@@ -1,16 +1,40 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var cache = builder.AddRedis("cache");
+var cache = builder.AddRedis("cache")
+    .WithRedisInsight();
 
-var apiService = builder.AddProject<Projects.BeselerNet_Api>("apiservice");
+var postgresPassword = builder.AddParameter("postgres-password", "default_password", secret: true);
+var postgres = builder.AddPostgres("postgres", password: postgresPassword, port: 15432)
+    .WithBindMount("../../data", "/docker-entrypoint-initdb.d")
+    .WithPgWeb();
 
-builder.AddProject<Projects.BeselerNet_Web>("webfrontend")
+var database = postgres.AddDatabase("Default", "bnet");
+
+var dbMigrator = builder.AddContainer("dbdeploy", "abeseler/dbdeploy")
+    .WithEnvironment("Deploy__Command", "update")
+    .WithEnvironment("Deploy__StartingFile", "migrations.json")
+    .WithEnvironment("Deploy__DatabaseProvider", "postgres")
+    .WithEnvironment("Deploy__Contexts", "local")
+    .WithEnvironment("Deploy__ConnectionString", $"Host=host.docker.internal;Port=15432;Database={database.Resource.DatabaseName};Username=postgres;Password={postgresPassword.Resource.Value}")
+    .WithEnvironment("Deploy__ConnectionAttempts", "10")
+    .WithEnvironment("Deploy__ConnectionRetryDelaySeconds", "1")
+    .WithEnvironment("Serilog__MinimumLevel__Default", "Debug")
+    .WithBindMount("../../data", "/app/Migrations")
+    .WaitFor(database);
+
+var beselerNetApi = builder.AddProject<Projects.BeselerNet_Api>("beseler-net-api")
+    .WithReference(cache)
+    .WaitFor(cache)
+    .WithReference(database)
+    .WaitForCompletion(dbMigrator);
+
+builder.AddProject<Projects.BeselerNet_Web>("beseler-net-web")
     .WithExternalHttpEndpoints()
     .WithReference(cache)
     .WaitFor(cache)
-    .WithReference(apiService)
-    .WaitFor(apiService);
+    .WithReference(beselerNetApi)
+    .WaitFor(beselerNetApi);
 
-builder.AddProject<Projects.BeselerDev_Web>("beselerdev-web");
+builder.AddProject<Projects.BeselerDev_Web>("beseler-dev-web");
 
 builder.Build().Run();
