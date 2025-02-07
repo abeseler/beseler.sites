@@ -35,6 +35,8 @@ builder.AddProject<Projects.BeselerNet_Web>("beseler-net-web")
     .WithReference(beselerNetApi)
     .WaitFor(beselerNetApi);
 
-builder.AddProject<Projects.BeselerDev_Web>("beseler-dev-web");
+builder.AddProject<Projects.BeselerDev_Web>("beseler-dev-web")
+    .WithReference(cache)
+    .WaitFor(cache);
 
 builder.Build().Run();

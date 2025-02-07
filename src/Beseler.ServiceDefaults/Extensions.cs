@@ -1,47 +1,60 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.ServiceDiscovery;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using System.Text.Json;
+using System.Text;
 
-namespace Microsoft.Extensions.Hosting;
+namespace Beseler.ServiceDefaults;
 
-// Adds common .NET Aspire services: service discovery, resilience, health checks, and OpenTelemetry.
-// This project should be referenced by each service project in your solution.
-// To learn more about using this project, see https://aka.ms/dotnet/aspire/service-defaults
 public static class Extensions
 {
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         builder.ConfigureOpenTelemetry();
-
         builder.AddDefaultHealthChecks();
 
         builder.Services.AddServiceDiscovery();
-
         builder.Services.ConfigureHttpClientDefaults(http =>
         {
-            // Turn on resilience by default
             http.AddStandardResilienceHandler();
-
-            // Turn on service discovery by default
             http.AddServiceDiscovery();
         });
-
-        // Uncomment the following to restrict the allowed schemes for service discovery.
-        // builder.Services.Configure<ServiceDiscoveryOptions>(options =>
-        // {
-        //     options.AllowedSchemes = ["https"];
-        // });
 
         return builder;
     }
 
-    public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    public static WebApplication MapDefaultEndpoints(this WebApplication app)
+    {
+        app.MapHealthChecks("/_health", new HealthCheckOptions()
+        {
+            ResponseWriter = WriteResponse
+        }).CacheOutput("HealthCheck").WithRequestTimeout(TimeSpan.FromSeconds(10));
+
+        app.MapHealthChecks("/_alive", new HealthCheckOptions()
+        {
+            Predicate = r => r.Tags.Contains("live"),
+            ResponseWriter = WriteResponse
+        });
+
+        app.MapHealthChecks("/_ready", new HealthCheckOptions()
+        {
+            Predicate = r => r.Tags.Contains("ready"),
+            ResponseWriter = WriteResponse
+        });
+
+        app.MapGet("/coffee", () => TypedResults.Text("I'm a teapot!", statusCode: StatusCodes.Status418ImATeapot));
+
+        return app;
+    }
+
+    private static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         builder.Logging.AddOpenTelemetry(logging =>
         {
@@ -58,62 +71,81 @@ public static class Extensions
             })
             .WithTracing(tracing =>
             {
+                if (builder.Environment.IsDevelopment())
+                {
+                    tracing.SetSampler(new AlwaysOnSampler());
+                }
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation()
-                    // Uncomment the following line to enable gRPC instrumentation (requires the OpenTelemetry.Instrumentation.GrpcNetClient package)
-                    //.AddGrpcClientInstrumentation()
                     .AddHttpClientInstrumentation();
             });
 
-        builder.AddOpenTelemetryExporters();
-
-        return builder;
-    }
-
-    private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
-    {
-        var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
-
+        var useOtlpExporter = string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]) is false;
         if (useOtlpExporter)
         {
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
 
-        // Uncomment the following lines to enable the Azure Monitor exporter (requires the Azure.Monitor.OpenTelemetry.AspNetCore package)
-        //if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
-        //{
-        //    builder.Services.AddOpenTelemetry()
-        //       .UseAzureMonitor();
-        //}
-
         return builder;
     }
 
-    public static TBuilder AddDefaultHealthChecks<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    private static TBuilder AddDefaultHealthChecks<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
-        builder.Services.AddHealthChecks()
-            // Add a default liveness check to ensure app is responsive
-            .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
+        builder.Services.AddOutputCache(
+            configureOptions: static caching =>
+                caching.AddPolicy("HealthCheck",
+                build: static policy => policy.Expire(TimeSpan.FromSeconds(10))));
 
+        builder.Services.AddSingleton<StartupHealthCheck>();
+        builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("ready", tags: ["ready"]);
+        builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"]);
+
+        
         return builder;
     }
 
-    public static WebApplication MapDefaultEndpoints(this WebApplication app)
+    private static Task WriteResponse(HttpContext context, HealthReport healthReport)
     {
-        // Adding health checks endpoints to applications in non-development environments has security implications.
-        // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-        if (app.Environment.IsDevelopment())
+        context.Response.ContentType = "application/json; charset=utf-8";
+
+        var options = new JsonWriterOptions { Indented = true };
+
+        using var memoryStream = new MemoryStream();
+        using (var jsonWriter = new Utf8JsonWriter(memoryStream, options))
         {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks("/health");
+            jsonWriter.WriteStartObject();
+            jsonWriter.WriteString("status", healthReport.Status.ToString());
+            jsonWriter.WriteString("duration", healthReport.TotalDuration.ToString());
+            jsonWriter.WriteStartObject("results");
 
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
-            app.MapHealthChecks("/alive", new HealthCheckOptions
+            foreach (var healthReportEntry in healthReport.Entries)
             {
-                Predicate = r => r.Tags.Contains("live")
-            });
+                jsonWriter.WriteStartObject(healthReportEntry.Key);
+                jsonWriter.WriteString("status",
+                    healthReportEntry.Value.Status.ToString());
+                jsonWriter.WriteString("duration",
+                    healthReportEntry.Value.Duration.ToString());
+                jsonWriter.WriteString("description",
+                    healthReportEntry.Value.Description);
+                jsonWriter.WriteStartObject("data");
+
+                foreach (var item in healthReportEntry.Value.Data)
+                {
+                    jsonWriter.WritePropertyName(item.Key);
+
+                    JsonSerializer.Serialize(jsonWriter, item.Value,
+                        item.Value?.GetType() ?? typeof(object));
+                }
+
+                jsonWriter.WriteEndObject();
+                jsonWriter.WriteEndObject();
+            }
+
+            jsonWriter.WriteEndObject();
+            jsonWriter.WriteEndObject();
         }
 
-        return app;
+        return context.Response.WriteAsync(
+            Encoding.UTF8.GetString(memoryStream.ToArray()));
     }
 }

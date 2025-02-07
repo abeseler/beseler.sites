@@ -1,8 +1,13 @@
+using Beseler.ServiceDefaults;
+using BeselerDev.Web;
 using BeselerDev.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.AddRedisOutputCache("cache");
+builder.Services.AddRequestTimeouts();
+builder.Services.AddHostedService<StartupService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
