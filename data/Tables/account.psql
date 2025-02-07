@@ -1,0 +1,47 @@
+/* Migration
+{
+    "title": "createTable"
+}
+*/
+CREATE TABLE IF NOT EXISTS account (
+    account_id INT NOT NULL,
+    username VARCHAR(50) NOT NULL,
+    email VARCHAR(320) NULL,
+    email_verified_on TIMESTAMPTZ NULL,
+    secret_hash TEXT NULL,
+    secret_hashed_on TIMESTAMPTZ NULL,
+    given_name VARCHAR(50) NULL,
+    family_name VARCHAR(50) NULL,
+    created_on TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    disabled_on TIMESTAMPTZ NULL,
+    locked_on TIMESTAMPTZ NULL,
+    last_logon TIMESTAMPTZ NULL,
+    failed_login_attempts INT NOT NULL DEFAULT (0),
+    CONSTRAINT pk_account PRIMARY KEY (account_id),
+    CONSTRAINT uq_account_email UNIQUE (email)
+);
+
+/* Migration
+{
+    "title": "createSequence"
+}
+*/
+CREATE SEQUENCE IF NOT EXISTS account_id_seq
+    AS INT
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1000
+    NO CYCLE
+    OWNED BY account.account_id;
+
+/* Migration
+{
+    "title": "insertTestAccount",
+    "contextRequired": true,
+    "contextFilter": ["local"]
+}
+*/
+INSERT INTO account (account_id, username, email, given_name, family_name)
+VALUES (0, 'tester', 'tester@example.com', 'Test', 'User');

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
+    <ContainerRepository>abeseler/beseler-dev-web</ContainerRepository>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Beseler.ServiceDefaults\Beseler.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>
