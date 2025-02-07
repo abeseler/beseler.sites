@@ -1,10 +1,11 @@
 [
   {
     "include": [
-      "Tables"
+      "sequences",
+      "tables"
     ],
     "contextFilter": [],
     "requiresContext": false,
-    "errorIfMissingOrEmpty": false
+    "errorIfMissingOrEmpty": true
   }
 ]
