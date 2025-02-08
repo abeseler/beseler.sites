@@ -5,7 +5,7 @@ using BeselerDev.Web.Components;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.AddRedisOutputCache("cache");
+builder.AddRedisOutputCache("Cache");
 builder.Services.AddRequestTimeouts();
 builder.Services.AddHostedService<StartupService>();
 

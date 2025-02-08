@@ -1,6 +1,6 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var cache = builder.AddRedis("cache")
+var cache = builder.AddRedis("Cache")
     .WithRedisInsight();
 
 var postgresPassword = builder.AddParameter("postgres-password", "default_password", secret: true);
@@ -8,7 +8,7 @@ var postgres = builder.AddPostgres("postgres", password: postgresPassword, port:
     .WithBindMount("../../data", "/docker-entrypoint-initdb.d")
     .WithPgWeb();
 
-var database = postgres.AddDatabase("Default", "bnet");
+var database = postgres.AddDatabase("Database", "bnet");
 
 var dbMigrator = builder.AddContainer("dbdeploy", "abeseler/dbdeploy")
     .WithEnvironment("Deploy__Command", "update")

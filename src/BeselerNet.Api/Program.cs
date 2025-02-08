@@ -4,7 +4,7 @@ using BeselerNet.Api;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.AddRedisOutputCache("cache");
+builder.AddRedisOutputCache("Cache");
 builder.Services.AddRequestTimeouts();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
