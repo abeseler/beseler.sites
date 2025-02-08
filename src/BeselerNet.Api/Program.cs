@@ -1,14 +1,18 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Api;
+using Dapper;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 builder.AddRedisOutputCache("Cache");
+builder.AddNpgsqlDataSource("Database");
 builder.Services.AddRequestTimeouts();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddHostedService<StartupService>();
+
+DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 var app = builder.Build();
 

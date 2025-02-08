@@ -22,6 +22,10 @@ var dbMigrator = builder.AddContainer("dbdeploy", "abeseler/dbdeploy")
     .WithBindMount("../../data", "/app/Migrations")
     .WaitFor(database);
 
+builder.AddProject<Projects.BeselerDev_Web>("beseler-dev-web")
+    .WithReference(cache)
+    .WaitFor(cache);
+
 var beselerNetApi = builder.AddProject<Projects.BeselerNet_Api>("beseler-net-api")
     .WithReference(cache)
     .WaitFor(cache)
@@ -34,9 +38,5 @@ builder.AddProject<Projects.BeselerNet_Web>("beseler-net-web")
     .WaitFor(cache)
     .WithReference(beselerNetApi)
     .WaitFor(beselerNetApi);
-
-builder.AddProject<Projects.BeselerDev_Web>("beseler-dev-web")
-    .WithReference(cache)
-    .WaitFor(cache);
 
 builder.Build().Run();
