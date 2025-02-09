@@ -49,7 +49,8 @@ public static class Extensions
             ResponseWriter = WriteResponse
         });
 
-        app.MapGet("/coffee", () => TypedResults.Text("I'm a teapot!", statusCode: StatusCodes.Status418ImATeapot));
+        app.MapGet("/coffee", () => TypedResults.Text("I'm a teapot!", statusCode: StatusCodes.Status418ImATeapot))
+            .ExcludeFromDescription();
 
         return app;
     }

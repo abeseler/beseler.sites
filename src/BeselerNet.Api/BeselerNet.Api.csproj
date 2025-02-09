@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Beseler.ServiceDefaults\Beseler.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\BeselerNet.Shared\BeselerNet.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

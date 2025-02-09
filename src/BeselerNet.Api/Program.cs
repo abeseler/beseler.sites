@@ -1,5 +1,7 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Api;
+using BeselerNet.Api.OAuth;
+using BeselerNet.Api.Webhooks;
 using Dapper;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,6 +38,8 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast");
 
+app.MapOAuthEndpoints();
+app.MapWebhookEndpoints();
 app.MapDefaultEndpoints();
 
 app.Run();
