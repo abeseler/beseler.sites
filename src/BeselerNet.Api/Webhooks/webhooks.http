@@ -1,0 +1,12 @@
+@host=https://api.beseler.net
+#@host={{$projectUrl}}
+
+POST {{host}}/webhooks/email-events
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "timestamp": 123456789,
+  "event": "example",
+  "sg_event_id": "id-123"
+}
