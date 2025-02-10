@@ -30,11 +30,10 @@ app.UseRequestLogging();
 app.UseAntiforgery();
 app.UseOutputCache();
 
-app.MapStaticAssets();
+app.MapDefaultEndpoints();
 
+app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-app.MapDefaultEndpoints();
 
 app.Run();

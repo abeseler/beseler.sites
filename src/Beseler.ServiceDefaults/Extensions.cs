@@ -134,14 +134,7 @@ public static class Extensions
                 }
 
                 tracing.AddSource(builder.Environment.ApplicationName)
-                    .AddAspNetCoreInstrumentation(options =>
-                    {
-                        options.Filter = (context) =>
-                        {
-                            var path = context.Request.Path.ToString();
-                            return path.StartsWith("/_") is false;
-                        };
-                    })
+                    .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation();
             });
 
