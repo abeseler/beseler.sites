@@ -32,8 +32,15 @@ internal static class OAuthTokenRequestHandler
         throw new NotImplementedException();
     }
 
-    private static Task<IResult> HandleRefreshTokenGrant(OAuthTokenRequest request, Cookies cookies)
+    private static async Task<IResult> HandleRefreshTokenGrant(OAuthTokenRequest request, Cookies cookies)
     {
+        var token = request.RefreshToken ?? cookies.Get("refresh_token");
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        await Task.CompletedTask;
         throw new NotImplementedException();
     }
 }

@@ -13,6 +13,7 @@ using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.ConfigureLogging();
 builder.AddServiceDefaults();
 builder.AddRedisOutputCache("Cache");
 builder.AddNpgsqlDataSource("Database");
@@ -29,8 +30,7 @@ builder.Services.AddFusionCache()
     })
     .WithSerializer(new FusionCacheSystemTextJsonSerializer())
     .WithDistributedCache(new RedisCache(new RedisCacheOptions() { Configuration = builder.Configuration["ConnectionStrings:Cache"] }))
-    .WithBackplane(
-        new RedisBackplane(new RedisBackplaneOptions() { Configuration = builder.Configuration["ConnectionStrings:Cache"] }))
+    .WithBackplane(new RedisBackplane(new RedisBackplaneOptions() { Configuration = builder.Configuration["ConnectionStrings:Cache"] }))
     .AsHybridCache();
 
 builder.Services.AddOpenTelemetry()
@@ -46,9 +46,10 @@ DefaultTypeMap.MatchNamesWithUnderscores = true;
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseRequestLogging();
 app.UseOutputCache();
-app.MapOpenApi();
 
+app.MapOpenApi();
 app.MapOAuthEndpoints();
 app.MapWebhookEndpoints();
 app.MapDefaultEndpoints();

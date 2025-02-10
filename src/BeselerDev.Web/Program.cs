@@ -4,6 +4,7 @@ using BeselerDev.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.ConfigureLogging();
 builder.AddServiceDefaults();
 builder.AddRedisOutputCache("Cache");
 builder.Services.AddRequestTimeouts();
@@ -20,6 +21,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseRequestLogging();
 app.UseAntiforgery();
 
 app.MapStaticAssets();

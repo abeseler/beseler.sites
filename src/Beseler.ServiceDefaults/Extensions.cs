@@ -10,6 +10,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using System.Text.Json;
 using System.Text;
+using Serilog;
 
 namespace Beseler.ServiceDefaults;
 
@@ -54,6 +55,53 @@ public static class Extensions
 
         return app;
     }
+
+    public static IHostApplicationBuilder ConfigureLogging(this WebApplicationBuilder builder)
+    {        
+        builder.Logging.ClearProviders();
+        builder.Host.UseSerilog((context, services, configuration) => configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Filter.ByExcluding(logEvent =>
+                logEvent.Properties.TryGetValue("RequestPath", out var requestPath)
+                    && requestPath.ToString() switch
+                    {
+                        { } path when path.StartsWith("\"/_health") => true,
+                        { } path when path.StartsWith("\"/_alive") => true,
+                        { } path when path.StartsWith("\"/_ready") => true,
+                        _ => false
+                    })
+            .WriteTo.OpenTelemetry(options =>
+            {
+                options.Endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]!;
+                var headers = builder.Configuration["OTEL_EXPORTER_OTLP_HEADERS"]?.Split(',') ?? [];
+                foreach (var header in headers)
+                {
+                    var (key, value) = header.Split('=') switch
+                    {
+                    [{ } k, { } v] => (k, v),
+                        var v => throw new Exception($"Invalid header format {v}")
+                    };
+
+                    options.Headers.Add(key, value);
+                }
+                options.ResourceAttributes.Add("service.name", builder.Environment.ApplicationName);
+                options.ResourceAttributes.Add("env", builder.Environment.EnvironmentName);
+
+                var (otelResourceAttribute, otelResourceAttributeValue) = builder.Configuration["OTEL_RESOURCE_ATTRIBUTES"]?.Split('=') switch
+                {
+                [string k, string v] => (k, v),
+                    _ => throw new Exception($"Invalid header format {builder.Configuration["OTEL_RESOURCE_ATTRIBUTES"]}")
+                };
+
+                options.ResourceAttributes.Add(otelResourceAttribute, otelResourceAttributeValue);
+            })
+            .Enrich.FromLogContext());
+
+        return builder;
+    }
+
+    public static IApplicationBuilder UseRequestLogging(this IApplicationBuilder app) => app.UseSerilogRequestLogging();
 
     private static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {

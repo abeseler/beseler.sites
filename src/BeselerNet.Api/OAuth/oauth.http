@@ -1,0 +1,33 @@
+@host={{$projectUrl}}
+
+### Get token
+
+POST {{host}}/oauth/token
+Content-Type: application/json
+
+{
+  "grant_type": "password",
+  "username": "Admin",
+  "password": "Admin"
+}
+
+### Get token with client credentials
+
+POST {{host}}/oauth/token
+Content-Type: application/json
+
+{
+  "grant_type": "client_credentials",
+  "client_id": "client_id",
+  "client_secret": "client_secret"
+}
+
+### Get token with refresh token
+
+POST {{host}}/oauth/token
+Content-Type: application/json
+
+{
+  "grant_type": "refresh_token",
+  "refresh_token": "refresh_token"
+}
