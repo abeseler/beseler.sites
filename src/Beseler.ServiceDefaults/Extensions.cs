@@ -88,13 +88,19 @@ public static class Extensions
                 options.ResourceAttributes.Add("service.name", builder.Environment.ApplicationName);
                 options.ResourceAttributes.Add("env", builder.Environment.EnvironmentName);
 
-                var (otelResourceAttribute, otelResourceAttributeValue) = builder.Configuration["OTEL_RESOURCE_ATTRIBUTES"]?.Split('=') switch
+                var attributes = builder.Configuration["OTEL_LOGS_ATTRIBUTES"];
+                if (string.IsNullOrWhiteSpace(attributes) is false)
                 {
-                [string k, string v] => (k, v),
-                    _ => throw new Exception($"Invalid header format {builder.Configuration["OTEL_RESOURCE_ATTRIBUTES"]}")
-                };
-
-                options.ResourceAttributes.Add(otelResourceAttribute, otelResourceAttributeValue);
+                    foreach (var attribute in attributes.Split(','))
+                    {
+                        var (key, value) = attribute.Split('=') switch
+                        {
+                        [{ } k, { } v] => (k, v),
+                            var v => throw new Exception($"Invalid header format {v}")
+                        };
+                        options.ResourceAttributes.Add(key, value);
+                    }
+                }
             })
             .Enrich.FromLogContext());
 
