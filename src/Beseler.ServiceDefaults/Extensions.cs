@@ -85,7 +85,9 @@ public static class Extensions
 
                     options.Headers.Add(key, value);
                 }
-                options.ResourceAttributes.Add("service.name", builder.Environment.ApplicationName);
+
+                var serviceName = builder.Configuration["OTEL_SERVICE_NAME"];
+                options.ResourceAttributes.Add("service.name", serviceName ?? builder.Environment.ApplicationName);
                 options.ResourceAttributes.Add("env", builder.Environment.EnvironmentName);
 
                 var attributes = builder.Configuration["OTEL_LOGS_ATTRIBUTES"];
