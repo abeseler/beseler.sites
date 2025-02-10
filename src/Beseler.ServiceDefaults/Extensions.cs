@@ -132,8 +132,16 @@ public static class Extensions
                 {
                     tracing.SetSampler(new AlwaysOnSampler());
                 }
+
                 tracing.AddSource(builder.Environment.ApplicationName)
-                    .AddAspNetCoreInstrumentation()
+                    .AddAspNetCoreInstrumentation(options =>
+                    {
+                        options.Filter = (context) =>
+                        {
+                            var path = context.Request.Path.ToString();
+                            return path.StartsWith("/_") is false;
+                        };
+                    })
                     .AddHttpClientInstrumentation();
             });
 
