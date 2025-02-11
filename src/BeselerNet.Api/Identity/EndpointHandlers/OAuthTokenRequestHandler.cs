@@ -2,7 +2,7 @@
 using BeselerNet.Shared.Contracts;
 using System.Diagnostics;
 
-namespace BeselerNet.Api.OAuth;
+namespace BeselerNet.Api.Identity.EndpointHandlers;
 
 internal static class OAuthTokenRequestHandler
 {

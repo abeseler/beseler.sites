@@ -1,5 +1,5 @@
-#@host=https://api.beseler.net
-@host={{$projectUrl}}
+@host=https://api.beseler.net
+#@host={{$projectUrl}}
 
 ### test webhook for email events
 

@@ -1,9 +1,11 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Api;
 using BeselerNet.Api.Core;
-using BeselerNet.Api.OAuth;
+using BeselerNet.Api.Identity;
+using BeselerNet.Api.Identity.Models;
 using BeselerNet.Api.Webhooks;
 using Dapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -15,8 +17,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.ConfigureLogging();
 builder.AddServiceDefaults();
-builder.AddRedisOutputCache("Cache");
+builder.AddAuthentication();
 builder.AddNpgsqlDataSource("Database");
+builder.AddRedisOutputCache("Cache");
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddRequestTimeouts();
 builder.Services.AddProblemDetails();
@@ -40,6 +43,7 @@ builder.Services.AddOpenTelemetry()
 builder.Services.AddHostedService<StartupService>();
 
 builder.Services.AddScoped<Cookies>();
+builder.Services.AddTransient<IPasswordHasher<Account>, PasswordHasher<Account>>();
 
 DefaultTypeMap.MatchNamesWithUnderscores = true;
 
@@ -47,7 +51,6 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseRequestLogging();
-app.UseOutputCache();
 
 app.MapOpenApi();
 app.MapOAuthEndpoints();

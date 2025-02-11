@@ -11,6 +11,7 @@ using OpenTelemetry.Trace;
 using System.Text.Json;
 using System.Text;
 using Serilog;
+using OpenTelemetry.Exporter;
 
 namespace Beseler.ServiceDefaults;
 
@@ -57,23 +58,28 @@ public static class Extensions
     }
 
     public static IHostApplicationBuilder ConfigureLogging(this WebApplicationBuilder builder)
-    {        
+    {
+        var endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
         builder.Logging.ClearProviders();
         builder.Host.UseSerilog((context, services, configuration) => configuration
             .ReadFrom.Configuration(context.Configuration)
             .ReadFrom.Services(services)
             .Filter.ByExcluding(logEvent =>
-                logEvent.Properties.TryGetValue("RequestPath", out var requestPath)
-                    && requestPath.ToString() switch
-                    {
-                        { } path when path.StartsWith("\"/_health") => true,
-                        { } path when path.StartsWith("\"/_alive") => true,
-                        { } path when path.StartsWith("\"/_ready") => true,
-                        _ => false
-                    })
+            {
+                if (logEvent.Properties.TryGetValue("RequestPath", out var requestPath))
+                {
+                    return requestPath.ToString().StartsWith("\"/_");
+                }
+                if (logEvent.Properties.TryGetValue("Uri", out var uri))
+                {
+                    return uri.ToString().Contains("ingest/otlp");
+                }
+                return false;
+            })
             .WriteTo.OpenTelemetry(options =>
             {
                 options.Endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]!;
+                options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.HttpProtobuf;
                 var headers = builder.Configuration["OTEL_EXPORTER_OTLP_HEADERS"]?.Split(',') ?? [];
                 foreach (var header in headers)
                 {
@@ -88,7 +94,7 @@ public static class Extensions
 
                 var serviceName = builder.Configuration["OTEL_SERVICE_NAME"];
                 options.ResourceAttributes.Add("service.name", serviceName ?? builder.Environment.ApplicationName);
-                options.ResourceAttributes.Add("env", builder.Environment.EnvironmentName);
+                options.ResourceAttributes.Add("deployment.environment", builder.Environment.EnvironmentName);
 
                 var attributes = builder.Configuration["OTEL_LOGS_ATTRIBUTES"];
                 if (string.IsNullOrWhiteSpace(attributes) is false)
@@ -119,6 +125,7 @@ public static class Extensions
             logging.IncludeScopes = true;
         });
 
+        var endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
         builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics =>
             {
@@ -134,12 +141,28 @@ public static class Extensions
                 }
 
                 tracing.AddSource(builder.Environment.ApplicationName)
-                    .AddAspNetCoreInstrumentation()
+                    .AddAspNetCoreInstrumentation(options =>
+                    {
+                        options.Filter = (context) =>
+                        {
+                            if (!context.Request.Path.HasValue) return true;
+                            if (context.Request.Path.Value.StartsWith("/_")) return false;
+                            return true;
+                        };
+                    })
                     .AddHttpClientInstrumentation();
+
+                if (!string.IsNullOrWhiteSpace(endpoint) && endpoint.Contains("seq"))
+                {
+                    tracing.AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = new Uri($"{endpoint}v1/traces");
+                        options.Protocol = OtlpExportProtocol.HttpProtobuf;
+                    });
+                }
             });
 
-        var useOtlpExporter = string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]) is false;
-        if (useOtlpExporter)
+        if (!string.IsNullOrWhiteSpace(endpoint) && !endpoint.Contains("seq"))
         {
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
