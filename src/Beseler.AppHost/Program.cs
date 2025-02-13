@@ -22,6 +22,8 @@ var dbMigrator = builder.AddContainer("dbdeploy", "abeseler/dbdeploy")
     .WithBindMount("../../data", "/app/Migrations")
     .WaitFor(database);
 
+builder.AddProject<Projects.Beseler_Deploy>("beseler-deploy");
+
 builder.AddProject<Projects.BeselerDev_Web>("beseler-dev-web")
     .WithReference(cache)
     .WaitFor(cache);

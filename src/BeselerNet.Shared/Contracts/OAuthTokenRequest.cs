@@ -17,7 +17,7 @@ public sealed record OAuthTokenRequest
     [JsonPropertyName("refresh_token")]
     public string? RefreshToken { get; init; }
 
-    public bool IsValid([NotNullWhen(false)] out Dictionary<string, string[]>? errors)
+    public bool HasValidationErrors([NotNullWhen(true)] out Dictionary<string, string[]>? errors)
     {
         errors = null;
         if (GrantType == OAuthGrantType.password)
@@ -51,7 +51,7 @@ public sealed record OAuthTokenRequest
             errors ??= [];
             errors["grant_type"] = ["Invalid grant type."];
         }
-        return errors is null;
+        return errors is not null;
     }
 }
 

@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Beseler.Deploy\Beseler.Deploy.csproj" />
     <ProjectReference Include="..\BeselerDev.Web\BeselerDev.Web.csproj" />
     <ProjectReference Include="..\BeselerNet.Api\BeselerNet.Api.csproj" />
     <ProjectReference Include="..\BeselerNet.Web\BeselerNet.Web.csproj" />

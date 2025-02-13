@@ -1,8 +1,7 @@
-﻿using BeselerNet.Api.Identity.EndpointHandlers;
-using BeselerNet.Shared.Contracts;
+﻿using BeselerNet.Shared.Contracts;
 using System.Net.Mime;
 
-namespace BeselerNet.Api.Identity;
+namespace BeselerNet.Api.Accounts;
 
 internal static class OAuthEndpoints
 {

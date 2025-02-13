@@ -1,0 +1,6 @@
+@Beseler.Deploy_HostAddress = http://localhost:5210
+
+GET {{Beseler.Deploy_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
