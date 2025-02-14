@@ -38,28 +38,33 @@ internal sealed class JwtGenerator
         };
     }
 
+    /// <summary>
+    /// This method will validate the token and return a claims principal if valid.
+    /// </summary>
     public async Task<ClaimsPrincipal?> Validate(string token)
     {
         var result = await _handler.ValidateTokenAsync(token, _validationParameters);
         return result.IsValid ? new ClaimsPrincipal(result.ClaimsIdentity) : null;
     }
 
-    public TokenResult Generate(Account account)
+    /// <summary>
+    /// Generate access and refresh tokens for the specified claims principal.
+    /// </summary>
+    public TokenResult Generate(ClaimsPrincipal principal)
     {
-        var tokenId = Guid.NewGuid();
-        var now = _timeProvider.GetUtcNow();
-        var expires = now.AddMinutes(_options.AccessTokenLifetimeMinutes);
-        var claims = GetDefaultClaims(account, tokenId);
+        var utcNow = _timeProvider.GetUtcNow();
+        var tokenId = Guid.CreateVersion7(utcNow);
+        var expires = utcNow.AddSeconds(_expiresIn);
+        var claims = principal.Claims.ToList();
+        claims.Add(new Claim(JwtRegisteredClaimNames.Jti, tokenId.ToString()));
+        var accessToken = WriteToken(principal.Claims, utcNow, expires);
 
-        //TODO: add access token claims
+        tokenId = Guid.CreateVersion7(utcNow);
+        expires = utcNow.AddHours(_options.RefreshTokenLifetimeHours);
+        claims.RemoveAll(x => x.Type != JwtRegisteredClaimNames.Sub);
+        claims.Add(new Claim(JwtRegisteredClaimNames.Jti, tokenId.ToString()));
 
-        var accessToken = WriteToken(claims, expires);
-
-        tokenId = Guid.CreateVersion7(now);
-        expires = now.AddHours(_options.RefreshTokenLifetimeHours);
-        claims = GetDefaultClaims(account, tokenId);
-
-        var refreshToken = WriteToken(claims, expires);
+        var refreshToken = WriteToken(claims, utcNow, expires);
 
         return new()
         {
@@ -70,18 +75,35 @@ internal sealed class JwtGenerator
         };
     }
 
-    public TokenResult Generate(Account account, TimeSpan lifetime, IEnumerable<Claim>? additionalClaims = null)
+    /// <summary>
+    /// Generate an access token with the specified subject and lifetime and optional additional claims. This method does not return a refresh token.
+    /// <para>
+    /// The <paramref name="subject"/> parameter must have a claim type of <see cref="JwtRegisteredClaimNames.Sub"/>.
+    /// </para>
+    /// </summary>
+    /// <exception cref="ArgumentException"></exception>
+    public TokenResult Generate(Claim subject, TimeSpan lifetime, IEnumerable<Claim>? additionalClaims = null)
     {
-        var tokenId = Guid.NewGuid();
-        var expires = _timeProvider.GetUtcNow().Add(lifetime);
-        var claims = GetDefaultClaims(account, tokenId);
+        if (subject.Type != JwtRegisteredClaimNames.Sub)
+        {
+            throw new ArgumentException($"Claim type must be {JwtRegisteredClaimNames.Sub}", nameof(subject));
+        }
+
+        var utcNow = _timeProvider.GetUtcNow();
+        var tokenId = Guid.CreateVersion7(utcNow);
+        var expires = utcNow.Add(lifetime);
+        var claims = new List<Claim>
+        {
+            subject,
+            new(JwtRegisteredClaimNames.Jti, tokenId.ToString())
+        };
 
         if (additionalClaims is not null)
         {
             claims.AddRange(additionalClaims);
         }           
 
-        var token = WriteToken(claims, expires);
+        var token = WriteToken(claims, utcNow, expires);
         return new()
         {
             Token = token,
@@ -89,31 +111,18 @@ internal sealed class JwtGenerator
         };
     }
 
-    private string WriteToken(List<Claim> claims, DateTimeOffset expires)
+    private string WriteToken(IEnumerable<Claim> claims, DateTimeOffset issuedAt, DateTimeOffset expires)
     {
         var descriptor = new SecurityTokenDescriptor
         {
             Subject = new(claims),
+            IssuedAt = issuedAt.DateTime,
             Expires = expires.DateTime,
             Issuer = _options.Issuer,
             Audience = _options.Audience,
             SigningCredentials = _signingCredentials
         };
         return _handler.CreateToken(descriptor);
-    }
-
-    private static List<Claim> GetDefaultClaims(Account account, Guid tokenId)
-    {
-        var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Jti, tokenId.ToString()),
-            new(JwtRegisteredClaimNames.Sub, account.Id.ToString())
-        };
-        if (account.Email is not null)
-        {
-            claims.Add(new(JwtRegisteredClaimNames.Email, account.Email));
-        }
-        return claims;
     }
 }
 
