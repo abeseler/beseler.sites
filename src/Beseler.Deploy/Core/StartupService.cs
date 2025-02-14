@@ -1,6 +1,6 @@
 ﻿using Beseler.ServiceDefaults;
 
-namespace Beseler.Deploy;
+namespace Beseler.Deploy.Core;
 
 internal sealed class StartupService(StartupHealthCheck startupCheck, ILogger<StartupService> logger) : BackgroundService
 {

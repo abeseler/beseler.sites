@@ -1,0 +1,44 @@
+# Docker Ignore File
+
+# Ignore version control system files
+.git
+.gitignore
+
+# Ignore development related files
+*.md
+LICENSE
+README*
+
+# Ignore IDE and text editor configuration files
+.vscode
+.idea
+*.iml
+.vscode-test
+
+# Ignore logs
+*.log
+
+# Ignore temporary files
+*.tmp
+*.bak
+*.swp
+
+# Ignore node_modules if it's not needed in the container
+node_modules/
+
+# Ignore build artifacts if they are not needed
+build/
+dist/
+
+# Ignore environment files unless explicitly needed
+.env
+
+# Ignore macOS specific files
+.DS_Store
+
+# Ignore Windows specific files
+Thumbs.db
+
+# Ignore other potentially unnecessary directories or files
+coverage/
+test-results/
