@@ -17,6 +17,7 @@ builder.Services.AddSingleton(x => Channel.CreateUnbounded<WebhookRequest>(new()
 }));
 builder.Services.AddHostedService<StartupService>();
 builder.Services.AddHostedService<Worker>();
+builder.Services.AddOptions<WebhookOptions>().BindConfiguration("Webhook");
 
 builder.Services.AddOpenApi();
 

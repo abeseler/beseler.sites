@@ -20,6 +20,6 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
     private async Task ProcessDeployment(WebhookRequest request)
     {
         await Task.CompletedTask;
-        _logger.LogInformation("Processing deployment for {Repository}:\n{Request}", request.Repository.RepoName, request);
+        _logger.LogInformation("Processing deployment for {Repository}:\n{Request}", request.Repository?.RepoName, request);
     }
 }
