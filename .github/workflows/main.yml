@@ -12,11 +12,11 @@ jobs:
       matrix:
         include:
           - image: abeseler/beseler-net-api
-            dockerfile: src/beseler-net-api.Dockerfile
-            context: src
+            dockerfile: docker/beseler-net-api.Dockerfile
+            context: .
           - image: abeseler/beseler-net-web
-            dockerfile: src/abeseler/beseler-net-web
-            context: src
+            dockerfile: docker/beseler-net-web.Dockerfile
+            context: .
 
     steps:
       - name: Checkout code
