@@ -11,6 +11,7 @@ var postgres = builder.AddPostgres("postgres", password: postgresPassword, port:
 var database = postgres.AddDatabase("Database", "bnet");
 
 var dbMigrator = builder.AddContainer("dbdeploy", "abeseler/dbdeploy")
+    .WithOtlpExporter()
     .WithEnvironment("Deploy__Command", "update")
     .WithEnvironment("Deploy__StartingFile", "migrations.json")
     .WithEnvironment("Deploy__DatabaseProvider", "postgres")
@@ -18,7 +19,6 @@ var dbMigrator = builder.AddContainer("dbdeploy", "abeseler/dbdeploy")
     .WithEnvironment("Deploy__ConnectionString", $"Host=host.docker.internal;Port=15432;Database={database.Resource.DatabaseName};Username=postgres;Password={postgresPassword.Resource.Value}")
     .WithEnvironment("Deploy__ConnectionAttempts", "10")
     .WithEnvironment("Deploy__ConnectionRetryDelaySeconds", "1")
-    .WithEnvironment("Serilog__MinimumLevel__Default", "Debug")
     .WithBindMount("../../data", "/app/Migrations")
     .WaitFor(database);
 
