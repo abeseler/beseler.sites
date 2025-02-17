@@ -1,0 +1,20 @@
+/* Migration
+{
+    "title": "createTable"
+}
+*/
+CREATE TABLE IF NOT EXISTS outbox (
+    message_id UUID NOT NULL,
+    message_data JSON NOT NULL,
+    invisible_until TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    receives_remaining INT NOT NULL DEFAULT (10),
+    CONSTRAINT pk_outbox PRIMARY KEY (message_id)
+);
+
+/* Migration
+{
+    "title": "createIndex"
+}
+*/
+CREATE INDEX IF NOT EXISTS idx_outbox_lookup ON outbox (invisible_until)
+WHERE receives_remaining > 0;

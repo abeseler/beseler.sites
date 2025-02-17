@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS account (
     locked_on TIMESTAMPTZ NULL,
     last_logon TIMESTAMPTZ NULL,
     failed_login_attempts INT NOT NULL DEFAULT (0),
+    event_log_count INT NOT NULL DEFAULT (0),
     CONSTRAINT pk_account PRIMARY KEY (account_id),
     CONSTRAINT uq_account_username UNIQUE (username),
     CONSTRAINT uq_account_email UNIQUE (email),

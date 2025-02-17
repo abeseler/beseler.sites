@@ -1,11 +1,15 @@
-﻿using Dapper;
+﻿using BeselerNet.Api.Core;
+using BeselerNet.Api.Outbox;
+using Dapper;
 using Npgsql;
+using System.Text.Json;
 
 namespace BeselerNet.Api.Accounts;
 
-internal sealed class AccountDataSource(NpgsqlDataSource dataSource)
+internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataSource outbox)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
+    private readonly OutboxDataSource _outbox = outbox;
     public async Task<int> NextId(CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
@@ -34,14 +38,26 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource)
             "SELECT * FROM account WHERE email = @email", new { email });
     }
 
+    public async Task<IEnumerable<DomainEvent>> DomainEvents(int accountId, CancellationToken stoppingToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        return await connection.QueryAsync<DomainEvent>(
+            "SELECT event_data FROM account_event_log WHERE account_id = @accountId", new { accountId });
+    }
+
     public async Task SaveChanges(Account account, CancellationToken stoppingToken)
     {
         if (account.IsChanged is false)
         {
             return;
         }
+
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        await connection.ExecuteAsync("""
+        using var transaction = await connection.BeginTransactionAsync(stoppingToken);
+
+        try
+        {
+            await connection.ExecuteAsync("""
             INSERT INTO account (
                 account_id,
                 username,
@@ -80,7 +96,49 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource)
                 locked_on = @LockedOn,
                 last_logon = @LastLogon,
                 failed_login_attempts = @FailedLoginAttempts
-            """, account);
-        account.AcceptChanges();
+            """, account, transaction);
+
+            List<OutboxMessage>? outboxMessages = null;
+            foreach (var @event in account.UncommittedEvents)
+            {
+                var eventData = JsonSerializer.Serialize(@event, JsonSerializerOptions.Web);
+                if (@event.PublishToOutbox)
+                {
+                    outboxMessages ??= [];
+                    outboxMessages.Add(new OutboxMessage
+                    {
+                        MessageId = @event.EventId,
+                        MessageType = nameof(DomainEvent),
+                        MessageData = eventData,
+                        InvisibleUntil = @event.OccurredOn,
+                        ReceivesRemaining = 3
+                    });
+                }
+                await connection.ExecuteAsync("""
+                INSERT INTO account_event_log (event_id,  account_id, event_data, occurred_on)
+                VALUES (@EventId, @AccountId, @EventData::jsonb, @OccurredOn)
+                """, new
+                {
+                    @event.EventId,
+                    account.AccountId,
+                    EventData = eventData,
+                    @event.OccurredOn
+                }, transaction);
+            }
+
+            if (outboxMessages is { Count: >0 })
+            {
+                await _outbox.SaveAll(outboxMessages, connection, transaction, stoppingToken);
+            }
+
+            await transaction.CommitAsync(stoppingToken);
+
+            account.AcceptChanges();
+        }
+        catch
+        {
+            await transaction.RollbackAsync(stoppingToken);
+            throw;
+        }
     }
 }

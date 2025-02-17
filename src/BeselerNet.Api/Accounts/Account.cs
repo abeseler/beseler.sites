@@ -1,12 +1,15 @@
-﻿using Microsoft.IdentityModel.JsonWebTokens;
+﻿using BeselerNet.Api.Core;
+using Microsoft.IdentityModel.JsonWebTokens;
 using System.ComponentModel;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 
 namespace BeselerNet.Api.Accounts;
 
 internal sealed class Account : IChangeTracking
 {
     private Account() { }
+    private List<DomainEvent>? _events;
     public int AccountId { get; private init; }
     public AccountType Type { get; private init; }
     public string Username { get; private set; } = default!;
@@ -21,6 +24,7 @@ internal sealed class Account : IChangeTracking
     public DateTimeOffset? LockedOn { get; private set; }
     public DateTimeOffset? LastLogon { get; private set; }
     public int FailedLoginAttempts { get; private set; }
+    public int EventLogCount { get; private set; }
     public string Name => this switch
     {
         { GivenName: not null, FamilyName: not null } => $"{GivenName} {FamilyName}",
@@ -30,12 +34,15 @@ internal sealed class Account : IChangeTracking
     };
     public bool IsDisabled => DisabledOn.HasValue;
     public bool IsLocked => LockedOn.HasValue;
+    public IReadOnlyCollection<DomainEvent> UncommittedEvents => _events ?? [];
     public bool IsChanged { get; private set; }
     public void Login()
     {
         LastLogon = DateTimeOffset.UtcNow;
         FailedLoginAttempts = 0;
         IsChanged = true;
+        _events ??= [];
+        _events.Add(new AccountLoginSucceeded(AccountId));
     }
     public void FailLogin()
     {
@@ -45,6 +52,8 @@ internal sealed class Account : IChangeTracking
             LockedOn = DateTimeOffset.UtcNow;
         }
         IsChanged = true;
+        _events ??= [];
+        _events.Add(new AccountLoginFailed(AccountId, FailedLoginAttempts, IsLocked));
     }
     public void ResetPassword(string hash)
     {
@@ -52,12 +61,19 @@ internal sealed class Account : IChangeTracking
         SecretHashedOn = DateTimeOffset.UtcNow;
         IsChanged = true;
     }
-    public void Disable()
+    public void Disable(string? disabledBy = null)
     {
         DisabledOn = DateTimeOffset.UtcNow;
         IsChanged = true;
+        _events ??= [];
+        _events.Add(new AccountDisabled(AccountId, disabledBy));
     }
-    public void AcceptChanges() => IsChanged = false;
+    public void AcceptChanges()
+    {
+        _events = null;
+        IsChanged = false;
+    }
+
     public ClaimsPrincipal ToClaimsPrincipal()
     {
         var claims = new List<Claim>
@@ -78,6 +94,7 @@ internal sealed class Account : IChangeTracking
     }
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 internal enum AccountType
 {
     User,

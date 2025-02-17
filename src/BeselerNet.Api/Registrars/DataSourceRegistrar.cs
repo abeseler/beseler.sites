@@ -6,6 +6,7 @@ using ZiggyCreatures.Caching.Fusion.Backplane.StackExchangeRedis;
 using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 using ZiggyCreatures.Caching.Fusion;
 using Dapper;
+using BeselerNet.Api.Outbox;
 
 namespace BeselerNet.Api.Registrars;
 
@@ -15,6 +16,7 @@ internal static class DataSourceRegistrar
     {
         builder.AddNpgsqlDataSource("Database");
 
+        builder.Services.AddSingleton<OutboxDataSource>();
         builder.Services.AddScoped<AccountDataSource>();
 
         DefaultTypeMap.MatchNamesWithUnderscores = true;

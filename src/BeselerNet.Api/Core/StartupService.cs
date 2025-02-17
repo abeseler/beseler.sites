@@ -1,7 +1,7 @@
 ﻿using Beseler.ServiceDefaults;
 using Microsoft.Extensions.Caching.Hybrid;
 
-namespace BeselerNet.Api;
+namespace BeselerNet.Api.Core;
 
 internal sealed class StartupService(HybridCache cache, StartupHealthCheck startupCheck, ILogger<StartupService> logger) : BackgroundService
 {

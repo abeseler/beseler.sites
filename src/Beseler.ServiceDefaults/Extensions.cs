@@ -12,6 +12,7 @@ using System.Text.Json;
 using System.Text;
 using Serilog;
 using OpenTelemetry.Exporter;
+using System.Diagnostics;
 
 namespace Beseler.ServiceDefaults;
 

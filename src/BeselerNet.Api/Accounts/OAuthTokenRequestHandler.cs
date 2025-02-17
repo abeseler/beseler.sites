@@ -9,7 +9,7 @@ namespace BeselerNet.Api.Accounts;
 
 internal static class OAuthTokenRequestHandler
 {
-    public readonly struct RequestParameters
+    public readonly struct Parameters
     {
         public OAuthTokenRequest Request { get; init; }
         public AccountDataSource Accounts { get; init; }
@@ -19,7 +19,7 @@ internal static class OAuthTokenRequestHandler
         public CancellationToken StoppingToken { get; init; }
     }
 
-    public static async Task<IResult> GenerateToken([AsParameters] RequestParameters parameters)
+    public static async Task<IResult> GenerateToken([AsParameters] Parameters parameters)
     {
         if (parameters.Request.HasValidationErrors(out var errors))
         {
@@ -35,7 +35,7 @@ internal static class OAuthTokenRequestHandler
         };
     }
 
-    private static async Task<IResult> HandleAccessTokenGrant(string username, string secret, RequestParameters parameters)
+    private static async Task<IResult> HandleAccessTokenGrant(string username, string secret, Parameters parameters)
     {
         var account = await parameters.Accounts.WithUsername(username, parameters.StoppingToken);
         if (account is not { SecretHash: not null })
@@ -105,7 +105,7 @@ internal static class OAuthTokenRequestHandler
         return TypedResults.Ok(response);
     }
 
-    private static async Task<IResult> HandleRefreshTokenGrant(RequestParameters parameters)
+    private static async Task<IResult> HandleRefreshTokenGrant(Parameters parameters)
     {
         var token = parameters.Request.RefreshToken ?? parameters.Cookies.Get(Cookies.RefreshToken);
         if (string.IsNullOrWhiteSpace(token))

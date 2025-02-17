@@ -41,6 +41,7 @@ internal sealed class JwtGenerator
     /// <summary>
     /// This method will validate the token and return a claims principal if valid.
     /// </summary>
+    /// <returns>If valid, returns <see cref="ClaimsPrincipal"/>, otherwise returns null</returns>
     public async Task<ClaimsPrincipal?> Validate(string token)
     {
         var result = await _handler.ValidateTokenAsync(token, _validationParameters);
@@ -50,6 +51,7 @@ internal sealed class JwtGenerator
     /// <summary>
     /// Generate access and refresh tokens for the specified claims principal.
     /// </summary>
+    /// <returns><see cref="TokenResult"/></returns>
     public TokenResult Generate(ClaimsPrincipal principal)
     {
         var utcNow = _timeProvider.GetUtcNow();
@@ -82,6 +84,7 @@ internal sealed class JwtGenerator
     /// The <paramref name="subject"/> parameter must have a claim type of <see cref="JwtRegisteredClaimNames.Sub"/>.
     /// </para>
     /// </summary>
+    /// <returns><see cref="TokenResult"/></returns>
     /// <exception cref="ArgumentException"></exception>
     public TokenResult Generate(Claim subject, TimeSpan lifetime, IEnumerable<Claim>? additionalClaims = null)
     {
@@ -136,7 +139,7 @@ internal readonly struct TokenResult
     public DateTimeOffset? RefreshTokenExpires { get; init; }
 }
 
-internal sealed class JwtOptions
+internal sealed record JwtOptions
 {
     public const string SectionName = "Jwt";
     public required string Issuer { get; init; }
