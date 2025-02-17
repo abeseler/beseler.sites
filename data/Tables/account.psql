@@ -5,6 +5,7 @@
 */
 CREATE TABLE IF NOT EXISTS account (
     account_id INT NOT NULL DEFAULT (nextval('account_id_seq')),
+    type TEXT NOT NULL,
     username TEXT NOT NULL,
     email TEXT NULL,
     email_verified_on TIMESTAMPTZ NULL,
@@ -19,15 +20,6 @@ CREATE TABLE IF NOT EXISTS account (
     failed_login_attempts INT NOT NULL DEFAULT (0),
     CONSTRAINT pk_account PRIMARY KEY (account_id),
     CONSTRAINT uq_account_username UNIQUE (username),
-    CONSTRAINT uq_account_email UNIQUE (email)
+    CONSTRAINT uq_account_email UNIQUE (email),
+    CONSTRAINT chk_account_type CHECK (type IN ('User', 'Service'))
 );
-
-/* Migration
-{
-    "title": "insertTestAccount",
-    "contextRequired": true,
-    "contextFilter": ["local"]
-}
-*/
-INSERT INTO account (username, email, given_name, family_name)
-VALUES ('tester', 'tester@example.com', 'Test', 'User');

@@ -68,10 +68,11 @@ internal sealed class JwtGenerator
 
         return new()
         {
-            Token = accessToken,
+            AccessToken = accessToken,
             ExpiresIn = _expiresIn,
             RefreshToken = refreshToken,
-            RefreshTokenId = tokenId
+            RefreshTokenId = tokenId,
+            RefreshTokenExpires = expires
         };
     }
 
@@ -106,7 +107,7 @@ internal sealed class JwtGenerator
         var token = WriteToken(claims, utcNow, expires);
         return new()
         {
-            Token = token,
+            AccessToken = token,
             ExpiresIn = (long)lifetime.TotalSeconds
         };
     }
@@ -128,10 +129,11 @@ internal sealed class JwtGenerator
 
 internal readonly struct TokenResult
 {
-    public string Token { get; init; }
+    public string AccessToken { get; init; }
     public long ExpiresIn { get; init; }
     public string? RefreshToken { get; init; }
     public Guid? RefreshTokenId { get; init; }
+    public DateTimeOffset? RefreshTokenExpires { get; init; }
 }
 
 internal sealed class JwtOptions

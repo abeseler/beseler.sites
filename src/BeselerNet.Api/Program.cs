@@ -19,6 +19,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddRequestTimeouts();
 builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<Cookies>();
 builder.Services.AddTransient<IPasswordHasher<Account>, PasswordHasher<Account>>();
 

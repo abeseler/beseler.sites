@@ -2,6 +2,7 @@
 
 internal sealed class Cookies(IHttpContextAccessor accessor)
 {
+    public const string RefreshToken = "refresh_token";
     private static readonly CookieOptions DefaultOptions = new()
     {
         HttpOnly = true,

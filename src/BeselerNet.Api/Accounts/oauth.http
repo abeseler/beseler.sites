@@ -7,8 +7,8 @@ Content-Type: application/json
 
 {
   "grant_type": "password",
-  "username": "Admin",
-  "password": "Admin"
+  "username": "admin",
+  "password": "admin"
 }
 
 ### Get token with client credentials

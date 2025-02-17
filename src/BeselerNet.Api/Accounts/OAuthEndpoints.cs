@@ -15,6 +15,7 @@ internal static class OAuthEndpoints
             .Accepts<OAuthTokenRequest>(MediaTypeNames.Application.Json)
             .Produces<OAuthTokenResponse>(StatusCodes.Status200OK, MediaTypeNames.Application.Json)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest, MediaTypeNames.Application.Json)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .Produces(StatusCodes.Status401Unauthorized)
+            .AllowAnonymous();
     }
 }

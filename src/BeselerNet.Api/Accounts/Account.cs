@@ -8,6 +8,7 @@ internal sealed class Account : IChangeTracking
 {
     private Account() { }
     public int AccountId { get; private init; }
+    public AccountType Type { get; private init; }
     public string Username { get; private set; } = default!;
     public string? Email { get; private set; }
     public DateTimeOffset? EmailVerifiedOn { get; private set; }
@@ -30,6 +31,32 @@ internal sealed class Account : IChangeTracking
     public bool IsDisabled => DisabledOn.HasValue;
     public bool IsLocked => LockedOn.HasValue;
     public bool IsChanged { get; private set; }
+    public void Login()
+    {
+        LastLogon = DateTimeOffset.UtcNow;
+        FailedLoginAttempts = 0;
+        IsChanged = true;
+    }
+    public void FailLogin()
+    {
+        FailedLoginAttempts += 1;
+        if (FailedLoginAttempts >= 5)
+        {
+            LockedOn = DateTimeOffset.UtcNow;
+        }
+        IsChanged = true;
+    }
+    public void ResetPassword(string hash)
+    {
+        SecretHash = hash;
+        SecretHashedOn = DateTimeOffset.UtcNow;
+        IsChanged = true;
+    }
+    public void Disable()
+    {
+        DisabledOn = DateTimeOffset.UtcNow;
+        IsChanged = true;
+    }
     public void AcceptChanges() => IsChanged = false;
     public ClaimsPrincipal ToClaimsPrincipal()
     {
@@ -49,4 +76,10 @@ internal sealed class Account : IChangeTracking
         var identity = new ClaimsIdentity(claims);
         return new ClaimsPrincipal(identity);
     }
+}
+
+internal enum AccountType
+{
+    User,
+    Service,
 }
