@@ -65,27 +65,21 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
                 await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                 if (cts.Token.IsCancellationRequested)
                 {
-                    _logger.LogWarning("Job {Name} in namespace {Namespace} timed out.", result.Metadata.Name, k8sNamespace);
+                    _logger.LogWarning("Job {Name} timed out.", result.Metadata.Name);
                     break;
                 }
                 var updatedJob = await client.ReadNamespacedJobAsync(result.Metadata.Name, k8sNamespace, cancellationToken: cts.Token);
-                var condition = updatedJob.Status?.Conditions?.FirstOrDefault(c => c.Type == "Complete" || c.Type == "Failed");
-                if (condition is null)
+                if (updatedJob.Status?.Succeeded == 1)
                 {
-                    _logger.LogWarning("Job {Name} in namespace {Namespace} failed.", result.Metadata.Name, k8sNamespace);
+                    _logger.LogInformation("Job {Name} completed successfully.", result.Metadata.Name);
                     break;
                 }
-                if (condition.Type == "Complete" && condition.Status == "True")
+                if (updatedJob.Status?.Failed == 1)
                 {
-                    _logger.LogInformation("Job {Name} in namespace {Namespace} completed successfully.", result.Metadata.Name, k8sNamespace);
+                    _logger.LogError("Job {Name} failed.", result.Metadata.Name);
                     break;
                 }
-                if (condition.Type == "Failed" && condition.Status == "True")
-                {
-                    _logger.LogError("Job {Name} in namespace {Namespace} failed.", result.Metadata.Name, k8sNamespace);
-                    break;
-                }
-                _logger.LogInformation("Job {Name} in namespace {Namespace} is in progress. Status: {Status}, Reason: {Reason}.", result.Metadata.Name, k8sNamespace, condition.Status, condition.Reason);
+                _logger.LogInformation("Job {Name} is in progress. Status: {Status}.", result.Metadata.Name, updatedJob.Status?.Conditions?.FirstOrDefault()?.Status);
             }
         }
         catch (Exception ex)
@@ -132,7 +126,7 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
 
             var patchResult = await client.PatchNamespacedDeploymentAsync(patch, name, k8sNamespace, cancellationToken: stoppingToken);
 
-            _logger.LogInformation("Rollout restart initiated for deployment {Name} in namespace {Namespace}.", name, k8sNamespace);
+            _logger.LogInformation("Deployment {Name} update applied.", name);
 
             await MonitorDeploymentRollout(client, k8sNamespace, name, stoppingToken);
         }
@@ -151,7 +145,7 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
 
             if (cts.Token.IsCancellationRequested)
             {
-                _logger.LogWarning("Deployment {Name} in namespace {Namespace} timed out.", name, k8sNamespace);
+                _logger.LogWarning("Deployment {Name} timed out.", name);
                 break;
             }
 
@@ -159,21 +153,21 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
             var condition = updatedDeployment.Status?.Conditions?.FirstOrDefault(c => c.Type == "Progressing" || c.Type == "Available");
             if (condition is null)
             {
-                _logger.LogWarning("Deployment {Name} in namespace {Namespace} failed.", name, k8sNamespace);
+                _logger.LogWarning("Deployment {Name} failed.", name);
                 break;
             }
             if (condition.Type == "Available" && condition.Status == "True")
             {
-                _logger.LogInformation("Deployment {Name} in namespace {Namespace} updated successfully.", name, k8sNamespace);
+                _logger.LogInformation("Deployment {Name} update initiated.", name);
                 break;
             }
             if (condition.Type == "Progressing" && condition.Status == "False")
             {
-                _logger.LogWarning("Deployment {Name} in namespace {Namespace} failed.", name, k8sNamespace);
+                _logger.LogWarning("Deployment {Name} failed.", name);
                 break;
             }
 
-            _logger.LogInformation("Deployment {Name} in namespace {Namespace} is in progress. Status: {Status}, Reason: {Reason}.", name, k8sNamespace, condition.Status, condition.Reason);
+            _logger.LogInformation("Deployment {Name} is in progress. Status: {Status}, Reason: {Reason}.", name, condition.Status, condition.Reason);
         }
 
         while (!stoppingToken.IsCancellationRequested)
@@ -190,16 +184,16 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
 
             if (desired == total && ready == total && terminating == 0 && crashlooping == 0)
             {
-                _logger.LogInformation("Deployment {Name} in namespace {Namespace} updated successfully. Desired: {Desired}, Total: {Total}, Running: {Running}, Ready: {Ready}.", name, k8sNamespace, desired, total, running, ready);
+                _logger.LogInformation("Deployment {Name} updated successfully. Desired: {Desired}, Total: {Total}, Running: {Running}, Ready: {Ready}.", name, desired, total, running, ready);
                 break;
             }
             if (crashlooping > 0)
             {
-                _logger.LogError("Deployment {Name} in namespace {Namespace} failed. Crashlooping pods: {Crashlooping}.", name, k8sNamespace, crashlooping);
+                _logger.LogError("Deployment {Name} failed. Crashlooping pods: {Crashlooping}.", name, crashlooping);
                 break;
             }
 
-            _logger.LogInformation("Deployment {Name} in namespace {Namespace} is in progress. Desired: {Desired}, Total: {Total}, Running: {Running}, Ready: {Ready}, Terminating: {Terminating}", name, k8sNamespace, desired, total, running, ready, terminating);
+            _logger.LogInformation("Deployment {Name} is in progress. Desired: {Desired}, Total: {Total}, Running: {Running}, Ready: {Ready}, Terminating: {Terminating}", name, desired, total, running, ready, terminating);
 
             await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
         }

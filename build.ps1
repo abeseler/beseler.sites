@@ -1,6 +1,6 @@
-docker build -f ./docker/beseler-net-dbdeploy.Dockerfile -t abeseler/beseler-net-dbdeploy .
-docker push abeseler/beseler-net-dbdeploy
-docker image rm abeseler/beseler-net-dbdeploy
+#docker build -f ./docker/beseler-net-dbdeploy.Dockerfile -t abeseler/beseler-net-dbdeploy .
+#docker push abeseler/beseler-net-dbdeploy
+#docker image rm abeseler/beseler-net-dbdeploy
 
 #dotnet publish ./src/Beseler.Deploy/Beseler.Deploy.csproj /t:PublishContainer
 #docker push abeseler/beseler-deploy
