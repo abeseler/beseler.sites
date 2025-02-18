@@ -6,11 +6,14 @@ on:
       - 'main'
 
 jobs:
-  build:
+  build-sites:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
+          - image: abeseler/beseler-net-dbdeploy
+            dockerfile: docker/beseler-net-dbdeploy.Dockerfile
+            context: .
           - image: abeseler/beseler-net-api
             dockerfile: docker/beseler-net-api.Dockerfile
             context: .

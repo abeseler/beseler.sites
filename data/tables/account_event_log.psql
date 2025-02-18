@@ -1,6 +1,6 @@
 /* Migration
 {
-    "title": "createTable"
+    "title": "00:createTable"
 }
 */
 CREATE TABLE IF NOT EXISTS account_event_log (
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS account_event_log (
 
 /* Migration
 {
-    "title": "createIndex"
+    "title": "01:createIndex"
 }
 */
 CREATE INDEX IF NOT EXISTS idx_account_event_log_account_id_occurred_on

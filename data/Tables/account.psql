@@ -1,6 +1,6 @@
 /* Migration
 {
-    "title": "createTable"
+    "title": "00:createTable"
 }
 */
 CREATE TABLE IF NOT EXISTS account (
@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS account (
     username TEXT NOT NULL,
     email TEXT NULL,
     email_verified_on TIMESTAMPTZ NULL,
-    secret_hash TEXT NULL,
-    secret_hashed_on TIMESTAMPTZ NULL,
+    secret_hash TEXT NOT NULL,
+    secret_hashed_on TIMESTAMPTZ NOT NULL,
     given_name TEXT NULL,
     family_name TEXT NULL,
     created_on TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),

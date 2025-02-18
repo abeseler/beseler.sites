@@ -1,6 +1,6 @@
 /* Migration
 {
-    "title": "createSequence"
+    "title": "00:createSequence"
 }
 */
 CREATE SEQUENCE IF NOT EXISTS account_id_seq

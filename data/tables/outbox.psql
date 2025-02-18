@@ -1,10 +1,11 @@
 /* Migration
 {
-    "title": "createTable"
+    "title": "00:createTable"
 }
 */
 CREATE TABLE IF NOT EXISTS outbox (
     message_id UUID NOT NULL,
+    message_type TEXT NOT NULL,
     message_data JSON NOT NULL,
     invisible_until TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
     receives_remaining INT NOT NULL DEFAULT (10),
@@ -13,7 +14,7 @@ CREATE TABLE IF NOT EXISTS outbox (
 
 /* Migration
 {
-    "title": "createIndex"
+    "title": "01:createIndex"
 }
 */
 CREATE INDEX IF NOT EXISTS idx_outbox_lookup ON outbox (invisible_until)
