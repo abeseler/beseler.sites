@@ -15,8 +15,8 @@ internal sealed class Account : IChangeTracking
     public string Username { get; private set; } = default!;
     public string? Email { get; private set; }
     public DateTimeOffset? EmailVerifiedOn { get; private set; }
-    public string? SecretHash { get; private set; }
-    public DateTimeOffset? SecretHashedOn { get; private set; }
+    public string SecretHash { get; private set; } = default!;
+    public DateTimeOffset SecretHashedOn { get; private set; }
     public string? GivenName { get; private set; }
     public string? FamilyName { get; private set; }
     public DateTimeOffset CreatedOn { get; private init; }
@@ -36,6 +36,23 @@ internal sealed class Account : IChangeTracking
     public bool IsLocked => LockedOn.HasValue;
     public IReadOnlyCollection<DomainEvent> UncommittedEvents => _events ?? [];
     public bool IsChanged { get; private set; }
+    public static Account CreateUser(int accountId, string username, string secretHash, string email, string givenName, string familyName) =>
+        Create(new AccountCreated(accountId, AccountType.User, username, email, secretHash, givenName, familyName));
+    private static Account Create(AccountCreated domainEvent) => new()
+    {
+        AccountId = domainEvent.AccountId,
+        Type = domainEvent.Type,
+        Username = domainEvent.Username,
+        SecretHash = domainEvent.SecretHash!,
+        SecretHashedOn = domainEvent.OccurredOn,
+        Email = domainEvent.Email,
+        GivenName = domainEvent.GivenName,
+        FamilyName = domainEvent.FamilyName,
+        CreatedOn = domainEvent.OccurredOn,
+        EventLogCount = 1,
+        IsChanged = true,
+        _events = [domainEvent]
+    };
     public void Login()
     {
         LastLogon = DateTimeOffset.UtcNow;
@@ -43,6 +60,7 @@ internal sealed class Account : IChangeTracking
         IsChanged = true;
         _events ??= [];
         _events.Add(new AccountLoginSucceeded(AccountId));
+        EventLogCount += 1;
     }
     public void FailLogin()
     {
@@ -54,6 +72,16 @@ internal sealed class Account : IChangeTracking
         IsChanged = true;
         _events ??= [];
         _events.Add(new AccountLoginFailed(AccountId, FailedLoginAttempts, IsLocked));
+        EventLogCount += 1;
+    }
+    public void VerifyEmail(string email)
+    {
+        Email = email;
+        EmailVerifiedOn = DateTimeOffset.UtcNow;
+        IsChanged = true;
+        _events ??= [];
+        _events.Add(new AccountEmailVerified(AccountId, email));
+        EventLogCount += 1;
     }
     public void ResetPassword(string hash)
     {
@@ -67,6 +95,7 @@ internal sealed class Account : IChangeTracking
         IsChanged = true;
         _events ??= [];
         _events.Add(new AccountDisabled(AccountId, disabledBy));
+        EventLogCount += 1;
     }
     public void AcceptChanges()
     {
@@ -81,11 +110,7 @@ internal sealed class Account : IChangeTracking
             new(JwtRegisteredClaimNames.Sub, AccountId.ToString(), ClaimValueTypes.Integer),
             new(JwtRegisteredClaimNames.Name, Name),
         };
-        if (Email is not null)
-        {
-            claims.Add(new(JwtRegisteredClaimNames.Email, Email));
-        }
-        if (EmailVerifiedOn is not null)
+        if (Email is not null && EmailVerifiedOn is not null)
         {
             claims.Add(new(JwtRegisteredClaimNames.EmailVerified, "true", ClaimValueTypes.Boolean));
         }

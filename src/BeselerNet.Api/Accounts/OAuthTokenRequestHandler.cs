@@ -1,5 +1,5 @@
 ﻿using BeselerNet.Api.Core;
-using BeselerNet.Shared.Contracts;
+using BeselerNet.Shared.Contracts.OAuth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Diagnostics;
@@ -9,12 +9,15 @@ namespace BeselerNet.Api.Accounts;
 
 internal static class OAuthTokenRequestHandler
 {
+    private const string AccessTokenActivityName = $"{nameof(OAuthTokenRequestHandler)}.{nameof(HandleAccessTokenGrant)}";
+    private const string RefreshTokenActivityName = $"{nameof(OAuthTokenRequestHandler)}.{nameof(HandleRefreshTokenGrant)}";
     public readonly struct Parameters
     {
         public OAuthTokenRequest Request { get; init; }
         public AccountDataSource Accounts { get; init; }
         public IPasswordHasher<Account> PasswordHasher { get; init; }
         public JwtGenerator TokenGenerator { get; init; }
+        public TokenLogDataSource TokenLogs { get; init; }
         public Cookies Cookies { get; init; }
         public CancellationToken StoppingToken { get; init; }
     }
@@ -37,28 +40,23 @@ internal static class OAuthTokenRequestHandler
 
     private static async Task<IResult> HandleAccessTokenGrant(string username, string secret, Parameters parameters)
     {
-        var account = await parameters.Accounts.WithUsername(username, parameters.StoppingToken);
-        if (account is not { SecretHash: not null })
+        using var activity = Telemetry.Source.StartActivity(AccessTokenActivityName, ActivityKind.Internal);
+        if (await parameters.Accounts.WithUsername(username, parameters.StoppingToken) is not { } account)
         {
             return TypedResults.Unauthorized();
         }
-        else if (account.IsDisabled)
+
+        activity?.SetTag_AccountId(account.AccountId);
+        var problem = account switch
         {
-            return TypedResults.Problem(new()
-            {
-                Title = "Account Disabled",
-                Detail = "Your account has been disabled. Please contact support.",
-                Status = StatusCodes.Status403Forbidden
-            });
-        }
-        else if (account.IsLocked)
+            { IsDisabled: true } => AccountProblems.Disabled,
+            { IsLocked: true } => AccountProblems.Locked,
+            _ => null
+        };
+
+        if (problem is not null)
         {
-            return TypedResults.Problem(new()
-            {
-                Title = "Account Locked",
-                Detail = "Your account has been locked due to too many failed login attempts. Please contact support.",
-                Status = StatusCodes.Status403Forbidden
-            });
+            return TypedResults.Problem(problem);
         }
 
         var result = parameters.PasswordHasher.VerifyHashedPassword(account, account.SecretHash, secret);
@@ -80,74 +78,82 @@ internal static class OAuthTokenRequestHandler
         var principal = account.ToClaimsPrincipal();
         var tokenResult = parameters.TokenGenerator.Generate(principal);
 
-        // TODO: Save refresh token in database
-
-        var response = new OAuthTokenResponse
-        {
-            AccessToken = tokenResult.AccessToken,
-            TokenType = "Bearer",
-            ExpiresIn = tokenResult.ExpiresIn,
-            RefreshToken = tokenResult.RefreshToken
-        };
-
         if (tokenResult.RefreshToken is not null)
         {
+            var log = TokenLog.Create(tokenResult, account.AccountId);
+            await parameters.TokenLogs.SaveChanges(log, parameters.StoppingToken);
+
             parameters.Cookies.Set(Cookies.RefreshToken, tokenResult.RefreshToken, new()
             {
                 Expires = tokenResult.RefreshTokenExpires,
                 SameSite = SameSiteMode.Strict,
                 Secure = true,
                 HttpOnly = true,
-                Path = "/oauth/token"
+                Path = "/oauth/tokens"
             });
         }
 
-        return TypedResults.Ok(response);
+        return TypedResults.Ok(new OAuthTokenResponse
+        {
+            AccessToken = tokenResult.AccessToken,
+            TokenType = "Bearer",
+            ExpiresIn = tokenResult.ExpiresIn,
+            RefreshToken = tokenResult.RefreshToken
+        });
     }
 
     private static async Task<IResult> HandleRefreshTokenGrant(Parameters parameters)
     {
+        using var activity = Telemetry.Source.StartActivity(RefreshTokenActivityName, ActivityKind.Internal);
         var token = parameters.Request.RefreshToken ?? parameters.Cookies.Get(Cookies.RefreshToken);
         if (string.IsNullOrWhiteSpace(token))
         {
             return TypedResults.Unauthorized();
         }
-        var principal = await parameters.TokenGenerator.Validate(token);
-        if (principal is null
+
+        if (await parameters.TokenGenerator.Validate(token) is not { } principal
             || !int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId)
-            || !Guid.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Jti), out var refreshTokenId))
+            || !Guid.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Jti), out var jti)
+            || await parameters.Accounts.WithId(accountId, parameters.StoppingToken) is not { } account)
         {
             return TypedResults.Unauthorized();
         }
-        var account = await parameters.Accounts.WithId(accountId, parameters.StoppingToken);
-        if (account is null)
+
+        activity?.SetTag_AccountId(accountId);
+        var log = await parameters.TokenLogs.WithJti(jti, parameters.StoppingToken);
+        if (log is { ReplacedBy: not null })
+        {
+            await parameters.TokenLogs.RevokeChain(jti, parameters.StoppingToken);
+            return TypedResults.Unauthorized();
+        }
+        else if (log is null or { RevokedAt: not null })
         {
             return TypedResults.Unauthorized();
         }
-        else if (account.IsDisabled)
+
+        var problem = account switch
         {
-            return TypedResults.Problem(new()
-            {
-                Title = "Account Disabled",
-                Detail = "Your account has been disabled. Please contact support.",
-                Status = StatusCodes.Status403Forbidden
-            });
-        }
-        else if (account.IsLocked)
+            { IsDisabled: true } => AccountProblems.Disabled,
+            { IsLocked: true } => AccountProblems.Locked,
+            _ => null
+        };
+
+        if (problem is not null)
         {
-            return TypedResults.Problem(new()
-            {
-                Title = "Account Locked",
-                Detail = "Your account has been locked due to too many failed login attempts. Please contact support.",
-                Status = StatusCodes.Status403Forbidden
-            });
+            return TypedResults.Problem(problem);
         }
 
         principal = account.ToClaimsPrincipal();
         var tokenResult = parameters.TokenGenerator.Generate(principal);
+        var newLog = TokenLog.Create(tokenResult, account.AccountId);
+        log?.ReplaceWith(newLog.Jti);
 
-        // TODO: Save refresh token in database
-
+        await parameters.TokenLogs.SaveChanges(newLog, parameters.StoppingToken);
+        if (log is not null)
+        {
+            await parameters.TokenLogs.SaveChanges(log, parameters.StoppingToken);
+        }
+        
         var response = new OAuthTokenResponse
         {
             AccessToken = tokenResult.AccessToken,
@@ -164,7 +170,7 @@ internal static class OAuthTokenRequestHandler
                 SameSite = SameSiteMode.Strict,
                 Secure = true,
                 HttpOnly = true,
-                Path = "/oauth/token"
+                Path = "/oauth/tokens"
             });
         }
 

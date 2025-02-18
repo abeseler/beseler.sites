@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 
-namespace BeselerNet.Shared.Contracts;
+namespace BeselerNet.Shared.Contracts.OAuth;
 
 public sealed record OAuthTokenRequest
 {

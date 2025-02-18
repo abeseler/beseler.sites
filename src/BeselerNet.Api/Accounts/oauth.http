@@ -2,18 +2,18 @@
 
 ### Get token
 
-POST {{host}}/oauth/token
+POST {{host}}/oauth/tokens
 Content-Type: application/json
 
 {
   "grant_type": "password",
-  "username": "admin",
-  "password": "admin"
+  "username": "adam.beseler@gmail.com",
+  "password": "password"
 }
 
 ### Get token with client credentials
 
-POST {{host}}/oauth/token
+POST {{host}}/oauth/tokens
 Content-Type: application/json
 
 {
@@ -24,10 +24,10 @@ Content-Type: application/json
 
 ### Get token with refresh token
 
-POST {{host}}/oauth/token
+POST {{host}}/oauth/tokens
 Content-Type: application/json
 
 {
   "grant_type": "refresh_token",
-  "refresh_token": "refresh_token"
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL2xvY2FsaG9zdCIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0IiwiZXhwIjoxNzM5ODc3MzA5LCJpYXQiOjE3Mzk4NzM3MDksInN1YiI6MSwianRpIjoiMDE5NTE3NDQtNTg3NC03NTc2LTg5ODQtNDllNmZlNGQ2MTc1IiwibmJmIjoxNzM5ODUyMTA5fQ.uAN6sYRnR0R1HOMLBkhjNLXUawHJnD_Lt2t-ng5npfk"
 }

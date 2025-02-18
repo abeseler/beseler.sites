@@ -14,8 +14,83 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
         {
             while (_channel.Reader.TryRead(out var request))
             {
-                await ProcessDeployment(request, stoppingToken);
+                if (request.Repository?.Name == "beseler-net-dbdeploy")
+                {
+                    await ProcessJob(request, stoppingToken);
+                }
+                else
+                {
+                    await ProcessDeployment(request, stoppingToken);
+                }                    
             }
+        }
+    }
+
+    private async Task ProcessJob(WebhookRequest request, CancellationToken stoppingToken)
+    {
+        try
+        {
+            var config = KubernetesClientConfiguration.InClusterConfig();
+            using var client = new Kubernetes(config);
+
+            var k8sNamespace = "default";
+            
+            var yaml = $"""
+                apiVersion: batch/v1
+                kind: Job
+                metadata:
+                  name: beseler-net-dbdeploy-{DateTime.UtcNow:yyMMddHHmmss}
+                spec:
+                  ttlSecondsAfterFinished: 300
+                  template:
+                    spec:
+                      containers:
+                      - name: beseler-net-dbdeploy
+                        image: abeseler/beseler-net-dbdeploy:latest
+                        imagePullPolicy: Always
+                        envFrom:
+                          - configMapRef:
+                              name: beseler-net-dbdeploy-config
+                      restartPolicy: Never
+                  backoffLimit: 0 
+                """;
+
+            var job = KubernetesYaml.Deserialize<V1Job>(yaml);
+            var result = await client.CreateNamespacedJobAsync(job, k8sNamespace, cancellationToken: stoppingToken);
+            _logger.LogInformation("Job {Name} created in namespace {Namespace}.", result.Metadata.Name, k8sNamespace);
+
+            var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                if (cts.Token.IsCancellationRequested)
+                {
+                    _logger.LogWarning("Job {Name} in namespace {Namespace} timed out.", result.Metadata.Name, k8sNamespace);
+                    break;
+                }
+                var updatedJob = await client.ReadNamespacedJobAsync(result.Metadata.Name, k8sNamespace, cancellationToken: cts.Token);
+                var condition = updatedJob.Status?.Conditions?.FirstOrDefault(c => c.Type == "Complete" || c.Type == "Failed");
+                if (condition is null)
+                {
+                    _logger.LogWarning("Job {Name} in namespace {Namespace} failed.", result.Metadata.Name, k8sNamespace);
+                    break;
+                }
+                if (condition.Type == "Complete" && condition.Status == "True")
+                {
+                    _logger.LogInformation("Job {Name} in namespace {Namespace} completed successfully.", result.Metadata.Name, k8sNamespace);
+                    break;
+                }
+                if (condition.Type == "Failed" && condition.Status == "True")
+                {
+                    _logger.LogError("Job {Name} in namespace {Namespace} failed.", result.Metadata.Name, k8sNamespace);
+                    break;
+                }
+                _logger.LogInformation("Job {Name} in namespace {Namespace} is in progress. Status: {Status}, Reason: {Reason}.", result.Metadata.Name, k8sNamespace, condition.Status, condition.Reason);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing job for {Name}.", request.Repository);
         }
     }
 

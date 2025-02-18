@@ -11,6 +11,7 @@ internal sealed record SendGridOptions
     public string? SenderEmail { get; init; }
     public string? SenderName { get; init; }
     public string? ConfirmEmailUrl { get; init; }
+    public string? ResetPasswordUrl { get; init; }
 }
 
 internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOptions> options, ILogger<EmailService> logger)
@@ -22,7 +23,7 @@ internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOpti
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
-            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is not set");
+            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is missing. Token not sent: {Token}", token);
             return;
         }
 
@@ -63,7 +64,6 @@ internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOpti
             throw new InvalidOperationException("Failed to send email.");
         }
     }
-
     public async Task SendAccountLocked(string email, string recipientName, CancellationToken stoppingToken)
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
@@ -92,6 +92,51 @@ internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOpti
                   <p>We regret to inform you that your account has been locked due to too many failed login attempts. For your security, we have temporarily disabled access to your account.</p>
                   <p>If you believe this is a mistake or if you need assistance unlocking your account, please contact our support team.</p>
                   <p>Thank you for your understanding.</p>
+                  <p>Best regards,<br>The Beseler dotNET Team</p>
+                </div>
+                </body>
+                </html>
+                """
+        };
+        emailMessage.AddTo(new EmailAddress(email, recipientName));
+
+        if ((await _client.SendEmailAsync(emailMessage, stoppingToken)) is { IsSuccessStatusCode: false } response)
+        {
+            var responseBody = await response.Body.ReadAsStringAsync(stoppingToken);
+            _logger.LogError("Failed to send email: {Response}", responseBody);
+            throw new InvalidOperationException("Failed to send email.");
+        }
+    }
+    public async Task SendPasswordReset(string email, string recipientName, string token, CancellationToken stoppingToken)
+    {
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is not set");
+            return;
+        }
+
+        var emailMessage = new SendGridMessage
+        {
+            From = new EmailAddress(options.Value.SenderEmail, options.Value.SenderName),
+            Subject = "Reset Your Password 🔑",
+            PlainTextContent = $"To reset your password, navigate to the following url in your browser: {_options.ResetPasswordUrl}?token={token}",
+            HtmlContent = $"""
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Reset Your Password</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; color: #333; margin: 0; padding: 0;">
+                <div style="max-width: 600px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+                  <h2>Reset Your Password 🔑</h2>
+                  <p>Dear {recipientName},</p>
+                  <p>We received a request to reset your password. To proceed, please click the button below:</p>
+                  <p style="text-align: center;"><a href="{_options.ResetPasswordUrl}?token={token}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: #fff; text-decoration: none; border-radius: 4px;">Reset My Password</a></p>
+                  <p>If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
+                  <p>{_options.ResetPasswordUrl}?token={token}</p>
+                  <p>If you didn't request a password reset, please ignore this email.</p>
                   <p>Best regards,<br>The Beseler dotNET Team</p>
                 </div>
                 </body>

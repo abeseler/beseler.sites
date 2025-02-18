@@ -18,6 +18,7 @@ internal static class DataSourceRegistrar
 
         builder.Services.AddSingleton<OutboxDataSource>();
         builder.Services.AddScoped<AccountDataSource>();
+        builder.Services.AddScoped<TokenLogDataSource>();
 
         DefaultTypeMap.MatchNamesWithUnderscores = true;
     }

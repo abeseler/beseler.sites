@@ -1,4 +1,4 @@
-﻿namespace BeselerNet.Shared.Contracts;
+﻿namespace BeselerNet.Shared.Contracts.OAuth;
 
 public sealed record class OAuthTokenResponse
 {

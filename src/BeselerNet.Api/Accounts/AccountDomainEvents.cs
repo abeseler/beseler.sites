@@ -21,7 +21,7 @@ namespace BeselerNet.Api.Accounts
         AccountType Type,
         string Username,
         string? Email,
-        string? SecretHash,
+        string SecretHash,
         string? GivenName,
         string? FamilyName) : DomainEvent(!string.IsNullOrWhiteSpace(Email));
 

@@ -1,0 +1,13 @@
+@host={{$projectUrl}}
+
+### Register user
+
+POST {{host}}/users
+Content-Type: application/json
+
+{
+  "email": "adam.beseler@gmail.com",
+  "password": "password",
+  "givenName": "Adam",
+  "familyName": "Beseler"
+}

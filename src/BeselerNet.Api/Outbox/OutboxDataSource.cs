@@ -1,23 +1,15 @@
-﻿using BeselerNet.Api.Core;
-using Dapper;
-using Microsoft.Extensions.Options;
+﻿using Dapper;
 using Npgsql;
 using System.Data;
 
 namespace BeselerNet.Api.Outbox;
 
-internal sealed class OutboxDataSource(NpgsqlDataSource dataSource, IOptions<FeaturesOptions> features)
+internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
-    private readonly FeaturesOptions _features = features.Value;
 
     public async Task SaveAll(IEnumerable<OutboxMessage> messages, IDbConnection? openConnection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
     {
-        if (!_features.OutboxEnabled)
-        {
-            return;
-        }
-
         var connection = openConnection ?? await _dataSource.OpenConnectionAsync(stoppingToken);
         try
         {

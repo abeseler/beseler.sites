@@ -1,26 +1,18 @@
 ﻿using BeselerNet.Api.Core;
 using BeselerNet.Shared.Core;
-using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 namespace BeselerNet.Api.Outbox;
 
-internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHandler domainEventHandler, ILogger<OutboxMonitor> logger, IOptions<FeaturesOptions> features) : BackgroundService
+internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHandler domainEventHandler, ILogger<OutboxMonitor> logger) : BackgroundService
 {
     private const int MAX_MESSAGES = 5;
     private readonly OutboxDataSource _dataSource = dataSource;
     private readonly DomainEventHandler _domainEventHandler = domainEventHandler;
     private readonly ILogger<OutboxMonitor> _logger = logger;
-    private readonly FeaturesOptions _features = features.Value;
-    private readonly PeriodicTimer _timer = new(TimeSpan.FromMilliseconds(500));
+    private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(5));
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!_features.OutboxEnabled)
-        {
-            _logger.LogWarning("Outbox is disabled.");
-            return;
-        }
-
         var backoffPow = 0;
         while (await _timer.WaitForNextTickAsync(stoppingToken))
         {

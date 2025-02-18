@@ -13,7 +13,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
     public async Task<int> NextId(CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        return await connection.ExecuteScalarAsync<int>("SELECT nextval('accounts_id_seq')");
+        return await connection.ExecuteScalarAsync<int>("SELECT nextval('account_id_seq')");
     }
 
     public async Task<Account?> WithId(int id, CancellationToken stoppingToken)
@@ -33,7 +33,6 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
     public async Task<Account?> WithEmail(string email, CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-
         return await connection.QuerySingleOrDefaultAsync<Account>(
             "SELECT * FROM account WHERE email = @email", new { email });
     }
@@ -60,6 +59,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
             await connection.ExecuteAsync("""
             INSERT INTO account (
                 account_id,
+                type,
                 username,
                 email,
                 secret_hash,
@@ -70,9 +70,11 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 disabled_on,
                 locked_on,
                 last_logon,
-                failed_login_attempts)
+                failed_login_attempts,
+                event_log_count)
             VALUES (
                 @AccountId,
+                @Type,
                 @Username,
                 @Email,
                 @SecretHash,
@@ -83,7 +85,8 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 @DisabledOn,
                 @LockedOn,
                 @LastLogon,
-                @FailedLoginAttempts)
+                @FailedLoginAttempts,
+                @EventLogCount)
             ON CONFLICT (account_id) DO UPDATE
             SET username = @Username,
                 email = @Email,
@@ -95,8 +98,25 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 disabled_on = @DisabledOn,
                 locked_on = @LockedOn,
                 last_logon = @LastLogon,
-                failed_login_attempts = @FailedLoginAttempts
-            """, account, transaction);
+                failed_login_attempts = @FailedLoginAttempts,
+                event_log_count = @EventLogCount
+            """, new
+            {
+                account.AccountId,
+                Type = account.Type.ToString(),
+                account.Username,
+                account.Email,
+                account.SecretHash,
+                account.SecretHashedOn,
+                account.GivenName,
+                account.FamilyName,
+                account.CreatedOn,
+                account.DisabledOn,
+                account.LockedOn,
+                account.LastLogon,
+                account.FailedLoginAttempts,
+                account.EventLogCount
+            }, transaction);
 
             List<OutboxMessage>? outboxMessages = null;
             foreach (var @event in account.UncommittedEvents)

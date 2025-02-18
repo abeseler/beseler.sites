@@ -1,5 +1,6 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Api.Accounts;
+using BeselerNet.Api.Accounts.Users;
 using BeselerNet.Api.Core;
 using BeselerNet.Api.Registrars;
 using BeselerNet.Api.Webhooks;
@@ -24,7 +25,6 @@ builder.Services.AddRequestTimeouts();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton(TimeProvider.System);
 
-builder.Services.AddOptions<FeaturesOptions>().BindConfiguration(FeaturesOptions.SectionName);
 builder.Services.AddOptions<JwtOptions>().BindConfiguration(JwtOptions.SectionName);
 builder.Services.AddOptions<SendGridOptions>().BindConfiguration(SendGridOptions.SectionName);
 
@@ -49,6 +49,7 @@ app.UseRequestLogging();
 
 app.MapOpenApi();
 app.MapOAuthEndpoints();
+app.MapUserEndpoints();
 app.MapWebhookEndpoints();
 app.MapDefaultEndpoints();
 
