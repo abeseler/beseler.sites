@@ -36,6 +36,8 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: ${{ matrix.image }}
+          tags: |
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v4
