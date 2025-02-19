@@ -5,6 +5,7 @@ using BeselerNet.Api.Core;
 using BeselerNet.Api.Registrars;
 using BeselerNet.Api.Webhooks;
 using Microsoft.AspNetCore.Identity;
+using Scalar.AspNetCore;
 using SendGrid.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,7 +20,10 @@ builder.AddDataSources();
 builder.AddCaches();
 builder.AddHostedServices();
 
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<AuthenticationSchemeTransformer>();
+});
 builder.Services.AddProblemDetails();
 builder.Services.AddRequestTimeouts();
 builder.Services.AddHttpContextAccessor();
@@ -47,9 +51,9 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseRequestLogging();
 
-app.MapOpenApi();
+app.MapOpenApi().CacheOutput();
 app.MapOAuthEndpoints();
-app.MapUserEndpoints();
+app.MapUserAccountEndpoints();
 app.MapWebhookEndpoints();
 app.MapDefaultEndpoints();
 

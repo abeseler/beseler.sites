@@ -3,14 +3,14 @@ using System.Net.Mime;
 
 namespace BeselerNet.Api.Accounts.Users;
 
-internal static class UserEndpoints
+internal static class UserAccountEndpoints
 {
-    public static void MapUserEndpoints(this IEndpointRouteBuilder builder)
+    public static void MapUserAccountEndpoints(this IEndpointRouteBuilder builder)
     {
-        var group = builder.MapGroup("/users")
-            .WithTags("Users");
+        var group = builder.MapGroup("/accounts")
+            .WithTags("Accounts");
 
-        group.MapPost("", UserEndpointHandlers.RegisterUser)
+        group.MapPost("/users", UserEndpointHandlers.RegisterUser)
             .WithName("RegisterUser")
             .Accepts<RegisterUserRequest>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status201Created)
@@ -18,7 +18,7 @@ internal static class UserEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .AllowAnonymous();
 
-        group.MapPost("/email-verification", EmailVerificationHandlers.CreateEmailVerification)
+        group.MapPost("/verify-email", EmailVerificationHandlers.CreateEmailVerification)
             .WithName("CreateEmailVerification")
             .Produces(StatusCodes.Status204NoContent)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest, MediaTypeNames.Application.Json)
@@ -26,7 +26,7 @@ internal static class UserEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden, MediaTypeNames.Application.Json)
             .RequireAuthorization();
 
-        group.MapPut("/email-verification", EmailVerificationHandlers.ConfirmEmailVerification)
+        group.MapPut("/verify-email", EmailVerificationHandlers.ConfirmEmailVerification)
             .WithName("ConfirmEmailVerification")
             .RequireAuthorization();
 
