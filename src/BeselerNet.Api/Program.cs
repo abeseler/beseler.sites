@@ -5,7 +5,6 @@ using BeselerNet.Api.Core;
 using BeselerNet.Api.Registrars;
 using BeselerNet.Api.Webhooks;
 using Microsoft.AspNetCore.Identity;
-using Scalar.AspNetCore;
 using SendGrid.Extensions.DependencyInjection;
 
 var builder = WebApplication.CreateBuilder(args);
