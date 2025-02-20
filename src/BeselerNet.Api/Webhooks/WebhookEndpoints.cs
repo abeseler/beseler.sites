@@ -1,4 +1,5 @@
-﻿using System.Net.Mime;
+﻿using BeselerNet.Api.Webhooks.Handlers;
+using System.Net.Mime;
 
 namespace BeselerNet.Api.Webhooks;
 
@@ -6,11 +7,11 @@ internal static class WebhookEndpoints
 {
     public static void MapWebhookEndpoints(this IEndpointRouteBuilder builder)
     {
-        var group = builder.MapGroup("/webhooks")
+        var v1 = builder.MapGroup("/v1/webhooks")
             .WithTags("Webhooks");
 
-        group.MapPost("/email-events", EmailEventsWebhook.Handle)
-            .WithName("PostEmailEvents")
+        v1.MapPost("/email-events", EmailEventsWebhook.Handle)
+            .WithName("ProcessEmailEvents")
             .Accepts<EmailEvent[]>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status204NoContent);
     }

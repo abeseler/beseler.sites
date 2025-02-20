@@ -2,7 +2,7 @@
 
 ### Get token
 
-POST {{host}}/oauth/tokens
+POST {{host}}/v1/oauth/tokens
 Content-Type: application/json
 
 {
@@ -13,7 +13,7 @@ Content-Type: application/json
 
 ### Get token with client credentials
 
-POST {{host}}/oauth/tokens
+POST {{host}}/v1/oauth/tokens
 Content-Type: application/json
 
 {
@@ -24,7 +24,7 @@ Content-Type: application/json
 
 ### Get token with refresh token
 
-POST {{host}}/oauth/tokens
+POST {{host}}/v1/oauth/tokens
 Content-Type: application/json
 
 {

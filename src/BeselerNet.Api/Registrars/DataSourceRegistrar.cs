@@ -7,6 +7,7 @@ using ZiggyCreatures.Caching.Fusion.Serialization.SystemTextJson;
 using ZiggyCreatures.Caching.Fusion;
 using Dapper;
 using BeselerNet.Api.Outbox;
+using BeselerNet.Api.Accounts.OAuth;
 
 namespace BeselerNet.Api.Registrars;
 

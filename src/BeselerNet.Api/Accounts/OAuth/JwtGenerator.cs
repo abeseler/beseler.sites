@@ -4,7 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
 
-namespace BeselerNet.Api.Accounts;
+namespace BeselerNet.Api.Accounts.OAuth;
 
 internal sealed class JwtGenerator
 {
@@ -105,7 +105,7 @@ internal sealed class JwtGenerator
         if (additionalClaims is not null)
         {
             claims.AddRange(additionalClaims);
-        }           
+        }
 
         var token = WriteToken(claims, utcNow, expires);
         return new()

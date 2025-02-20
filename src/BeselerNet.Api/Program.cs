@@ -1,5 +1,6 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Api.Accounts;
+using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Accounts.Users;
 using BeselerNet.Api.Core;
 using BeselerNet.Api.Registrars;

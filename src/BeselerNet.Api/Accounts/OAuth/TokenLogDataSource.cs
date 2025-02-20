@@ -1,7 +1,7 @@
 ﻿using Dapper;
 using Npgsql;
 
-namespace BeselerNet.Api.Accounts;
+namespace BeselerNet.Api.Accounts.OAuth;
 
 internal sealed record TokenLog
 {

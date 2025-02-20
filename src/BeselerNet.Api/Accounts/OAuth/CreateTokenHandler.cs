@@ -5,12 +5,12 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using System.Diagnostics;
 using System.Security.Claims;
 
-namespace BeselerNet.Api.Accounts;
+namespace BeselerNet.Api.Accounts.OAuth;
 
-internal static class OAuthTokenRequestHandler
+internal static class CreateTokenHandler
 {
-    private const string AccessTokenActivityName = $"{nameof(OAuthTokenRequestHandler)}.{nameof(HandleAccessTokenGrant)}";
-    private const string RefreshTokenActivityName = $"{nameof(OAuthTokenRequestHandler)}.{nameof(HandleRefreshTokenGrant)}";
+    private const string AccessTokenActivityName = $"{nameof(CreateTokenHandler)}.{nameof(HandleAccessTokenGrant)}";
+    private const string RefreshTokenActivityName = $"{nameof(CreateTokenHandler)}.{nameof(HandleRefreshTokenGrant)}";
     public readonly struct Parameters
     {
         public OAuthTokenRequest Request { get; init; }
@@ -22,7 +22,7 @@ internal static class OAuthTokenRequestHandler
         public CancellationToken StoppingToken { get; init; }
     }
 
-    public static async Task<IResult> GenerateToken([AsParameters] Parameters parameters)
+    public static async Task<IResult> Handle([AsParameters] Parameters parameters)
     {
         if (parameters.Request.HasValidationErrors(out var errors))
         {
@@ -153,7 +153,7 @@ internal static class OAuthTokenRequestHandler
         {
             await parameters.TokenLogs.SaveChanges(log, parameters.StoppingToken);
         }
-        
+
         var response = new OAuthTokenResponse
         {
             AccessToken = tokenResult.AccessToken,

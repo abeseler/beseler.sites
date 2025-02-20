@@ -2,7 +2,7 @@
 
 ### Register user
 
-POST {{host}}/users
+POST {{host}}/v1/users
 Content-Type: application/json
 
 {
@@ -10,4 +10,13 @@ Content-Type: application/json
   "password": "password",
   "givenName": "Adam",
   "familyName": "Beseler"
+}
+
+### Forgot password
+
+POST {{host}}/v1/accounts/forgot-password
+Content-Type: application/json
+
+{
+  "email": "test@example.com"
 }

@@ -1,11 +1,11 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace BeselerNet.Api.Webhooks;
+namespace BeselerNet.Api.Webhooks.Handlers;
 
 internal static class EmailEventsWebhook
 {
     public static async Task<IResult> Handle(EmailEvent[] events, ILogger<EmailEvent> logger, CancellationToken stoppingToken)
-    {        
+    {
         foreach (var @event in events)
         {
             logger.LogInformation("Email event: {EmailEvent}", @event);

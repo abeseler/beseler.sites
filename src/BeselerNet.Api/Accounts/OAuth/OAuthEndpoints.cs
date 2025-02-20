@@ -1,16 +1,16 @@
 ﻿using BeselerNet.Shared.Contracts.OAuth;
 using System.Net.Mime;
 
-namespace BeselerNet.Api.Accounts;
+namespace BeselerNet.Api.Accounts.OAuth;
 
 internal static class OAuthEndpoints
 {
     public static void MapOAuthEndpoints(this IEndpointRouteBuilder builder)
     {
-        var group = builder.MapGroup("/oauth")
+        var v1 = builder.MapGroup("/v1/accounts/oauth")
             .WithTags("OAuth");
 
-        group.MapPost("/tokens", OAuthTokenRequestHandler.GenerateToken)
+        v1.MapPost("/tokens", CreateTokenHandler.Handle)
             .WithName("GetOAuthToken")
             .Accepts<OAuthTokenRequest>(MediaTypeNames.Application.Json)
             .Produces<OAuthTokenResponse>(StatusCodes.Status200OK, MediaTypeNames.Application.Json)
