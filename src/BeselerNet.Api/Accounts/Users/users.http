@@ -2,11 +2,11 @@
 
 ### Register user
 
-POST {{host}}/v1/users
+POST {{host}}/v1/accounts/users
 Content-Type: application/json
 
 {
-  "email": "adam.beseler@gmail.com",
+  "email": "test@example.com",
   "password": "password",
   "givenName": "Adam",
   "familyName": "Beseler"

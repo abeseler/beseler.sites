@@ -24,7 +24,7 @@ public sealed partial record RegisterUserRequest
             errors ??= [];
             errors["Email"] = ["Email is too long. It must be less than 320 characters."];
         }
-        else if (!BasicEmailRegex().IsMatch(Email))
+        else if (!Extensions.BasicEmailRegex().IsMatch(Email))
         {
             errors ??= [];
             errors["Email"] = ["Email is invalid."];
@@ -52,7 +52,4 @@ public sealed partial record RegisterUserRequest
 
         return errors is not null;
     }
-
-    [GeneratedRegex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")]
-    private static partial Regex BasicEmailRegex();
 }

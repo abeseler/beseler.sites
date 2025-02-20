@@ -63,6 +63,8 @@ internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOpti
             _logger.LogError("Failed to send email: {Response}", responseBody);
             throw new InvalidOperationException("Failed to send email.");
         }
+
+        _logger.LogInformation("Email verification email sent to {Email}", email);
     }
     public async Task SendAccountLocked(string email, string recipientName, CancellationToken stoppingToken)
     {
@@ -106,12 +108,14 @@ internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOpti
             _logger.LogError("Failed to send email: {Response}", responseBody);
             throw new InvalidOperationException("Failed to send email.");
         }
+
+        _logger.LogInformation("Account locked email sent to {Email}", email);
     }
     public async Task SendPasswordReset(string email, string recipientName, string token, CancellationToken stoppingToken)
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
-            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is not set");
+            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is missing. Token not sent: {Token}", token);
             return;
         }
 
@@ -151,5 +155,7 @@ internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOpti
             _logger.LogError("Failed to send email: {Response}", responseBody);
             throw new InvalidOperationException("Failed to send email.");
         }
+
+        _logger.LogInformation("Password reset email sent to {Email}", email);
     }
 }

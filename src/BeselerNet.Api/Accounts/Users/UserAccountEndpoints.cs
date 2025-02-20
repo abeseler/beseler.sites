@@ -1,4 +1,5 @@
 ﻿using BeselerNet.Api.Accounts.Users.EndpointHandlers;
+using BeselerNet.Shared.Contracts;
 using BeselerNet.Shared.Contracts.Users;
 using System.Net.Mime;
 
@@ -35,8 +36,9 @@ internal static class UserAccountEndpoints
 
         v1.MapPost("/forgot-password", ForgotPasswordHandler.Handle)
             .WithName("SendForgotPassword")
-            .Produces(StatusCodes.Status202Accepted)
+            .Produces<GenericMessageResponse>(StatusCodes.Status202Accepted)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest, MediaTypeNames.Application.Json)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests, MediaTypeNames.Application.Json)
             .AllowAnonymous();
 
         v1.MapPost("/reset-password", ForgotPasswordHandler.Handle)

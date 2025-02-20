@@ -1,4 +1,5 @@
-﻿using BeselerNet.Api.Core;
+﻿using BeselerNet.Api.Accounts.Users.EndpointHandlers;
+using BeselerNet.Api.Core;
 using BeselerNet.Api.Outbox;
 
 namespace BeselerNet.Api.Registrars;
@@ -9,5 +10,6 @@ internal static class HostedServiceRegistrar
     {
         builder.Services.AddHostedService<StartupService>();
         builder.Services.AddHostedService<OutboxMonitor>();
+        builder.Services.AddHostedService<ForgotPasswordService>();
     }
 }

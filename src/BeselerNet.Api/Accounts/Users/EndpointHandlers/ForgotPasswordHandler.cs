@@ -1,24 +1,93 @@
 ﻿using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Core;
+using BeselerNet.Shared.Contracts;
 using BeselerNet.Shared.Contracts.Users;
 using Microsoft.IdentityModel.JsonWebTokens;
+using System.Diagnostics;
 using System.Security.Claims;
+using System.Threading.Channels;
 
 namespace BeselerNet.Api.Accounts.Users.EndpointHandlers;
 
 internal sealed class ForgotPasswordHandler
 {
-    public static async Task<IResult> Handle(ForgotPasswordRequest request, AccountDataSource accounts, JwtGenerator tokens, EmailService emailer, CancellationToken stoppingToken)
+    public static IResult Handle(ForgotPasswordRequest request, CancellationToken stoppingToken)
     {
-        var account = await accounts.WithEmail(request.Email, stoppingToken);
-        if (account is not null && account is { IsDisabled: false })
+        if (request.HasValidationErrors(out var errors))
         {
-            var subjectClaim = new Claim(JwtRegisteredClaimNames.Sub, account.AccountId.ToString(), ClaimValueTypes.Integer);
-            var token = tokens.Generate(subjectClaim, TimeSpan.FromMinutes(20), [new("ResetPassword", "true", ClaimValueTypes.Boolean)]);
-
-            await emailer.SendPasswordReset(request.Email, account.Name, token.AccessToken, stoppingToken);
+            return TypedResults.ValidationProblem(errors);
         }
 
-        return TypedResults.Accepted((string?)null);
+        var requestSubmitted = ForgotPasswordService.RequestChannel.Writer.TryWrite(request);
+        return requestSubmitted
+            ? TypedResults.Accepted((string?)null, new GenericMessageResponse { Message = "If an account with that email exists, a password reset link has been sent." })
+            : TypedResults.Problem(new()
+            {
+                Title = "Too Many Requests",
+                Detail = "The request could not be processed at this time. Please try again later.",
+                Status = StatusCodes.Status429TooManyRequests
+            });
+    }
+}
+
+internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenerator tokens, ILogger<ForgotPasswordService> logger) : BackgroundService
+{
+    private readonly IServiceProvider _services = services;
+    private readonly JwtGenerator _tokens = tokens;
+    private readonly ILogger<ForgotPasswordService> _logger = logger;
+
+    public static readonly Channel<ForgotPasswordRequest> RequestChannel = Channel.CreateBounded<ForgotPasswordRequest>(new BoundedChannelOptions(500)
+    {
+        FullMode = BoundedChannelFullMode.DropWrite,
+        SingleReader = true,
+        SingleWriter = false,
+        AllowSynchronousContinuations = false
+    });
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (await RequestChannel.Reader.WaitToReadAsync(stoppingToken))
+        {
+            while (RequestChannel.Reader.TryRead(out var request))
+            {
+                await ProcessRequest(request, stoppingToken);
+            }
+        }
+    }
+
+    private async Task ProcessRequest(ForgotPasswordRequest request, CancellationToken stoppingToken)
+    {
+        using var activity = Telemetry.Source.StartActivity("ForgotPasswordService.ProcessRequest", ActivityKind.Consumer, request.TraceId);
+        
+        if (request.Email is null)
+        {
+            _logger.LogWarning("Password reset request for {Email} failed: email is null", request.Email);
+            return;
+        }
+
+        _logger.LogInformation("Processing password reset request for {Email}", request.Email);
+
+        try
+        {
+            using var scope = _services.CreateAsyncScope();
+            var accounts = scope.ServiceProvider.GetRequiredService<AccountDataSource>();
+            var account = await accounts.WithEmail(request.Email, stoppingToken);
+            if (account is not null and { IsDisabled: false })
+            {
+                var subjectClaim = new Claim(JwtRegisteredClaimNames.Sub, account.AccountId.ToString(), ClaimValueTypes.Integer);
+                var token = _tokens.Generate(subjectClaim, TimeSpan.FromMinutes(20), [new("ResetPassword", "true", ClaimValueTypes.Boolean)]);
+
+                var _emailer = scope.ServiceProvider.GetRequiredService<EmailService>();
+                await _emailer.SendPasswordReset(request.Email, account.Name, token.AccessToken, stoppingToken);
+            }
+            else
+            {
+                _logger.LogWarning("Password reset request for {Email} failed: account {Status}", request.Email, account is null ? "not found" : "disabled");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing password reset request for {Email}", request.Email);
+        }
     }
 }
