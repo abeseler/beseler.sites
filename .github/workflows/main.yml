@@ -14,6 +14,9 @@ jobs:
           - image: abeseler/beseler-net-dbdeploy
             dockerfile: docker/beseler-net-dbdeploy.Dockerfile
             context: .
+          - image: abeseler/beseler-dev-web
+            dockerfile: docker/beseler-dev-web.Dockerfile
+            context: .
           - image: abeseler/beseler-net-api
             dockerfile: docker/beseler-net-api.Dockerfile
             context: .
