@@ -1,9 +1,43 @@
-﻿namespace BeselerNet.Api.Accounts.Users.EndpointHandlers;
+﻿using BeselerNet.Shared.Contracts.Users;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.JsonWebTokens;
+using System.Security.Claims;
+
+namespace BeselerNet.Api.Accounts.Users.EndpointHandlers;
 
 internal sealed class ResetPasswordHandler
 {
-    public static async Task<IResult> Handle()
+    public static async Task<IResult> Handle(ResetPasswordRequest request, ClaimsPrincipal principal, AccountDataSource accounts, IPasswordHasher<Account> passwordHasher, CancellationToken stoppingToken)
     {
-        throw new NotImplementedException();
+        if (!int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId)
+            || principal.FindFirstValue("ResetPassword") is null)
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var account = await accounts.WithId(accountId, stoppingToken);
+        var problem = account switch
+        {
+            { IsDisabled: true } => AccountProblems.Disabled,
+            { IsLocked: true } => AccountProblems.Locked,
+            _ => null
+        };
+
+        if (problem is not null)
+        {
+            return TypedResults.Problem(problem);
+        }
+
+        if (request.HasValidationErrors(out var errors))
+        {
+            return TypedResults.ValidationProblem(errors);
+        }
+
+        var hashedPassword = passwordHasher.HashPassword(account!, request.Password!);
+        account!.ResetPassword(hashedPassword);
+
+        await accounts.SaveChanges(account, stoppingToken);
+
+        return TypedResults.NoContent();
     }
 }

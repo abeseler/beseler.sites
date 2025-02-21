@@ -9,6 +9,7 @@ namespace BeselerNet.Api.Accounts.OAuth;
 
 internal static class CreateTokenHandler
 {
+    private const string RefreshCookiePath = "/v1/accounts/oauth/tokens";
     private const string AccessTokenActivityName = $"{nameof(CreateTokenHandler)}.{nameof(HandleAccessTokenGrant)}";
     private const string RefreshTokenActivityName = $"{nameof(CreateTokenHandler)}.{nameof(HandleRefreshTokenGrant)}";
     public readonly struct Parameters
@@ -89,7 +90,7 @@ internal static class CreateTokenHandler
                 SameSite = SameSiteMode.Strict,
                 Secure = true,
                 HttpOnly = true,
-                Path = "/oauth/tokens"
+                Path = RefreshCookiePath
             });
         }
 
@@ -170,7 +171,7 @@ internal static class CreateTokenHandler
                 SameSite = SameSiteMode.Strict,
                 Secure = true,
                 HttpOnly = true,
-                Path = "/oauth/tokens"
+                Path = RefreshCookiePath
             });
         }
 

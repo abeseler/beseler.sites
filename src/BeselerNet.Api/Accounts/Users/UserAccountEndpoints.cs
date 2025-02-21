@@ -36,6 +36,7 @@ internal static class UserAccountEndpoints
 
         v1.MapPost("/forgot-password", ForgotPasswordHandler.Handle)
             .WithName("SendForgotPassword")
+            .Accepts<ForgotPasswordRequest>(MediaTypeNames.Application.Json)
             .Produces<GenericMessageResponse>(StatusCodes.Status202Accepted)
             .ProducesValidationProblem(StatusCodes.Status400BadRequest, MediaTypeNames.Application.Json)
             .ProducesProblem(StatusCodes.Status429TooManyRequests, MediaTypeNames.Application.Json)
@@ -43,7 +44,9 @@ internal static class UserAccountEndpoints
 
         v1.MapPost("/reset-password", ForgotPasswordHandler.Handle)
             .WithName("ResetUserPassword")
+            .Accepts<ResetPasswordRequest>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status204NoContent)
+            .ProducesValidationProblem(StatusCodes.Status400BadRequest, MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden, MediaTypeNames.Application.Json)
             .RequireAuthorization();

@@ -36,7 +36,7 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
     private readonly JwtGenerator _tokens = tokens;
     private readonly ILogger<ForgotPasswordService> _logger = logger;
 
-    public static readonly Channel<ForgotPasswordRequest> RequestChannel = Channel.CreateBounded<ForgotPasswordRequest>(new BoundedChannelOptions(500)
+    public static readonly Channel<ForgotPasswordRequest> RequestChannel = Channel.CreateBounded<ForgotPasswordRequest>(new BoundedChannelOptions(100)
     {
         FullMode = BoundedChannelFullMode.DropWrite,
         SingleReader = true,
@@ -74,6 +74,7 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
             var account = await accounts.WithEmail(request.Email, stoppingToken);
             if (account is not null and { IsDisabled: false })
             {
+                activity?.SetTag_AccountId(account.AccountId);
                 var subjectClaim = new Claim(JwtRegisteredClaimNames.Sub, account.AccountId.ToString(), ClaimValueTypes.Integer);
                 var token = _tokens.Generate(subjectClaim, TimeSpan.FromMinutes(20), [new("ResetPassword", "true", ClaimValueTypes.Boolean)]);
 
