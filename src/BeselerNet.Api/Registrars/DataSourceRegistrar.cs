@@ -8,6 +8,7 @@ using ZiggyCreatures.Caching.Fusion;
 using Dapper;
 using BeselerNet.Api.Outbox;
 using BeselerNet.Api.Accounts.OAuth;
+using BeselerNet.Api.Communications;
 
 namespace BeselerNet.Api.Registrars;
 
@@ -20,6 +21,7 @@ internal static class DataSourceRegistrar
         builder.Services.AddSingleton<OutboxDataSource>();
         builder.Services.AddScoped<AccountDataSource>();
         builder.Services.AddScoped<TokenLogDataSource>();
+        builder.Services.AddScoped<CommunicationDataSource>();
 
         DefaultTypeMap.MatchNamesWithUnderscores = true;
     }

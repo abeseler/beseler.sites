@@ -1,17 +1,30 @@
-﻿using System.Text.Json.Serialization;
+﻿using BeselerNet.Api.Communications;
+using System.Text.Json.Serialization;
 
 namespace BeselerNet.Api.Webhooks.Handlers;
 
 internal static class EmailEventsWebhook
 {
-    public static async Task<IResult> Handle(EmailEvent[] events, ILogger<EmailEvent> logger, CancellationToken stoppingToken)
+    public static async Task<IResult> Handle(EmailEvent[] events, CommunicationDataSource communications, ILogger<EmailEvent> logger, CancellationToken stoppingToken)
     {
         foreach (var @event in events)
         {
-            logger.LogInformation("Email event: {EmailEvent}", @event);
+            if (!Guid.TryParse(@event.CommunicationId, out var communicationId))
+            {
+                logger.LogWarning("Event with invalid or no communication ID: {Data}", @event);
+                continue;
+            }
+
+            var communication = await communications.WithId(communicationId, stoppingToken);
+            if (communication is null)
+            {
+                logger.LogWarning("Communication record missing for ID: {CommunicationId}", communicationId);
+                continue;
+            }
+
+            //TODO: Handle the event
         }
 
-        await Task.CompletedTask;
         return TypedResults.NoContent();
     }
 }
@@ -34,4 +47,6 @@ internal sealed record EmailEvent
     public string[] Category { get; init; } = [];
     [JsonPropertyName("bounce_classification")]
     public string? BounceClassification { get; init; }
+    [JsonPropertyName("communication_id")]
+    public string? CommunicationId { get; init; }
 }

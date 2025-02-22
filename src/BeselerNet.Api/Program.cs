@@ -2,6 +2,7 @@ using Beseler.ServiceDefaults;
 using BeselerNet.Api.Accounts;
 using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Accounts.Users;
+using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
 using BeselerNet.Api.Registrars;
 using BeselerNet.Api.Webhooks;
@@ -35,7 +36,7 @@ builder.Services.AddOptions<SendGridOptions>().BindConfiguration(SendGridOptions
 builder.Services.AddSingleton<JwtGenerator>();
 builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
 builder.Services.AddScoped<Cookies>();
-builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<SendGridEmailService>();
 
 builder.Services.AddSingleton<DomainEventHandler>();
 builder.Services.AddAccountDomainEventHandlers();

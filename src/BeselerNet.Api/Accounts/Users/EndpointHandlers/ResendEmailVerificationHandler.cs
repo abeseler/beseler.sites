@@ -1,5 +1,5 @@
 ﻿using BeselerNet.Api.Accounts.OAuth;
-using BeselerNet.Api.Core;
+using BeselerNet.Api.Communications;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
 
@@ -7,7 +7,7 @@ namespace BeselerNet.Api.Accounts.Users.EndpointHandlers;
 
 internal sealed class ResendEmailVerificationHandler
 {
-    public static async Task<IResult> Handle(ClaimsPrincipal principal, AccountDataSource accounts, JwtGenerator tokens, EmailService emailer, CancellationToken stoppingToken)
+    public static async Task<IResult> Handle(ClaimsPrincipal principal, AccountDataSource accounts, JwtGenerator tokens, SendGridEmailService emailer, CancellationToken stoppingToken)
     {
         if (!int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId))
         {
@@ -39,7 +39,16 @@ internal sealed class ResendEmailVerificationHandler
 
         var token = tokens.Generate(subjectClaim, TimeSpan.FromMinutes(10), [emailClaim, emailVerifiedClaim]);
 
-        await emailer.SendEmailVerification(account.Email!, account.Name, token.AccessToken, stoppingToken);
-        return TypedResults.NoContent();
+        var result = await emailer.SendEmailVerification(account.AccountId, account.Email!, account.Name, token.AccessToken, stoppingToken);
+        
+        return result.Match<IResult>(
+            _ => TypedResults.NoContent(),
+            exception => TypedResults.Problem(new()
+            {
+                Title = "Email Verification Send Failed",
+                Detail = "The email verification could not be sent. Please try again later.",
+                Status = StatusCodes.Status422UnprocessableEntity
+            })
+        );
     }
 }

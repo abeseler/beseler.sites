@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace BeselerNet.Api.Core;
 
 [JsonPolymorphic]
-internal abstract partial record DomainEvent(bool PublishToOutbox = false)
+internal abstract partial record DomainEvent(bool SendToOutbox = false)
 {
     public Guid EventId { get; init; } = Guid.CreateVersion7();
     public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;

@@ -1,4 +1,5 @@
 ﻿using BeselerNet.Api.Accounts.OAuth;
+using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Diagnostics;
@@ -6,10 +7,10 @@ using System.Security.Claims;
 
 namespace BeselerNet.Api.Accounts.EventHandlers;
 
-internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, EmailService emailer)
+internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, SendGridEmailService emailer)
 {
     private readonly JwtGenerator _tokenGenerator = tokenGenerator;
-    private readonly EmailService _emailer = emailer;
+    private readonly SendGridEmailService _emailer = emailer;
     public async Task Handle(AccountCreated domainEvent, CancellationToken stoppingToken)
     {
         using var activity = Telemetry.Source.StartActivity("AccountCreatedHandler.Handle", ActivityKind.Internal, domainEvent.TraceId);
@@ -31,6 +32,10 @@ internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, EmailSe
         };
         var token = _tokenGenerator.Generate(subjectClaim, TimeSpan.FromMinutes(10), [emailClaim, emailVerifiedClaim]);
 
-        await _emailer.SendEmailVerification(domainEvent.Email, name, token.AccessToken, stoppingToken);
+        var result = await _emailer.SendEmailVerification(domainEvent.AccountId, domainEvent.Email, name, token.AccessToken, stoppingToken);
+        if (result.Failed(out var exception))
+        {
+            throw exception;
+        }
     }
 }

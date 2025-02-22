@@ -1,4 +1,5 @@
 ﻿using BeselerNet.Api.Accounts.OAuth;
+using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
 using BeselerNet.Shared.Contracts;
 using BeselerNet.Shared.Contracts.Users;
@@ -78,8 +79,12 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
                 var subjectClaim = new Claim(JwtRegisteredClaimNames.Sub, account.AccountId.ToString(), ClaimValueTypes.Integer);
                 var token = _tokens.Generate(subjectClaim, TimeSpan.FromMinutes(20), [new("ResetPassword", "true", ClaimValueTypes.Boolean)]);
 
-                var _emailer = scope.ServiceProvider.GetRequiredService<EmailService>();
-                await _emailer.SendPasswordReset(request.Email, account.Name, token.AccessToken, stoppingToken);
+                var _emailer = scope.ServiceProvider.GetRequiredService<SendGridEmailService>();
+                var result = await _emailer.SendPasswordReset(account.AccountId, request.Email, account.Name, token.AccessToken, stoppingToken);
+                if (result.Failed(out var exception))
+                {
+                    throw exception;
+                }
             }
             else
             {

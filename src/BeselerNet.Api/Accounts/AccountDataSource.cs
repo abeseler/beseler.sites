@@ -92,7 +92,6 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 secret_hashed_at = @SecretHashedAt,
                 given_name = @GivenName,
                 family_name = @FamilyName,
-                created_at = @CreatedAt,
                 disabled_at = @DisabledAt,
                 locked_at = @LockedAt,
                 last_logon = @LastLogon,
@@ -118,7 +117,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
             foreach (var @event in account.UncommittedEvents)
             {
                 var eventData = JsonSerializer.Serialize(@event, JsonSerializerOptions.Web);
-                if (@event.PublishToOutbox)
+                if (@event.SendToOutbox)
                 {
                     outboxMessages ??= [];
                     outboxMessages.Add(new OutboxMessage
@@ -131,15 +130,15 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                     });
                 }
                 await connection.ExecuteAsync("""
-                INSERT INTO account_event_log (event_id,  account_id, event_data, occurred_at)
-                VALUES (@EventId, @AccountId, @EventData::jsonb, @OccurredAt)
-                """, new
-                {
-                    @event.EventId,
-                    account.AccountId,
-                    EventData = eventData,
-                    @event.OccurredAt
-                }, transaction);
+                    INSERT INTO account_event_log (event_id,  account_id, event_data, occurred_at)
+                    VALUES (@EventId, @AccountId, @EventData::jsonb, @OccurredAt)
+                    """, new
+                    {
+                        @event.EventId,
+                        account.AccountId,
+                        EventData = eventData,
+                        @event.OccurredAt
+                    }, transaction);
             }
 
             if (outboxMessages is { Count: >0 })

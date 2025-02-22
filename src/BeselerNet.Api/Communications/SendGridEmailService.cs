@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Options;
+﻿using BeselerNet.Shared.Core;
+using Microsoft.Extensions.Options;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 
-namespace BeselerNet.Api.Core;
+namespace BeselerNet.Api.Communications;
 
 internal sealed record SendGridOptions
 {
@@ -14,19 +15,21 @@ internal sealed record SendGridOptions
     public string? ResetPasswordUrl { get; init; }
 }
 
-internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOptions> options, ILogger<EmailService> logger)
+internal sealed class SendGridEmailService(CommunicationDataSource communications, ISendGridClient client, IOptions<SendGridOptions> options, ILogger<SendGridEmailService> logger)
 {
+    private readonly CommunicationDataSource _communications = communications;
     private readonly ISendGridClient _client = client;
     private readonly SendGridOptions _options = options.Value;
-    private readonly ILogger<EmailService> _logger = logger;
-    public async Task SendEmailVerification(string email, string recipientName, string token, CancellationToken stoppingToken)
+    private readonly ILogger<SendGridEmailService> _logger = logger;
+    public async Task<Result<Guid>> SendEmailVerification(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
             _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is missing. Token not sent: {Token}", token);
-            return;
+            return Guid.Empty;
         }
 
+        var communicationId = Guid.CreateVersion7();
         var emailMessage = new SendGridMessage
         {
             From = new EmailAddress(options.Value.SenderEmail, options.Value.SenderName),
@@ -53,27 +56,37 @@ internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOpti
                 </div>
                 </body>
                 </html>
-                """
+                """,
+            CustomArgs = new()
+            {
+                ["communication_id"] = communicationId.ToString(),
+                ["account_id"] = accountId.ToString()
+            }
         };
         emailMessage.AddTo(new EmailAddress(email, recipientName));
+        var communication = Communication.Create(communicationId, accountId, CommunicationType.Email, "Email Verification");
+        await _communications.SaveChanges(communication, stoppingToken);
 
-        if ((await _client.SendEmailAsync(emailMessage, stoppingToken)) is { IsSuccessStatusCode: false } response)
+        if (await _client.SendEmailAsync(emailMessage, stoppingToken) is { IsSuccessStatusCode: false } response)
         {
             var responseBody = await response.Body.ReadAsStringAsync(stoppingToken);
             _logger.LogError("Failed to send email: {Response}", responseBody);
-            throw new InvalidOperationException("Failed to send email.");
+            return new InvalidOperationException("Failed to send email.");
         }
 
         _logger.LogInformation("Email verification email sent to {Email}", email);
+
+        return communicationId;
     }
-    public async Task SendAccountLocked(string email, string recipientName, CancellationToken stoppingToken)
+    public async Task<Result<Guid>> SendAccountLocked(int accountId, string email, string recipientName, CancellationToken stoppingToken)
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
             _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is not set");
-            return;
+            return Guid.Empty;
         }
 
+        var communicationId = Guid.CreateVersion7();
         var emailMessage = new SendGridMessage
         {
             From = new EmailAddress(options.Value.SenderEmail, options.Value.SenderName),
@@ -98,27 +111,37 @@ internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOpti
                 </div>
                 </body>
                 </html>
-                """
+                """,
+            CustomArgs = new()
+            {
+                ["communication_id"] = communicationId.ToString(),
+                ["account_id"] = accountId.ToString()
+            }
         };
         emailMessage.AddTo(new EmailAddress(email, recipientName));
+        var communication = Communication.Create(communicationId, accountId, CommunicationType.Email, "Account Locked");
+        await _communications.SaveChanges(communication, stoppingToken);
 
-        if ((await _client.SendEmailAsync(emailMessage, stoppingToken)) is { IsSuccessStatusCode: false } response)
+        if (await _client.SendEmailAsync(emailMessage, stoppingToken) is { IsSuccessStatusCode: false } response)
         {
             var responseBody = await response.Body.ReadAsStringAsync(stoppingToken);
             _logger.LogError("Failed to send email: {Response}", responseBody);
-            throw new InvalidOperationException("Failed to send email.");
+            return new InvalidOperationException("Failed to send email.");
         }
 
         _logger.LogInformation("Account locked email sent to {Email}", email);
+
+        return communicationId;
     }
-    public async Task SendPasswordReset(string email, string recipientName, string token, CancellationToken stoppingToken)
+    public async Task<Result<Guid>> SendPasswordReset(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
             _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is missing. Token not sent: {Token}", token);
-            return;
+            return Guid.Empty;
         }
 
+        var communicationId = Guid.CreateVersion7();
         var emailMessage = new SendGridMessage
         {
             From = new EmailAddress(options.Value.SenderEmail, options.Value.SenderName),
@@ -145,17 +168,26 @@ internal sealed class EmailService(ISendGridClient client, IOptions<SendGridOpti
                 </div>
                 </body>
                 </html>
-                """
+                """,
+            CustomArgs = new()
+            {
+                ["communication_id"] = communicationId.ToString(),
+                ["account_id"] = accountId.ToString()
+            }
         };
         emailMessage.AddTo(new EmailAddress(email, recipientName));
+        var communication = Communication.Create(communicationId, accountId, CommunicationType.Email, "Password Reset");
+        await _communications.SaveChanges(communication, stoppingToken);
 
-        if ((await _client.SendEmailAsync(emailMessage, stoppingToken)) is { IsSuccessStatusCode: false } response)
+        if (await _client.SendEmailAsync(emailMessage, stoppingToken) is { IsSuccessStatusCode: false } response)
         {
             var responseBody = await response.Body.ReadAsStringAsync(stoppingToken);
             _logger.LogError("Failed to send email: {Response}", responseBody);
-            throw new InvalidOperationException("Failed to send email.");
+            return new InvalidOperationException("Failed to send email.");
         }
 
         _logger.LogInformation("Password reset email sent to {Email}", email);
+
+        return communicationId;
     }
 }

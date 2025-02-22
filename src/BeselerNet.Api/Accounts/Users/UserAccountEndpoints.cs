@@ -25,6 +25,7 @@ internal static class UserAccountEndpoints
             .ProducesValidationProblem(StatusCodes.Status400BadRequest, MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden, MediaTypeNames.Application.Json)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity, MediaTypeNames.Application.Json)
             .RequireAuthorization();
 
         v1.MapPost("/confirm-email", ConfirmEmailHandler.Handle)
