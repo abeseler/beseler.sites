@@ -14,17 +14,16 @@ internal sealed class Account : IChangeTracking
     public AccountType Type { get; private init; }
     public string Username { get; private set; } = default!;
     public string? Email { get; private set; }
-    public DateTimeOffset? EmailVerifiedOn { get; private set; }
+    public DateTimeOffset? EmailVerifiedAt { get; private set; }
     public string SecretHash { get; private set; } = default!;
     public DateTimeOffset SecretHashedOn { get; private set; }
     public string? GivenName { get; private set; }
     public string? FamilyName { get; private set; }
-    public DateTimeOffset CreatedOn { get; private init; }
-    public DateTimeOffset? DisabledOn { get; private set; }
-    public DateTimeOffset? LockedOn { get; private set; }
+    public DateTimeOffset CreatedAt { get; private init; }
+    public DateTimeOffset? DisabledAt { get; private set; }
+    public DateTimeOffset? LockedAt { get; private set; }
     public DateTimeOffset? LastLogon { get; private set; }
     public int FailedLoginAttempts { get; private set; }
-    public int EventLogCount { get; private set; }
     public string Name => this switch
     {
         { GivenName: not null, FamilyName: not null } => $"{GivenName} {FamilyName}",
@@ -32,8 +31,8 @@ internal sealed class Account : IChangeTracking
         { FamilyName: not null } => FamilyName,
         _ => Username,
     };
-    public bool IsDisabled => DisabledOn.HasValue;
-    public bool IsLocked => LockedOn.HasValue;
+    public bool IsDisabled => DisabledAt.HasValue;
+    public bool IsLocked => LockedAt.HasValue;
     public IReadOnlyCollection<DomainEvent> UncommittedEvents => _events ?? [];
     public bool IsChanged { get; private set; }
     public static Account CreateUser(int accountId, string username, string secretHash, string email, string givenName, string familyName) =>
@@ -44,12 +43,11 @@ internal sealed class Account : IChangeTracking
         Type = domainEvent.Type,
         Username = domainEvent.Username,
         SecretHash = domainEvent.SecretHash!,
-        SecretHashedOn = domainEvent.OccurredOn,
+        SecretHashedOn = domainEvent.OccurredAt,
         Email = domainEvent.Email,
         GivenName = domainEvent.GivenName,
         FamilyName = domainEvent.FamilyName,
-        CreatedOn = domainEvent.OccurredOn,
-        EventLogCount = 1,
+        CreatedAt = domainEvent.OccurredAt,
         IsChanged = true,
         _events = [domainEvent]
     };
@@ -60,28 +58,25 @@ internal sealed class Account : IChangeTracking
         IsChanged = true;
         _events ??= [];
         _events.Add(new AccountLoginSucceeded(AccountId));
-        EventLogCount += 1;
     }
     public void FailLogin()
     {
         FailedLoginAttempts += 1;
         if (FailedLoginAttempts >= 5)
         {
-            LockedOn = DateTimeOffset.UtcNow;
+            LockedAt = DateTimeOffset.UtcNow;
         }
         IsChanged = true;
         _events ??= [];
         _events.Add(new AccountLoginFailed(AccountId, FailedLoginAttempts, IsLocked));
-        EventLogCount += 1;
     }
     public void VerifyEmail(string email)
     {
         Email = email;
-        EmailVerifiedOn = DateTimeOffset.UtcNow;
+        EmailVerifiedAt = DateTimeOffset.UtcNow;
         IsChanged = true;
         _events ??= [];
         _events.Add(new AccountEmailVerified(AccountId, email));
-        EventLogCount += 1;
     }
     public void ResetPassword(string hash)
     {
@@ -91,11 +86,10 @@ internal sealed class Account : IChangeTracking
     }
     public void Disable(string? disabledBy = null)
     {
-        DisabledOn = DateTimeOffset.UtcNow;
+        DisabledAt = DateTimeOffset.UtcNow;
         IsChanged = true;
         _events ??= [];
         _events.Add(new AccountDisabled(AccountId, disabledBy));
-        EventLogCount += 1;
     }
     public void AcceptChanges()
     {
@@ -110,7 +104,7 @@ internal sealed class Account : IChangeTracking
             new(JwtRegisteredClaimNames.Sub, AccountId.ToString(), ClaimValueTypes.Integer),
             new(JwtRegisteredClaimNames.Name, Name),
         };
-        if (Email is not null && EmailVerifiedOn is not null)
+        if (Email is not null && EmailVerifiedAt.HasValue)
         {
             claims.Add(new(JwtRegisteredClaimNames.EmailVerified, "true", ClaimValueTypes.Boolean));
         }

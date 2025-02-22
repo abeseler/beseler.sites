@@ -7,6 +7,6 @@ namespace BeselerNet.Api.Core;
 internal abstract partial record DomainEvent(bool PublishToOutbox = false)
 {
     public Guid EventId { get; init; } = Guid.CreateVersion7();
-    public DateTimeOffset OccurredOn { get; init; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset OccurredAt { get; init; } = DateTimeOffset.UtcNow;
     public string? TraceId { get; init; } = Activity.Current?.Id ?? Activity.Current?.ParentId;
 }

@@ -63,15 +63,14 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 username,
                 email,
                 secret_hash,
-                secret_hashed_on,
+                secret_hashed_at,
                 given_name,
                 family_name,
-                created_on,
-                disabled_on,
-                locked_on,
+                created_at,
+                disabled_at,
+                locked_at,
                 last_logon,
-                failed_login_attempts,
-                event_log_count)
+                failed_login_attempts)
             VALUES (
                 @AccountId,
                 @Type,
@@ -85,8 +84,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 @DisabledOn,
                 @LockedOn,
                 @LastLogon,
-                @FailedLoginAttempts,
-                @EventLogCount)
+                @FailedLoginAttempts)
             ON CONFLICT (account_id) DO UPDATE
             SET username = @Username,
                 email = @Email,
@@ -98,8 +96,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 disabled_on = @DisabledOn,
                 locked_on = @LockedOn,
                 last_logon = @LastLogon,
-                failed_login_attempts = @FailedLoginAttempts,
-                event_log_count = @EventLogCount
+                failed_login_attempts = @FailedLoginAttempts
             """, new
             {
                 account.AccountId,
@@ -110,12 +107,11 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 account.SecretHashedOn,
                 account.GivenName,
                 account.FamilyName,
-                account.CreatedOn,
-                account.DisabledOn,
-                account.LockedOn,
+                account.CreatedAt,
+                account.DisabledAt,
+                account.LockedAt,
                 account.LastLogon,
-                account.FailedLoginAttempts,
-                account.EventLogCount
+                account.FailedLoginAttempts
             }, transaction);
 
             List<OutboxMessage>? outboxMessages = null;
@@ -130,19 +126,19 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                         MessageId = @event.EventId,
                         MessageType = nameof(DomainEvent),
                         MessageData = eventData,
-                        InvisibleUntil = @event.OccurredOn,
+                        InvisibleUntil = @event.OccurredAt,
                         ReceivesRemaining = 3
                     });
                 }
                 await connection.ExecuteAsync("""
-                INSERT INTO account_event_log (event_id,  account_id, event_data, occurred_on)
-                VALUES (@EventId, @AccountId, @EventData::jsonb, @OccurredOn)
+                INSERT INTO account_event_log (event_id,  account_id, event_data, occurred_at)
+                VALUES (@EventId, @AccountId, @EventData::jsonb, @OccurredAt)
                 """, new
                 {
                     @event.EventId,
                     account.AccountId,
                     EventData = eventData,
-                    @event.OccurredOn
+                    @event.OccurredAt
                 }, transaction);
             }
 

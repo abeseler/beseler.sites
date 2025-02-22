@@ -31,7 +31,7 @@ internal sealed class ConfirmEmailHandler
             },
             { IsDisabled: true } => AccountProblems.Disabled,
             { IsLocked: true } => AccountProblems.Locked,
-            { EmailVerifiedOn: not null } => AccountProblems.EmailAlreadyVerified,
+            { EmailVerifiedAt: not null } => AccountProblems.EmailAlreadyVerified,
             _ => null
         };
 
