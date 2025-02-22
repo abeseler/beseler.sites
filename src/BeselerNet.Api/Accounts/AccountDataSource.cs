@@ -56,7 +56,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
 
         try
         {
-            await connection.ExecuteAsync("""
+            _ = await connection.ExecuteAsync("""
             INSERT INTO account (
                 account_id,
                 type,
@@ -129,7 +129,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                         ReceivesRemaining = 3
                     });
                 }
-                await connection.ExecuteAsync("""
+                _ = await connection.ExecuteAsync("""
                     INSERT INTO account_event_log (event_id,  account_id, event_data, occurred_at)
                     VALUES (@EventId, @AccountId, @EventData::jsonb, @OccurredAt)
                     """, new

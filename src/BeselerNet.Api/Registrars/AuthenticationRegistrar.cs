@@ -18,7 +18,7 @@ internal static class AuthenticationRegistrar
 {
     public static void AddAuthentication(this IHostApplicationBuilder builder)
     {
-        builder.Services.AddAuthentication(options =>
+        _ = builder.Services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -44,11 +44,11 @@ internal static class AuthenticationRegistrar
             };
         }).AddScheme<ApiKeyAuthOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthOptions.Scheme, null);
 
-        builder.Services.AddAuthorizationBuilder()
+        _ = builder.Services.AddAuthorizationBuilder()
             .AddDefaultPolicy("ApiKeyOrBearer", policy =>
             {
-                policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, ApiKeyAuthOptions.Scheme);
-                policy.RequireAuthenticatedUser();
+                _ = policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, ApiKeyAuthOptions.Scheme);
+                _ = policy.RequireAuthenticatedUser();
             });
     }
 }
@@ -80,10 +80,10 @@ internal sealed class ApiKeyAuthenticationHandler(
 
                 //TODO: get permissions and claims for the api key from the database
                 //we need a mechanism to invalidate the cache when the api key is revoked or permissions are changed
-                if (false)
-                {
-                    return null;
-                }
+                //if (false)
+                //{
+                //    return null;
+                //}
                 var claims = new[] { new Claim(ClaimTypes.Name, "APIUser") };
                 var identity = new ClaimsIdentity(claims, ApiKeyAuthOptions.Scheme);
                 return new ClaimsPrincipal(identity);

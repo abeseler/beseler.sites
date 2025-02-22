@@ -22,7 +22,7 @@ internal sealed class CommunicationDataSource(NpgsqlDataSource dataSource)
         }
 
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);        
-        await connection.ExecuteAsync("""
+        _ = await connection.ExecuteAsync("""
             INSERT INTO communication (
                 communication_id,
                 account_id,
