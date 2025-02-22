@@ -13,6 +13,8 @@ internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHand
     private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(5));
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogInformation("OutboxMonitor has started");
+
         var backoffPow = 0;
         while (await _timer.WaitForNextTickAsync(stoppingToken))
         {
@@ -43,10 +45,21 @@ internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHand
                 await Task.Delay(delay, stoppingToken);
             }
         }
+
+        if (stoppingToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("OutboxMonitor has stopped");
+        }
+        else
+        {
+            _logger.LogCritical("OutboxMonitor has stopped unexpectedly");
+        }
     }
 
     private async Task<Result<OutboxMessage>> Process(OutboxMessage message)
     {
+        _logger.LogDebug("Processing outbox message {MessageId}. {Data}", message.MessageId, message.MessageData);
+        
         try
         {
             if (message.MessageType is nameof(DomainEvent))
@@ -54,6 +67,8 @@ internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHand
                 var domainEvent = JsonSerializer.Deserialize<DomainEvent>(message.MessageData, JsonSerializerOptions.Web)
                     ?? throw new InvalidOperationException("Failed to deserialize domain event.");
                 
+                _logger.LogDebug("Outbox message {MessageId} deserialized to: {EventType}", message.MessageId, domainEvent.GetType().Name);
+
                 await _domainEventHandler.Handle(domainEvent, CancellationToken.None);
             }
 

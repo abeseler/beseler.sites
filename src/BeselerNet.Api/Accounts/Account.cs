@@ -16,7 +16,7 @@ internal sealed class Account : IChangeTracking
     public string? Email { get; private set; }
     public DateTimeOffset? EmailVerifiedAt { get; private set; }
     public string SecretHash { get; private set; } = default!;
-    public DateTimeOffset SecretHashedOn { get; private set; }
+    public DateTimeOffset SecretHashedAt { get; private set; }
     public string? GivenName { get; private set; }
     public string? FamilyName { get; private set; }
     public DateTimeOffset CreatedAt { get; private init; }
@@ -43,7 +43,7 @@ internal sealed class Account : IChangeTracking
         Type = domainEvent.Type,
         Username = domainEvent.Username,
         SecretHash = domainEvent.SecretHash!,
-        SecretHashedOn = domainEvent.OccurredAt,
+        SecretHashedAt = domainEvent.OccurredAt,
         Email = domainEvent.Email,
         GivenName = domainEvent.GivenName,
         FamilyName = domainEvent.FamilyName,
@@ -81,7 +81,7 @@ internal sealed class Account : IChangeTracking
     public void ResetPassword(string hash)
     {
         SecretHash = hash;
-        SecretHashedOn = DateTimeOffset.UtcNow;
+        SecretHashedAt = DateTimeOffset.UtcNow;
         IsChanged = true;
     }
     public void Disable(string? disabledBy = null)
