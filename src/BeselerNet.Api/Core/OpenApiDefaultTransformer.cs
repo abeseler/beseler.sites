@@ -9,6 +9,7 @@ internal sealed record OpenApiOptions
     public const string SectionName = "OpenApi";
     public string? Title { get; init; }
     public string? Description { get; init; }
+    public string? ContactUrl { get; init; }
     public string? ServerUrl { get; init; }
 }
 
@@ -20,7 +21,15 @@ internal sealed class OpenApiDefaultTransformer : IOpenApiDocumentTransformer
 
         document.Info.Title = options.Title ?? document.Info.Title;
         document.Info.Description = options.Description ?? document.Info.Description;
-        
+
+        if (options.ContactUrl is not null)
+        {
+            document.Info.Contact = new OpenApiContact()
+            {
+                Url = new Uri(options.ContactUrl)
+            };
+        }
+
         if (!string.IsNullOrWhiteSpace(options.ServerUrl))
         {
             document.Servers.Clear();

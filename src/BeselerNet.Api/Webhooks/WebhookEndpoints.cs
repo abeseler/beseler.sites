@@ -12,6 +12,7 @@ internal static class WebhookEndpoints
 
         _ = v1.MapPost("/sendgrid-events", SendGridEmailEventsWebhook.Handle)
             .WithName("ProcessSendGridEmailEvents")
+            .WithDescription("Process SendGrid email events.")
             .Accepts<SendGridEmailEvent[]>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status401Unauthorized);

@@ -13,6 +13,7 @@ internal static class OAuthEndpoints
 
         _ = v1.MapPost("/tokens", CreateTokenHandler.Handle)
             .WithName("GetOAuthToken")
+            .WithDescription("Get OAuth token")
             .Accepts<OAuthTokenRequest>(Application.Json)
             .Produces<OAuthTokenResponse>(Status200OK, Application.Json)
             .ProducesValidationProblem(Status400BadRequest, Application.Json)
