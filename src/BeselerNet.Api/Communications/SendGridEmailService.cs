@@ -13,6 +13,7 @@ internal sealed record SendGridOptions
     public string? SenderName { get; init; }
     public string? ConfirmEmailUrl { get; init; }
     public string? ResetPasswordUrl { get; init; }
+    public string? WebhookApiKey { get; init; }
 }
 
 internal sealed class SendGridEmailService(CommunicationDataSource communications, ISendGridClient client, IOptions<SendGridOptions> options, ILogger<SendGridEmailService> logger)

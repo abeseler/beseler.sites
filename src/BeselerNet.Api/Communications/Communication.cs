@@ -25,6 +25,27 @@ internal sealed class Communication : IChangeTracking
         Name = name,
         IsChanged = true
     };
+    public void Processed(DateTimeOffset processedAt)
+    {
+        ProcessedAt = processedAt;
+        IsChanged = true;
+    }
+    public void Delivered(DateTimeOffset deliveredAt)
+    {
+        DeliveredAt = deliveredAt;
+        IsChanged = true;
+    }
+    public void Opened(DateTimeOffset openedAt)
+    {
+        OpenedAt = openedAt;
+        IsChanged = true;
+    }
+    public void Failed(DateTimeOffset failedAt, string error)
+    {
+        Error = Error is null ? error : $"{Error}; {error}";
+        FailedAt = failedAt;
+        IsChanged = true;
+    }
 }
 
 internal enum CommunicationType

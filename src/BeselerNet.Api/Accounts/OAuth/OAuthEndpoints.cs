@@ -1,5 +1,6 @@
 ﻿using BeselerNet.Shared.Contracts.OAuth;
-using System.Net.Mime;
+using static System.Net.Mime.MediaTypeNames;
+using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace BeselerNet.Api.Accounts.OAuth;
 
@@ -10,13 +11,13 @@ internal static class OAuthEndpoints
         var v1 = builder.MapGroup("/v1/accounts/oauth")
             .WithTags("OAuth");
 
-        v1.MapPost("/tokens", CreateTokenHandler.Handle)
+        _ = v1.MapPost("/tokens", CreateTokenHandler.Handle)
             .WithName("GetOAuthToken")
-            .Accepts<OAuthTokenRequest>(MediaTypeNames.Application.Json)
-            .Produces<OAuthTokenResponse>(StatusCodes.Status200OK, MediaTypeNames.Application.Json)
-            .ProducesValidationProblem(StatusCodes.Status400BadRequest, MediaTypeNames.Application.Json)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status403Forbidden, MediaTypeNames.Application.Json)
+            .Accepts<OAuthTokenRequest>(Application.Json)
+            .Produces<OAuthTokenResponse>(Status200OK, Application.Json)
+            .ProducesValidationProblem(Status400BadRequest, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
             .AllowAnonymous();
     }
 }

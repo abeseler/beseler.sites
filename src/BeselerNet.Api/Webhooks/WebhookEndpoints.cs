@@ -1,4 +1,4 @@
-﻿using BeselerNet.Api.Webhooks.Handlers;
+﻿using BeselerNet.Api.Communications;
 using System.Net.Mime;
 
 namespace BeselerNet.Api.Webhooks;
@@ -10,9 +10,10 @@ internal static class WebhookEndpoints
         var v1 = builder.MapGroup("/v1/webhooks")
             .WithTags("Webhooks");
 
-        v1.MapPost("/email-events", EmailEventsWebhook.Handle)
-            .WithName("ProcessEmailEvents")
-            .Accepts<EmailEvent[]>(MediaTypeNames.Application.Json)
-            .Produces(StatusCodes.Status204NoContent);
+        _ = v1.MapPost("/sendgrid-events", SendGridEmailEventsWebhook.Handle)
+            .WithName("ProcessSendGridEmailEvents")
+            .Accepts<SendGridEmailEvent[]>(MediaTypeNames.Application.Json)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status401Unauthorized);
     }
 }
