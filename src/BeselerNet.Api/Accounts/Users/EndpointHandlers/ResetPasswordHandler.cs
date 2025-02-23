@@ -9,8 +9,7 @@ internal sealed class ResetPasswordHandler
 {
     public static async Task<IResult> Handle(ResetPasswordRequest request, ClaimsPrincipal principal, AccountDataSource accounts, IPasswordHasher<Account> passwordHasher, CancellationToken stoppingToken)
     {
-        if (!int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId)
-            || principal.FindFirstValue("ResetPassword") is null)
+        if (!int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId))
         {
             return TypedResults.Unauthorized();
         }

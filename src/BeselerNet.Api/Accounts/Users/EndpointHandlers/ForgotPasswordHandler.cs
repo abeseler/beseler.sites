@@ -77,7 +77,7 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
             {
                 activity?.SetTag_AccountId(account.AccountId);
                 var subjectClaim = new Claim(JwtRegisteredClaimNames.Sub, account.AccountId.ToString(), ClaimValueTypes.Integer);
-                var token = _tokens.Generate(subjectClaim, TimeSpan.FromMinutes(20), [new("ResetPassword", "true", ClaimValueTypes.Boolean)]);
+                var token = _tokens.Generate(subjectClaim, TimeSpan.FromMinutes(20));
 
                 var _emailer = scope.ServiceProvider.GetRequiredService<SendGridEmailService>();
                 var result = await _emailer.SendPasswordReset(account.AccountId, request.Email, account.Name, token.AccessToken, stoppingToken);
