@@ -23,13 +23,15 @@ builder.AddHostedServices();
 
 builder.Services.AddOpenApi(options =>
 {
-    options.AddDocumentTransformer<AuthenticationSchemeTransformer>();
+    _ = options.AddDocumentTransformer<OpenApiDefaultTransformer>();
+    _ = options.AddDocumentTransformer<AuthenticationSchemeTransformer>();
 });
 builder.Services.AddProblemDetails();
 builder.Services.AddRequestTimeouts();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton(TimeProvider.System);
 
+builder.Services.AddOptions<OpenApiOptions>().BindConfiguration(OpenApiOptions.SectionName);
 builder.Services.AddOptions<JwtOptions>().BindConfiguration(JwtOptions.SectionName);
 builder.Services.AddOptions<SendGridOptions>().BindConfiguration(SendGridOptions.SectionName);
 
