@@ -6,31 +6,39 @@ namespace BeselerNet.Api.Outbox;
 
 internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHandler domainEventHandler, ILogger<OutboxMonitor> logger) : BackgroundService
 {
-    private const int MAX_MESSAGES = 5;
+    private const int DEQUEUE_MSG_LIMIT = 10;
+    private const int MAX_DELAY_SECONDS = 120;
     private readonly OutboxDataSource _dataSource = dataSource;
     private readonly DomainEventHandler _domainEventHandler = domainEventHandler;
     private readonly ILogger<OutboxMonitor> _logger = logger;
-    private readonly PeriodicTimer _timer = new(TimeSpan.FromSeconds(5));
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("OutboxMonitor has started");
 
         var backoffPow = 0;
-        while (await _timer.WaitForNextTickAsync(stoppingToken))
+        var delay = TimeSpan.FromSeconds(0);
+        while (!stoppingToken.IsCancellationRequested)
         {
+            await Task.Delay(delay, stoppingToken);
+
             try
             {
-                var messages = new List<OutboxMessage>();
-                while (messages.Count < MAX_MESSAGES && await _dataSource.Dequeue(stoppingToken) is { } message)
+                var messages = await _dataSource.Dequeue(DEQUEUE_MSG_LIMIT, stoppingToken);
+                if (messages.Length == 0)
                 {
-                    messages.Add(message);
+                    backoffPow += 1;
+                    delay = TimeSpan.FromSeconds(Math.Min(MAX_DELAY_SECONDS, (int)Math.Pow(2, backoffPow)));
+                    _logger.LogDebug("No outbox messages to process. Next check in {Seconds} seconds", delay.TotalSeconds);
+                    continue;
                 }
+                
+                _logger.LogInformation("Received {Count} messages from the outbox to process", messages.Length);
 
                 await foreach (var task in Task.WhenEach(messages.Select(Process)))
                 {
                     if (task.Result.Succeeded(out var message))
                     {
-                        await _dataSource.Delete(message.MessageId, stoppingToken);
+                        await _dataSource.Delete(message.MessageId, CancellationToken.None);
                     }
                 }
 
@@ -38,22 +46,13 @@ internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHand
             }
             catch (Exception ex)
             {
-                var delay = TimeSpan.FromSeconds(Math.Min(60, (int)Math.Pow(2, backoffPow)));
                 backoffPow += 1;
-                _logger.LogError(ex, "Error processing outbox. Retrying in {Delay} seconds", delay.TotalSeconds);
-
-                await Task.Delay(delay, stoppingToken);
+                delay = TimeSpan.FromSeconds(Math.Min(MAX_DELAY_SECONDS, (int)Math.Pow(2, backoffPow)));
+                _logger.LogError(ex, "Error processing outbox messages. Next attempt in {Seconds} seconds", delay.TotalSeconds);
             }
         }
 
-        if (stoppingToken.IsCancellationRequested)
-        {
-            _logger.LogInformation("OutboxMonitor has stopped");
-        }
-        else
-        {
-            _logger.LogCritical("OutboxMonitor has stopped unexpectedly");
-        }
+        _logger.LogInformation("OutboxMonitor has stopped");
     }
 
     private async Task<Result<OutboxMessage>> Process(OutboxMessage message)

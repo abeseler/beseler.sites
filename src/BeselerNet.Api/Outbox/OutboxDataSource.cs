@@ -15,7 +15,7 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
         {
             foreach (var message in messages)
             {
-                await connection.ExecuteAsync(
+                _ = await connection.ExecuteAsync(
                     """
                     INSERT INTO outbox (message_id, message_type, message_data, invisible_until, receives_remaining)
                     VALUES (@MessageId, @MessageType, @MessageData::json, @InvisibleUntil, @ReceivesRemaining)              
@@ -31,17 +31,17 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
         }
     }
 
-    public async Task<OutboxMessage?> Dequeue(CancellationToken stoppingToken)
+    public async Task<OutboxMessage[]> Dequeue(int dequeueMessageLimit, CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        return await connection.QuerySingleOrDefaultAsync<OutboxMessage>(
+        var messages =  await connection.QueryAsync<OutboxMessage>(
             """
             WITH messages AS (
                 SELECT message_id
                 FROM outbox
                 WHERE receives_remaining > 0
                 AND invisible_until <= NOW() AT TIME ZONE 'utc'
-                LIMIT 1
+                LIMIT @dequeueMessageLimit
                 FOR UPDATE SKIP LOCKED
             )
             UPDATE outbox o
@@ -50,13 +50,14 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
             FROM messages m
             WHERE m.message_id = o.message_id
             RETURNING *
-            """);
+            """, new { dequeueMessageLimit });
+        return [..messages];
     }
 
     public async Task Delete(Guid messageId, CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        await connection.ExecuteAsync(
+        _ = await connection.ExecuteAsync(
             "DELETE FROM outbox WHERE message_id = @messageId", new { messageId });
     }
 }
