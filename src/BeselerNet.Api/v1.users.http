@@ -1,4 +1,5 @@
 @host={{$projectUrl}}
+@token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL2xvY2FsaG9zdCIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0IiwiZXhwIjoxNzQwMzg2NjI4LCJpYXQiOjE3NDAzODYwMjgsInN1YiI6MSwianRpIjoiMDE5NTM1Y2QtYjJmNi03NTYyLTk0ZTAtYjlhMDhmMzU4NjUxIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5iZiI6MTc0MDM2NDQyOH0.nmUkm079cRfxdRQEmst3VzfnOLJeyh2LyeXvBQ4sT50
 
 ### Register user
 
@@ -11,6 +12,11 @@ Content-Type: application/json
   "givenName": "Adam",
   "familyName": "Beseler"
 }
+
+### Verify email
+
+POST {{host}}/v1/accounts/confirm-email
+Authorization: Bearer {{token}}
 
 ### Forgot password
 

@@ -7,7 +7,6 @@ using System.Data;
 using BeselerNet.Api.Events;
 using Microsoft.AspNetCore.DataProtection;
 using StackExchange.Redis;
-using System.Security.Cryptography.X509Certificates;
 
 namespace BeselerNet.Api.Registrars;
 
@@ -50,7 +49,7 @@ internal static class DataSourceRegistrar
 
         _ = builder.Services.AddMemoryCache();
 
-#pragma warning disable EXTEXP0018 // Type is for evaluation purposes only and is subject to change or removal in future updates.
+        #pragma warning disable EXTEXP0018 // Type is for evaluation purposes only and is subject to change or removal in future updates.
         _ = builder.Services.AddHybridCache();
         #pragma warning restore EXTEXP0018
     }

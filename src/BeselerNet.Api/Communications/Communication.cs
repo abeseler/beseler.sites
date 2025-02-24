@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿using BeselerNet.Api.Core;
+using System.ComponentModel;
+using System.Diagnostics;
 
 namespace BeselerNet.Api.Communications;
 
@@ -6,7 +8,6 @@ internal sealed class Communication : IChangeTracking
 {
     private Communication() { }
     public Guid CommunicationId { get; init; }
-    public string CommId => CommunicationId.ToString("N");
     public int AccountId { get; init; }
     public CommunicationType Type { get; init; } = CommunicationType.Email;
     public required string Name { get; init; }
@@ -18,14 +19,15 @@ internal sealed class Communication : IChangeTracking
     public string? Error { get; private set; }
     public bool IsChanged { get; private set; }
     public void AcceptChanges() => IsChanged = false;
-    public static Communication Create(Guid communicationId, int accountId, CommunicationType type, string name) => new()
+    public static Communication Create(CommunicationType type, string name, int accountId) => new()
     {
-        CommunicationId = communicationId,
+        CommunicationId = Guid.CreateVersion7(),
         AccountId = accountId,
         Type = type,
         Name = name,
         IsChanged = true
     };
+
     public void Processed(DateTimeOffset processedAt)
     {
         ProcessedAt = processedAt;
