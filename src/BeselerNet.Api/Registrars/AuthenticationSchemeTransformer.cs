@@ -10,7 +10,7 @@ internal sealed class AuthenticationSchemeTransformer(IAuthenticationSchemeProvi
     {
         var authenticationSchemes = await authenticationSchemeProvider.GetAllSchemesAsync();
         var requirements = new Dictionary<string, OpenApiSecurityScheme>();
-        
+
         if (authenticationSchemes.Any(authScheme => authScheme.Name == "Bearer"))
         {
 
@@ -22,7 +22,7 @@ internal sealed class AuthenticationSchemeTransformer(IAuthenticationSchemeProvi
                 In = ParameterLocation.Header,
                 BearerFormat = "Json Web Token"
             };
-            
+
         }
 
         if (authenticationSchemes.Any(authScheme => authScheme.Name == "ApiKey"))

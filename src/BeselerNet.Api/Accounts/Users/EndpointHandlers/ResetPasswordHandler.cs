@@ -33,7 +33,7 @@ internal sealed class ResetPasswordHandler
         }
 
         var hashedPassword = passwordHasher.HashPassword(account!, request.Password!);
-        account!.ResetPassword(hashedPassword);
+        account!.ChangePassword(hashedPassword);
 
         await accounts.SaveChanges(account, stoppingToken);
 

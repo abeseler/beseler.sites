@@ -32,7 +32,7 @@ internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHand
                     _logger.LogDebug("No outbox messages to process. Next check in {Seconds} seconds", delay.TotalSeconds);
                     continue;
                 }
-                
+
                 _logger.LogInformation("Received {Count} messages from the outbox to process", messages.Length);
 
                 await foreach (var task in Task.WhenEach(messages.Select(Process)))
@@ -59,7 +59,7 @@ internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHand
     private async Task<Result<OutboxMessage>> Process(OutboxMessage message)
     {
         _logger.LogDebug("Processing outbox message {MessageId}. {Data}", message.MessageId, message.MessageData);
-        
+
         try
         {
             if (message.MessageType is nameof(DomainEvent))

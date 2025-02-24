@@ -1,12 +1,12 @@
 ﻿using BeselerNet.Api.Accounts;
-using Dapper;
-using BeselerNet.Api.Outbox;
 using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Communications;
-using System.Data;
 using BeselerNet.Api.Events;
+using BeselerNet.Api.Outbox;
+using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using StackExchange.Redis;
+using System.Data;
 
 namespace BeselerNet.Api.Registrars;
 
@@ -33,7 +33,7 @@ internal static class DataSourceRegistrar
         {
             var connection = ConnectionMultiplexer.Connect(connectionString);
             _ = builder.Services.AddSingleton<IConnectionMultiplexer>(connection);
-            
+
             _ = builder.Services.AddDataProtection()
                 .SetApplicationName(builder.Environment.ApplicationName)
                 .PersistKeysToStackExchangeRedis(connection, "DataProtection-Keys");
@@ -49,9 +49,9 @@ internal static class DataSourceRegistrar
 
         _ = builder.Services.AddMemoryCache();
 
-        #pragma warning disable EXTEXP0018 // Type is for evaluation purposes only and is subject to change or removal in future updates.
+#pragma warning disable EXTEXP0018 // Type is for evaluation purposes only and is subject to change or removal in future updates.
         _ = builder.Services.AddHybridCache();
-        #pragma warning restore EXTEXP0018
+#pragma warning restore EXTEXP0018
     }
 }
 

@@ -1,22 +1,41 @@
 @host={{$projectUrl}}
-@token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL2xvY2FsaG9zdCIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0IiwiZXhwIjoxNzQwMzg2NjI4LCJpYXQiOjE3NDAzODYwMjgsInN1YiI6MSwianRpIjoiMDE5NTM1Y2QtYjJmNi03NTYyLTk0ZTAtYjlhMDhmMzU4NjUxIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5iZiI6MTc0MDM2NDQyOH0.nmUkm079cRfxdRQEmst3VzfnOLJeyh2LyeXvBQ4sT50
+@email=test@example.com
+@password=password
+@emailConfirmToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL2xvY2FsaG9zdCIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0IiwiZXhwIjoxNzQwMzkyMDUxLCJpYXQiOjE3NDAzOTE0NTEsInN1YiI6MSwianRpIjoiMDE5NTM2MjAtNzViYi03YmZlLThkZGEtYTBmYzUwZDczMDFiIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5iZiI6MTc0MDM2OTg1MX0.NS37b9ThnYHkx2raW8HLU86lLictsQBUihazVI4npvA
 
-### Register user
+### Register account
 
 POST {{host}}/v1/accounts/users
 Content-Type: application/json
 
 {
-  "email": "test@example.com",
-  "password": "password",
+  "email": "{{email}}",
+  "password": "{{password}}",
   "givenName": "Adam",
   "familyName": "Beseler"
 }
 
-### Verify email
+### Login account
+
+# @name login
+POST {{host}}/v1/accounts/oauth/tokens
+Content-Type: application/json
+
+{
+  "grant_type": "password",
+  "username": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Resend email confirmation
+
+POST {{host}}/v1/accounts/resend-email-confirmation
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Confirm email
 
 POST {{host}}/v1/accounts/confirm-email
-Authorization: Bearer {{token}}
+Authorization: Bearer {{emailConfirmToken}}
 
 ### Forgot password
 
@@ -25,4 +44,14 @@ Content-Type: application/json
 
 {
   "email": "test@example.com"
+}
+
+### Reset password
+
+POST {{host}}/v1/accounts/reset-password
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "password": "newpassword"
 }

@@ -1,6 +1,6 @@
 ﻿using BeselerNet.Api.Communications;
-using static System.Net.Mime.MediaTypeNames;
 using static Microsoft.AspNetCore.Http.StatusCodes;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace BeselerNet.Api.Webhooks;
 

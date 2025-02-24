@@ -34,7 +34,7 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
     public async Task<OutboxMessage[]> Dequeue(int dequeueMessageLimit, CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        var messages =  await connection.QueryAsync<OutboxMessage>(
+        var messages = await connection.QueryAsync<OutboxMessage>(
             """
             WITH messages AS (
                 SELECT message_id
@@ -51,7 +51,7 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
             WHERE m.message_id = o.message_id
             RETURNING *
             """, new { dequeueMessageLimit });
-        return [..messages];
+        return [.. messages];
     }
 
     public async Task Delete(Guid messageId, CancellationToken stoppingToken)

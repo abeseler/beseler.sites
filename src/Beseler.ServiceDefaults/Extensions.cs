@@ -6,13 +6,12 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
-using System.Text.Json;
-using System.Text;
 using Serilog;
-using OpenTelemetry.Exporter;
-using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
 
 namespace Beseler.ServiceDefaults;
 
@@ -182,7 +181,7 @@ public static class Extensions
         builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("ready", tags: ["ready"]);
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"]);
 
-        
+
         return builder;
     }
 

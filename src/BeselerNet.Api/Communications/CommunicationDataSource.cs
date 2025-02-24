@@ -21,7 +21,7 @@ internal sealed class CommunicationDataSource(NpgsqlDataSource dataSource)
             return;
         }
 
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);        
+        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
         _ = await connection.ExecuteAsync("""
             INSERT INTO communication (
                 communication_id,
@@ -53,18 +53,18 @@ internal sealed class CommunicationDataSource(NpgsqlDataSource dataSource)
                 failed_at = @failedAt,
                 error = @error
             """, new
-            {
-                communication.CommunicationId,
-                communication.AccountId,
-                Type = communication.Type.ToString(),
-                communication.Name,
-                communication.CreatedAt,
-                communication.ProcessedAt,
-                communication.DeliveredAt,
-                communication.OpenedAt,
-                communication.FailedAt,
-                communication.Error
-            });
+        {
+            communication.CommunicationId,
+            communication.AccountId,
+            Type = communication.Type.ToString(),
+            communication.Name,
+            communication.CreatedAt,
+            communication.ProcessedAt,
+            communication.DeliveredAt,
+            communication.OpenedAt,
+            communication.FailedAt,
+            communication.Error
+        });
 
         communication.AcceptChanges();
     }

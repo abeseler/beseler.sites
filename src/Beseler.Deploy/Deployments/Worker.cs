@@ -21,7 +21,7 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
                 else
                 {
                     await ProcessDeployment(request, stoppingToken);
-                }                    
+                }
             }
         }
     }
@@ -34,7 +34,7 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
             using var client = new Kubernetes(config);
 
             var k8sNamespace = "default";
-            
+
             var yaml = $"""
                 apiVersion: batch/v1
                 kind: Job

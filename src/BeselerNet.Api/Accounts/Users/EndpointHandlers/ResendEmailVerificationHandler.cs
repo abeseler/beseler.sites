@@ -40,7 +40,7 @@ internal sealed class ResendEmailVerificationHandler
         var token = tokens.Generate(subjectClaim, TimeSpan.FromMinutes(10), [emailClaim, emailVerifiedClaim]);
 
         var result = await emailer.SendEmailVerification(account.AccountId, account.Email!, account.Name, token.AccessToken, stoppingToken);
-        
+
         return result.Match<IResult>(
             _ => TypedResults.NoContent(),
             exception => TypedResults.Problem(new()

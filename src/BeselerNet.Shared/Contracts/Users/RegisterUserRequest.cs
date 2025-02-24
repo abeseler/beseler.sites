@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Text.RegularExpressions;
 
 namespace BeselerNet.Shared.Contracts.Users;
 
@@ -34,7 +33,7 @@ public sealed partial record RegisterUserRequest
             errors ??= [];
             errors["Password"] = ["Password is required."];
         }
-        else if (Password is not { Length: >7 })
+        else if (Password is not { Length: > 7 })
         {
             errors ??= [];
             errors["Password"] = ["Password is too short. It must be at least 8 characters."];

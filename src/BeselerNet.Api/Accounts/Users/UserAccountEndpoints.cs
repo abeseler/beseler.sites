@@ -1,8 +1,8 @@
 ﻿using BeselerNet.Api.Accounts.Users.EndpointHandlers;
 using BeselerNet.Shared.Contracts;
 using BeselerNet.Shared.Contracts.Users;
-using static System.Net.Mime.MediaTypeNames;
 using static Microsoft.AspNetCore.Http.StatusCodes;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace BeselerNet.Api.Accounts.Users;
 
@@ -48,7 +48,7 @@ internal static class UserAccountEndpoints
             .ProducesProblem(Status429TooManyRequests, Application.Json)
             .AllowAnonymous();
 
-        _ = v1.MapPost("/reset-password", ForgotPasswordHandler.Handle)
+        _ = v1.MapPost("/reset-password", ResetPasswordHandler.Handle)
             .WithName("ResetUserPassword")
             .WithDescription("Reset the password.")
             .Accepts<ResetPasswordRequest>(Application.Json)

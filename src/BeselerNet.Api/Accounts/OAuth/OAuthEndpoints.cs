@@ -1,6 +1,6 @@
 ﻿using BeselerNet.Shared.Contracts.OAuth;
-using static System.Net.Mime.MediaTypeNames;
 using static Microsoft.AspNetCore.Http.StatusCodes;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace BeselerNet.Api.Accounts.OAuth;
 

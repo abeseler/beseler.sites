@@ -8,7 +8,7 @@ internal static class SendGridEmailEventsWebhook
     public static async Task<IResult> Handle(string? apikey, SendGridEmailEvent[] events, CommunicationDataSource communications, IOptions<SendGridOptions> options, ILogger<SendGridEmailEvent> logger, CancellationToken stoppingToken)
     {
         var validApiKey = options.Value.WebhookApiKey;
-        if (validApiKey is { Length: >0 } && (apikey is null || apikey != validApiKey))
+        if (validApiKey is { Length: > 0 } && (apikey is null || apikey != validApiKey))
         {
             return TypedResults.Unauthorized();
         }

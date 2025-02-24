@@ -1,5 +1,4 @@
-﻿using BeselerNet.Api.Accounts;
-using BeselerNet.Api.Core;
+﻿using BeselerNet.Api.Core;
 using BeselerNet.Api.Outbox;
 using Dapper;
 using Npgsql;

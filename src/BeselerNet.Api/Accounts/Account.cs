@@ -78,11 +78,13 @@ internal sealed class Account : IChangeTracking
         _events ??= [];
         _events.Add(new AccountEmailVerified(AccountId, email));
     }
-    public void ResetPassword(string hash)
+    public void ChangePassword(string hash)
     {
         SecretHash = hash;
         SecretHashedAt = DateTimeOffset.UtcNow;
         IsChanged = true;
+        _events ??= [];
+        _events.Add(new AccountPasswordChanged(AccountId, hash));
     }
     public void Disable(string? disabledBy = null)
     {

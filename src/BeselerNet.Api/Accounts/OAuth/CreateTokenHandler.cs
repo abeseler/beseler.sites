@@ -70,7 +70,7 @@ internal static class CreateTokenHandler
         else if (result is PasswordVerificationResult.SuccessRehashNeeded)
         {
             var hash = parameters.PasswordHasher.HashPassword(account, parameters.Request.Password!);
-            account.ResetPassword(hash);
+            account.ChangePassword(hash);
         }
 
         account.Login();

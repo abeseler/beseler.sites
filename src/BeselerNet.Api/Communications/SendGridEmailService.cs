@@ -24,12 +24,6 @@ internal sealed class SendGridEmailService(CommunicationDataSource communication
     private readonly ILogger<SendGridEmailService> _logger = logger;
     public async Task<Result<Guid>> SendEmailVerification(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
     {
-        if (string.IsNullOrWhiteSpace(_options.ApiKey))
-        {
-            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is missing. Token not sent: {Token}", token);
-            return Guid.Empty;
-        }
-
         var communication = Communication.Create(CommunicationType.Email, "Email Verification", accountId);
         var template = EmailTemplates.EmailVerification(_options.ConfirmEmailUrl!, token);
         var emailMessage = new SendGridMessage
@@ -46,20 +40,21 @@ internal sealed class SendGridEmailService(CommunicationDataSource communication
         };
         emailMessage.AddTo(new EmailAddress(email, recipientName));
 
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is missing. Token not sent: {Token}", token);
+            communication.Failed(DateTimeOffset.UtcNow, "SendGrid ApiKey is missing");
+            await _communications.SaveChanges(communication, stoppingToken);
+            return Guid.Empty;
+        }
+        
         await Send(communication, emailMessage, stoppingToken);
-
         _logger.LogInformation("Email verification email sent to {Email}", email);
 
         return communication.CommunicationId;
     }
     public async Task<Result<Guid>> SendAccountLocked(int accountId, string email, string recipientName, CancellationToken stoppingToken)
     {
-        if (string.IsNullOrWhiteSpace(_options.ApiKey))
-        {
-            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is not set");
-            return Guid.Empty;
-        }
-
         var communication = Communication.Create(CommunicationType.Email, "Account Locked", accountId);
         var template = EmailTemplates.AccountLocked(recipientName);
         var emailMessage = new SendGridMessage
@@ -76,20 +71,21 @@ internal sealed class SendGridEmailService(CommunicationDataSource communication
         };
         emailMessage.AddTo(new EmailAddress(email, recipientName));
 
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is not set");
+            communication.Failed(DateTimeOffset.UtcNow, "SendGrid ApiKey is missing");
+            await _communications.SaveChanges(communication, stoppingToken);
+            return Guid.Empty;
+        }
+        
         await Send(communication, emailMessage, stoppingToken);
-
         _logger.LogInformation("Account locked email sent to {Email}", email);
 
         return communication.CommunicationId;
     }
     public async Task<Result<Guid>> SendPasswordReset(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
     {
-        if (string.IsNullOrWhiteSpace(_options.ApiKey))
-        {
-            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is missing. Token not sent: {Token}", token);
-            return Guid.Empty;
-        }
-
         var communication = Communication.Create(CommunicationType.Email, "Password Reset", accountId);
         var template = EmailTemplates.PasswordReset(recipientName, _options.ResetPasswordUrl!, token);
         var emailMessage = new SendGridMessage
@@ -106,8 +102,15 @@ internal sealed class SendGridEmailService(CommunicationDataSource communication
         };
         emailMessage.AddTo(new EmailAddress(email, recipientName));
 
-        await Send(communication, emailMessage, stoppingToken);
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+        {
+            _logger.LogWarning("Sending emails is disabled because SendGrid ApiKey is missing. Token not sent: {Token}", token);
+            communication.Failed(DateTimeOffset.UtcNow, "SendGrid ApiKey is missing");
+            await _communications.SaveChanges(communication, stoppingToken);
+            return Guid.Empty;
+        }
 
+        await Send(communication, emailMessage, stoppingToken);
         _logger.LogInformation("Password reset email sent to {Email}", email);
 
         return communication.CommunicationId;

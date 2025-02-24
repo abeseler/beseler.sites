@@ -59,7 +59,7 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
     private async Task ProcessRequest(ForgotPasswordRequest request, CancellationToken stoppingToken)
     {
         using var activity = Telemetry.Source.StartActivity("ForgotPasswordService.ProcessRequest", ActivityKind.Consumer, request.TraceId);
-        
+
         if (request.Email is null)
         {
             _logger.LogWarning("Password reset request for {Email} failed: email is null", request.Email);

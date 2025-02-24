@@ -8,6 +8,7 @@ namespace BeselerNet.Api.Core
 
     [JsonDerivedType(typeof(AccountCreated), "account-created")]
     [JsonDerivedType(typeof(AccountEmailVerified), "account-email-verified")]
+    [JsonDerivedType(typeof(AccountPasswordChanged), "account-password-changed")]
     [JsonDerivedType(typeof(AccountLoginSucceeded), "account-login-succeeded")]
     [JsonDerivedType(typeof(AccountLoginFailed), "account-login-failed")]
     [JsonDerivedType(typeof(AccountDisabled), "account-disabled")]
@@ -28,6 +29,10 @@ namespace BeselerNet.Api.Accounts
         public override string ResourceId => AccountId.ToString();
     }
     internal sealed record AccountEmailVerified(int AccountId, string Email) : DomainEvent("account")
+    {
+        public override string ResourceId => AccountId.ToString();
+    }
+    internal sealed record AccountPasswordChanged(int AccountId, string SecretHash) : DomainEvent("account")
     {
         public override string ResourceId => AccountId.ToString();
     }
