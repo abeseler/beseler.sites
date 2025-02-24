@@ -3,7 +3,7 @@
     "title": "00:createTable"
 }
 */
-CREATE TABLE IF NOT EXISTS communication (
+CREATE TABLE communication (
     communication_id UUID NOT NULL,
     account_id INT NOT NULL,
     type TEXT NOT NULL,
@@ -23,4 +23,4 @@ CREATE TABLE IF NOT EXISTS communication (
     "title": "01:createIndex"
 }
 */
-CREATE INDEX IF NOT EXISTS idx_communication_account_id ON communication (account_id, created_at DESC);
+CREATE INDEX idx_communication_account_id ON communication (account_id, created_at DESC);

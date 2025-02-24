@@ -1,8 +1,9 @@
 ﻿using BeselerNet.Api.Accounts;
 using BeselerNet.Api.Accounts.EventHandlers;
+using BeselerNet.Api.Core;
 using System.Diagnostics;
 
-namespace BeselerNet.Api.Core;
+namespace BeselerNet.Api.Events;
 
 internal sealed class DomainEventHandler(IServiceProvider services)
 {

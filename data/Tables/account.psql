@@ -3,7 +3,7 @@
     "title": "00:createTable"
 }
 */
-CREATE TABLE IF NOT EXISTS account (
+CREATE TABLE account (
     account_id INT NOT NULL DEFAULT (nextval('account_id_seq')),
     type TEXT NOT NULL,
     username TEXT NOT NULL,

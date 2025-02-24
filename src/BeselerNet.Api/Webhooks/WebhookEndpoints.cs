@@ -1,5 +1,6 @@
 ﻿using BeselerNet.Api.Communications;
-using System.Net.Mime;
+using static System.Net.Mime.MediaTypeNames;
+using static Microsoft.AspNetCore.Http.StatusCodes;
 
 namespace BeselerNet.Api.Webhooks;
 
@@ -13,8 +14,8 @@ internal static class WebhookEndpoints
         _ = v1.MapPost("/sendgrid-events", SendGridEmailEventsWebhook.Handle)
             .WithName("ProcessSendGridEmailEvents")
             .WithDescription("Process SendGrid email events.")
-            .Accepts<SendGridEmailEvent[]>(MediaTypeNames.Application.Json)
-            .Produces(StatusCodes.Status204NoContent)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .Accepts<SendGridEmailEvent[]>(Application.Json)
+            .Produces(Status204NoContent)
+            .Produces(Status401Unauthorized);
     }
 }

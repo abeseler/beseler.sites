@@ -1,4 +1,5 @@
 ﻿using BeselerNet.Api.Core;
+using BeselerNet.Api.Events;
 using BeselerNet.Shared.Core;
 using System.Text.Json;
 
@@ -65,18 +66,22 @@ internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHand
             {
                 var domainEvent = JsonSerializer.Deserialize<DomainEvent>(message.MessageData, JsonSerializerOptions.Web)
                     ?? throw new InvalidOperationException("Failed to deserialize domain event.");
-                
+
                 _logger.LogDebug("Outbox message {MessageId} deserialized to: {EventType}", message.MessageId, domainEvent.GetType().Name);
 
                 await _domainEventHandler.Handle(domainEvent, CancellationToken.None);
             }
-
-            return message;
+            else
+            {
+                _logger.LogWarning("Unknown message type {MessageType} for outbox message {MessageId}", message.MessageType, message.MessageId);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing outbox message {MessageId}", message.MessageId);
             return ex;
         }
+
+        return message;
     }
 }

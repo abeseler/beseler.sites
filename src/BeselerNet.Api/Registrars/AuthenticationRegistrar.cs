@@ -1,9 +1,6 @@
-﻿using BeselerNet.Api.Accounts;
-using BeselerNet.Api.Core;
-using BeselerNet.Api.Registrars;
+﻿using BeselerNet.Api.Registrars;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;

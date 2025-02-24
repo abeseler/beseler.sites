@@ -2,18 +2,18 @@
 
 ### Get token
 
-POST {{host}}/v1/oauth/tokens
+POST {{host}}/v1/accounts/oauth/tokens
 Content-Type: application/json
 
 {
   "grant_type": "password",
-  "username": "adam.beseler@gmail.com",
+  "username": "test@example.com",
   "password": "password"
 }
 
 ### Get token with client credentials
 
-POST {{host}}/v1/oauth/tokens
+POST {{host}}/v1/accounts/oauth/tokens
 Content-Type: application/json
 
 {
@@ -24,7 +24,7 @@ Content-Type: application/json
 
 ### Get token with refresh token
 
-POST {{host}}/v1/oauth/tokens
+POST {{host}}/v1/accounts/oauth/tokens
 Content-Type: application/json
 
 {

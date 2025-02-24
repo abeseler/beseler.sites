@@ -4,8 +4,10 @@ using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Accounts.Users;
 using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
+using BeselerNet.Api.Events;
 using BeselerNet.Api.Registrars;
 using BeselerNet.Api.Webhooks;
+using Cysharp.Serialization.Json;
 using Microsoft.AspNetCore.Identity;
 using SendGrid.Extensions.DependencyInjection;
 
@@ -25,6 +27,10 @@ builder.Services.AddOpenApi(options =>
 {
     _ = options.AddDocumentTransformer<OpenApiDefaultTransformer>();
     _ = options.AddDocumentTransformer<AuthenticationSchemeTransformer>();
+});
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new UlidJsonConverter());
 });
 builder.Services.AddProblemDetails();
 builder.Services.AddRequestTimeouts();

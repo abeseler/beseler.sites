@@ -6,6 +6,7 @@ internal sealed class Communication : IChangeTracking
 {
     private Communication() { }
     public Guid CommunicationId { get; init; }
+    public string CommId => CommunicationId.ToString("N");
     public int AccountId { get; init; }
     public CommunicationType Type { get; init; } = CommunicationType.Email;
     public required string Name { get; init; }

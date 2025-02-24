@@ -3,7 +3,7 @@
     "title": "00:createTable"
 }
 */
-CREATE TABLE IF NOT EXISTS outbox (
+CREATE TABLE outbox (
     message_id UUID NOT NULL,
     message_type TEXT NOT NULL,
     message_data JSON NOT NULL,
@@ -17,5 +17,4 @@ CREATE TABLE IF NOT EXISTS outbox (
     "title": "01:createIndex"
 }
 */
-CREATE INDEX IF NOT EXISTS idx_outbox_lookup ON outbox (invisible_until)
-WHERE receives_remaining > 0;
+CREATE INDEX idx_outbox_lookup ON outbox (invisible_until) WHERE receives_remaining > 0;

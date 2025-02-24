@@ -1,15 +1,13 @@
 ﻿using BeselerNet.Api.Core;
-using BeselerNet.Api.Outbox;
+using BeselerNet.Api.Events;
 using Dapper;
 using Npgsql;
-using System.Text.Json;
 
 namespace BeselerNet.Api.Accounts;
 
-internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataSource outbox)
+internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDataSource eventLog)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
-    private readonly OutboxDataSource _outbox = outbox;
     public async Task<int> NextId(CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
@@ -113,37 +111,9 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 account.FailedLoginAttempts
             }, transaction);
 
-            List<OutboxMessage>? outboxMessages = null;
-            foreach (var @event in account.UncommittedEvents)
+            if (account.UncommittedEvents is { Count: > 0 })
             {
-                var eventData = JsonSerializer.Serialize(@event, JsonSerializerOptions.Web);
-                if (@event.SendToOutbox)
-                {
-                    outboxMessages ??= [];
-                    outboxMessages.Add(new OutboxMessage
-                    {
-                        MessageId = @event.EventId,
-                        MessageType = nameof(DomainEvent),
-                        MessageData = eventData,
-                        InvisibleUntil = @event.OccurredAt,
-                        ReceivesRemaining = 3
-                    });
-                }
-                _ = await connection.ExecuteAsync("""
-                    INSERT INTO account_event_log (event_id,  account_id, event_data, occurred_at)
-                    VALUES (@EventId, @AccountId, @EventData::jsonb, @OccurredAt)
-                    """, new
-                    {
-                        @event.EventId,
-                        account.AccountId,
-                        EventData = eventData,
-                        @event.OccurredAt
-                    }, transaction);
-            }
-
-            if (outboxMessages is { Count: >0 })
-            {
-                await _outbox.SaveAll(outboxMessages, connection, transaction, stoppingToken);
+                await eventLog.Append(account.UncommittedEvents, connection, transaction, stoppingToken);
             }
 
             await transaction.CommitAsync(stoppingToken);

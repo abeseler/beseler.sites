@@ -23,19 +23,33 @@ namespace BeselerNet.Api.Accounts
         string? Email,
         string SecretHash,
         string? GivenName,
-        string? FamilyName) : DomainEvent(!string.IsNullOrWhiteSpace(Email));
-
-    internal sealed record AccountEmailVerified(int AccountId, string Email) : DomainEvent;
-    internal sealed record AccountLoginSucceeded(int AccountId) : DomainEvent;
-    internal sealed record AccountLoginFailed(int AccountId, int Attempt, bool Locked) : DomainEvent(Locked);
-    internal sealed record AccountDisabled(int AccountId, string? DisabledBy) : DomainEvent;
+        string? FamilyName) : DomainEvent("account", !string.IsNullOrWhiteSpace(Email))
+    {
+        public override string ResourceId => AccountId.ToString();
+    }
+    internal sealed record AccountEmailVerified(int AccountId, string Email) : DomainEvent("account")
+    {
+        public override string ResourceId => AccountId.ToString();
+    }
+    internal sealed record AccountLoginSucceeded(int AccountId) : DomainEvent("account")
+    {
+        public override string ResourceId => AccountId.ToString();
+    }
+    internal sealed record AccountLoginFailed(int AccountId, int Attempt, bool Locked) : DomainEvent("account", Locked)
+    {
+        public override string ResourceId => AccountId.ToString();
+    }
+    internal sealed record AccountDisabled(int AccountId, string? DisabledBy) : DomainEvent("account")
+    {
+        public override string ResourceId => AccountId.ToString();
+    }
 
     internal static class AccountDomainEventHandlerRegistrar
     {
         public static void AddAccountDomainEventHandlers(this IServiceCollection services)
         {
-            services.AddScoped<AccountCreatedHandler>();
-            services.AddScoped<AccountLoginFailedHandler>();
+            _ = services.AddScoped<AccountCreatedHandler>();
+            _ = services.AddScoped<AccountLoginFailedHandler>();
         }
     }
 }
