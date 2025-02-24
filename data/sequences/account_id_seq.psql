@@ -9,5 +9,4 @@ CREATE SEQUENCE account_id_seq
     INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
-    NO CACHE
     NO CYCLE;
