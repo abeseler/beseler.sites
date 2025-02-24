@@ -1,0 +1,12 @@
+/* Migration
+{
+    "title": "00:createSequence"
+}
+*/
+CREATE SEQUENCE account_id_seq
+    AS INT
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    NO CYCLE;

@@ -1,0 +1,25 @@
+/* Migration
+{
+    "title": "00:createTable"
+}
+*/
+CREATE TABLE account (
+    account_id INT NOT NULL DEFAULT (nextval('account_id_seq')),
+    type TEXT NOT NULL,
+    username TEXT NOT NULL,
+    email TEXT NULL,
+    email_verified_at TIMESTAMPTZ NULL,
+    secret_hash TEXT NOT NULL,
+    secret_hashed_at TIMESTAMPTZ NOT NULL,
+    given_name TEXT NULL,
+    family_name TEXT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    disabled_at TIMESTAMPTZ NULL,
+    locked_at TIMESTAMPTZ NULL,
+    last_logon TIMESTAMPTZ NULL,
+    failed_login_attempts INT NOT NULL DEFAULT (0),
+    CONSTRAINT pk_account PRIMARY KEY (account_id),
+    CONSTRAINT uq_account_username UNIQUE (username),
+    CONSTRAINT uq_account_email UNIQUE (email),
+    CONSTRAINT chk_account_type CHECK (type IN ('User', 'Service'))
+);

@@ -1,0 +1,26 @@
+/* Migration
+{
+    "title": "00:createTable"
+}
+*/
+CREATE TABLE communication (
+    communication_id UUID NOT NULL,
+    account_id INT NOT NULL,
+    type TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    processed_at TIMESTAMP NULL,
+    delivered_at TIMESTAMP NULL,
+    opened_at TIMESTAMP NULL,
+    failed_at TIMESTAMP NULL,
+    error TEXT NULL,
+    CONSTRAINT pk_communication PRIMARY KEY (communication_id),
+    CONSTRAINT chk_communication_type CHECK (type IN ('Email'))
+);
+
+/* Migration
+{
+    "title": "01:createIndex"
+}
+*/
+CREATE INDEX idx_communication_account_id ON communication (account_id, created_at DESC);
