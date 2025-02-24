@@ -1,33 +1,36 @@
 @host={{$projectUrl}}
+@email=test@example.com
+@password=password
 
 ### Get token
 
+# @name tokens
 POST {{host}}/v1/accounts/oauth/tokens
 Content-Type: application/json
 
 {
   "grant_type": "password",
-  "username": "test@example.com",
-  "password": "password"
+  "username": "{{email}}",
+  "password": "{{password}}"
 }
 
-### Get token with client credentials
+### Get token with refresh token
 
+# @name refresh
 POST {{host}}/v1/accounts/oauth/tokens
 Content-Type: application/json
 
 {
-  "grant_type": "client_credentials",
-  "client_id": "client_id",
-  "client_secret": "client_secret"
+  "grant_type": "refresh_token",
+  "refresh_token": "{{tokens.response.body.$.refresh_token}}"
 }
 
-### Get token with refresh token
+### Get token from refresh token
 
 POST {{host}}/v1/accounts/oauth/tokens
 Content-Type: application/json
 
 {
   "grant_type": "refresh_token",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL2xvY2FsaG9zdCIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0IiwiZXhwIjoxNzM5ODc3MzA5LCJpYXQiOjE3Mzk4NzM3MDksInN1YiI6MSwianRpIjoiMDE5NTE3NDQtNTg3NC03NTc2LTg5ODQtNDllNmZlNGQ2MTc1IiwibmJmIjoxNzM5ODUyMTA5fQ.uAN6sYRnR0R1HOMLBkhjNLXUawHJnD_Lt2t-ng5npfk"
+  "refresh_token": "{{refresh.response.body.$.refresh_token}}"
 }

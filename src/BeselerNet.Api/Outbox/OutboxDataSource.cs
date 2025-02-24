@@ -4,18 +4,21 @@ using System.Data;
 
 namespace BeselerNet.Api.Outbox;
 
-internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
+internal sealed class OutboxDataSource(NpgsqlDataSource dataSource, ILogger<OutboxDataSource> logger)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
+    private readonly ILogger<OutboxDataSource> _logger = logger;
 
-    public async Task SaveAll(IEnumerable<OutboxMessage> messages, IDbConnection? openConnection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
+    public async Task<int> Enqueue(IEnumerable<OutboxMessage> messages, IDbConnection? openConnection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
     {
         var connection = openConnection ?? await _dataSource.OpenConnectionAsync(stoppingToken);
+        var count = 0;
+
         try
         {
             foreach (var message in messages)
             {
-                _ = await connection.ExecuteAsync(
+                count += await connection.ExecuteAsync(
                     """
                     INSERT INTO outbox (message_id, message_type, message_data, invisible_until, receives_remaining)
                     VALUES (@MessageId, @MessageType, @MessageData::json, @InvisibleUntil, @ReceivesRemaining)              
@@ -29,6 +32,10 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
                 connection.Dispose();
             }
         }
+
+        _logger.LogDebug("Outbox messages enqueued. Count: {Count}", count);
+
+        return count;
     }
 
     public async Task<OutboxMessage[]> Dequeue(int dequeueMessageLimit, CancellationToken stoppingToken)
@@ -54,10 +61,9 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
         return [.. messages];
     }
 
-    public async Task Delete(Guid messageId, CancellationToken stoppingToken)
+    public async Task<int> Delete(Guid messageId, CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        _ = await connection.ExecuteAsync(
-            "DELETE FROM outbox WHERE message_id = @messageId", new { messageId });
+        return await connection.ExecuteAsync("DELETE FROM outbox WHERE message_id = @messageId", new { messageId });
     }
 }

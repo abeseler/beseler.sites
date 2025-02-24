@@ -7,14 +7,17 @@ using System.Text.Json;
 
 namespace BeselerNet.Api.Events;
 
-internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxDataSource outbox)
+internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxDataSource outbox, ILogger<EventLogDataSource> logger)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
     private readonly OutboxDataSource _outbox = outbox;
+    private readonly ILogger<EventLogDataSource> _logger = logger;
 
-    public async Task Append(IEnumerable<DomainEvent> events, IDbConnection? openConnection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
+    public async Task<int> Append(IEnumerable<DomainEvent> events, IDbConnection? openConnection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
     {
         var connection = openConnection ?? await _dataSource.OpenConnectionAsync(stoppingToken);
+        var count = 0;
+
         try
         {
             List<OutboxMessage>? outboxMessages = null;
@@ -33,7 +36,7 @@ internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxData
                         ReceivesRemaining = 3
                     });
                 }
-                _ = await connection.ExecuteAsync("""
+                count += await connection.ExecuteAsync("""
                     INSERT INTO event_log (event_id, resource, resource_id, details, occurred_at)
                     VALUES (@EventId, @Resource, @ResourceId, @Details::jsonb, @OccurredAt)
                     """, new
@@ -46,9 +49,9 @@ internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxData
                 }, transaction);
             }
 
-            if (outboxMessages is { Count: > 0 })
+            if (outboxMessages is { Count: >0 })
             {
-                await _outbox.SaveAll(outboxMessages, connection, transaction, stoppingToken);
+                _ = await _outbox.Enqueue(outboxMessages, connection, transaction, stoppingToken);
             }
         }
         finally
@@ -58,5 +61,9 @@ internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxData
                 connection.Dispose();
             }
         }
+
+        _logger.LogDebug("Events appended to event log. Count: {Count}", count);
+
+        return count;
     }
 }

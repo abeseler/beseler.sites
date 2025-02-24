@@ -1,13 +1,14 @@
-﻿using BeselerNet.Api.Core;
-using BeselerNet.Api.Events;
+﻿using BeselerNet.Api.Events;
 using Dapper;
 using Npgsql;
 
 namespace BeselerNet.Api.Accounts;
 
-internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDataSource eventLog)
+internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDataSource eventLog, ILogger<AccountDataSource> logger)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
+    private readonly EventLogDataSource _eventLog = eventLog;
+    private readonly ILogger<AccountDataSource> _logger = logger;
     public async Task<int> NextId(CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
@@ -33,13 +34,6 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
         return await connection.QuerySingleOrDefaultAsync<Account>(
             "SELECT * FROM account WHERE email = @email", new { email });
-    }
-
-    public async Task<IEnumerable<DomainEvent>> DomainEvents(int accountId, CancellationToken stoppingToken)
-    {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        return await connection.QueryAsync<DomainEvent>(
-            "SELECT event_data FROM account_event_log WHERE account_id = @accountId", new { accountId });
     }
 
     public async Task SaveChanges(Account account, CancellationToken stoppingToken)
@@ -111,17 +105,20 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
                 account.FailedLoginAttempts
             }, transaction);
 
-            if (account.UncommittedEvents is { Count: > 0 })
+            if (account.UncommittedEvents is { Count: >0 })
             {
-                await eventLog.Append(account.UncommittedEvents, connection, transaction, stoppingToken);
+                _ = await _eventLog.Append(account.UncommittedEvents, connection, transaction, stoppingToken);
             }
 
             await transaction.CommitAsync(stoppingToken);
+            _logger.LogDebug("Saved account {AccountId}.", account.AccountId);
 
             account.AcceptChanges();
         }
-        catch
+        catch(Exception ex)
         {
+            _logger.LogError(ex, "Failed to save account changes.");
+
             await transaction.RollbackAsync(stoppingToken);
             throw;
         }
