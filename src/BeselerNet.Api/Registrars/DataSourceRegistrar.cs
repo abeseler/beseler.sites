@@ -5,6 +5,9 @@ using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Communications;
 using System.Data;
 using BeselerNet.Api.Events;
+using Microsoft.AspNetCore.DataProtection;
+using StackExchange.Redis;
+using System.Security.Cryptography.X509Certificates;
 
 namespace BeselerNet.Api.Registrars;
 
@@ -26,12 +29,26 @@ internal static class DataSourceRegistrar
 
     public static void AddCaches(this IHostApplicationBuilder builder)
     {
-        builder.AddRedisOutputCache("Cache");
-        _ = builder.Services.AddMemoryCache();
-        _ = builder.Services.AddStackExchangeRedisCache(options =>
+        var connectionString = builder.Configuration.GetConnectionString("Cache");
+        if (!string.IsNullOrWhiteSpace(connectionString))
         {
-            options.Configuration = builder.Configuration.GetConnectionString("Cache");
-        });
+            var connection = ConnectionMultiplexer.Connect(connectionString);
+            _ = builder.Services.AddSingleton<IConnectionMultiplexer>(connection);
+            
+            _ = builder.Services.AddDataProtection()
+                .SetApplicationName(builder.Environment.ApplicationName)
+                .PersistKeysToStackExchangeRedis(connection, "DataProtection-Keys");
+
+            _ = builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = connectionString;
+                options.InstanceName = "Api:";
+            });
+
+            builder.AddRedisOutputCache("Cache");
+        }
+
+        _ = builder.Services.AddMemoryCache();
 
 #pragma warning disable EXTEXP0018 // Type is for evaluation purposes only and is subject to change or removal in future updates.
         _ = builder.Services.AddHybridCache();
