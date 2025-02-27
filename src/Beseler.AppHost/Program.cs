@@ -8,7 +8,8 @@ var postgres = builder.AddPostgres("postgres", password: postgresPassword, port:
     .WithBindMount("../../data", "/docker-entrypoint-initdb.d")
     .WithPgWeb();
 
-var database = postgres.AddDatabase("Database", "bnet");
+var database = postgres.AddDatabase("Database", "bnet")
+    .WithParentRelationship(postgres);
 
 var dbMigrator = builder.AddContainer("dbdeploy", "abeseler/dbdeploy")
     .WithOtlpExporter()
@@ -20,13 +21,16 @@ var dbMigrator = builder.AddContainer("dbdeploy", "abeseler/dbdeploy")
     .WithEnvironment("Deploy__ConnectionAttempts", "10")
     .WithEnvironment("Deploy__ConnectionRetryDelaySeconds", "1")
     .WithBindMount("../../data", "/app/Migrations")
+    .WithParentRelationship(postgres)
     .WaitFor(database);
 
-builder.AddProject<Projects.Beseler_Deploy>("beseler-deploy");
+builder.AddProject<Projects.Beseler_Deploy>("beseler-deploy")
+    .WithExplicitStart();
 
 builder.AddProject<Projects.BeselerDev_Web>("beseler-dev-web")
     .WithReference(cache)
-    .WaitFor(cache);
+    .WaitFor(cache)
+    .WithExplicitStart();
 
 var beselerNetApi = builder.AddProject<Projects.BeselerNet_Api>("beseler-net-api")
     .WithReference(cache)

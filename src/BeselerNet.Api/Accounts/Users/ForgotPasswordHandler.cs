@@ -8,7 +8,7 @@ using System.Diagnostics;
 using System.Security.Claims;
 using System.Threading.Channels;
 
-namespace BeselerNet.Api.Accounts.Users.EndpointHandlers;
+namespace BeselerNet.Api.Accounts.Users;
 
 internal sealed class ForgotPasswordHandler
 {

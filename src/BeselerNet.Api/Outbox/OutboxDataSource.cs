@@ -4,26 +4,21 @@ using System.Data;
 
 namespace BeselerNet.Api.Outbox;
 
-internal sealed class OutboxDataSource(NpgsqlDataSource dataSource, ILogger<OutboxDataSource> logger)
+internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
-    private readonly ILogger<OutboxDataSource> _logger = logger;
 
-    public async Task<int> Enqueue(IEnumerable<OutboxMessage> messages, IDbConnection? openConnection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
+    public async Task Enqueue(OutboxMessage message, IDbConnection? openConnection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
     {
         var connection = openConnection ?? await _dataSource.OpenConnectionAsync(stoppingToken);
-        var count = 0;
 
         try
         {
-            foreach (var message in messages)
-            {
-                count += await connection.ExecuteAsync(
-                    """
-                    INSERT INTO outbox (message_id, message_type, message_data, invisible_until, receives_remaining)
-                    VALUES (@MessageId, @MessageType, @MessageData::json, @InvisibleUntil, @ReceivesRemaining)              
-                    """, message, transaction);
-            }
+            _ = await connection.ExecuteAsync(
+                """
+                INSERT INTO outbox (message_id, message_type, message_data, invisible_until, receives_remaining)
+                VALUES (@MessageId, @MessageType, @MessageData::json, @InvisibleUntil, @ReceivesRemaining)              
+                """, message, transaction);
         }
         finally
         {
@@ -32,10 +27,6 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource, ILogger<Outb
                 connection.Dispose();
             }
         }
-
-        _logger.LogDebug("Outbox messages enqueued. Count: {Count}", count);
-
-        return count;
     }
 
     public async Task<OutboxMessage[]> Dequeue(int dequeueMessageLimit, CancellationToken stoppingToken)

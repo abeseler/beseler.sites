@@ -1,7 +1,6 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Api.Accounts;
 using BeselerNet.Api.Accounts.OAuth;
-using BeselerNet.Api.Accounts.Users;
 using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
 using BeselerNet.Api.Events;
@@ -61,8 +60,7 @@ app.UseExceptionHandler();
 app.UseRequestLogging();
 
 app.MapOpenApi().CacheOutput();
-app.MapOAuthEndpoints();
-app.MapUserAccountEndpoints();
+app.MapAccountEndpoints();
 app.MapWebhookEndpoints();
 app.MapDefaultEndpoints();
 

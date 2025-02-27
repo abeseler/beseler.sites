@@ -13,57 +13,45 @@ internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxData
     private readonly OutboxDataSource _outbox = outbox;
     private readonly ILogger<EventLogDataSource> _logger = logger;
 
-    public async Task<int> Append(IEnumerable<DomainEvent> events, IDbConnection? openConnection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
+    public async Task Append(DomainEvent @event, IDbConnection? connection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
     {
-        var connection = openConnection ?? await _dataSource.OpenConnectionAsync(stoppingToken);
-        var count = 0;
+        var conn = connection ?? await _dataSource.OpenConnectionAsync(stoppingToken);
+        var tran = transaction ?? conn.BeginTransaction();
 
         try
         {
-            List<OutboxMessage>? outboxMessages = null;
-            foreach (var @event in events)
-            {
-                var details = JsonSerializer.Serialize(@event, JsonSerializerOptions.Web);
-                if (@event.SendToOutbox)
-                {
-                    outboxMessages ??= [];
-                    outboxMessages.Add(new OutboxMessage
-                    {
-                        MessageId = @event.EventId,
-                        MessageType = nameof(DomainEvent),
-                        MessageData = details,
-                        InvisibleUntil = @event.OccurredAt,
-                        ReceivesRemaining = 3
-                    });
-                }
-                count += await connection.ExecuteAsync("""
-                    INSERT INTO event_log (event_id, resource, resource_id, details, occurred_at)
-                    VALUES (@EventId, @Resource, @ResourceId, @Details::jsonb, @OccurredAt)
-                    """, new
+            var details = JsonSerializer.Serialize(@event, JsonSerializerOptions.Web);
+            _ = await conn.ExecuteAsync("""
+                INSERT INTO event_log (event_id, resource_type, resource_id, details, occurred_at)
+                VALUES (@EventId, @Resource, @ResourceId, @Details::jsonb, @OccurredAt)
+                """, new
                 {
                     @event.EventId,
-                    @event.Resource,
+                    @event.ResourceType,
                     @event.ResourceId,
                     Details = details,
                     @event.OccurredAt
-                }, transaction);
-            }
+                }, tran);
 
-            if (outboxMessages is { Count: >0 })
+            if (@event.SendToOutbox)
             {
-                _ = await _outbox.Enqueue(outboxMessages, connection, transaction, stoppingToken);
+                var outboxMessage = new OutboxMessage
+                {
+                    MessageId = @event.EventId,
+                    MessageType = nameof(DomainEvent),
+                    MessageData = details,
+                    InvisibleUntil = @event.OccurredAt,
+                    ReceivesRemaining = 3
+                };
+                await _outbox.Enqueue(outboxMessage, conn, tran, stoppingToken);
             }
         }
         finally
         {
-            if (openConnection is null)
+            if (connection is null)
             {
-                connection.Dispose();
+                conn.Dispose();
             }
         }
-
-        _logger.LogDebug("Events appended to event log. Count: {Count}", count);
-
-        return count;
     }
 }

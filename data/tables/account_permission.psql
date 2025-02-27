@@ -1,0 +1,13 @@
+/* Migration
+{
+    "title": "00:createTable"
+}
+*/
+CREATE TABLE account_permission (
+    account_id INT NOT NULL,
+    permission_id INT NOT NULL,
+    scope TEXT NOT NULL,
+    granted_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    granted_by_account_id INT NOT NULL,
+    CONSTRAINT pk_account_permission PRIMARY KEY (account_id, permission_id)
+);

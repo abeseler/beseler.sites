@@ -1,4 +1,4 @@
-﻿using BeselerNet.Api.Accounts.Users.EndpointHandlers;
+﻿using BeselerNet.Api.Accounts.Users;
 using BeselerNet.Api.Core;
 using BeselerNet.Api.Outbox;
 

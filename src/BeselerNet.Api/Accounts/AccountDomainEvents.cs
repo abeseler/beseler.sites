@@ -1,5 +1,6 @@
 ﻿using BeselerNet.Api.Accounts;
 using BeselerNet.Api.Accounts.EventHandlers;
+using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Core;
 using System.Text.Json.Serialization;
 
@@ -12,6 +13,8 @@ namespace BeselerNet.Api.Core
     [JsonDerivedType(typeof(AccountLoginSucceeded), "account-login-succeeded")]
     [JsonDerivedType(typeof(AccountLoginFailed), "account-login-failed")]
     [JsonDerivedType(typeof(AccountDisabled), "account-disabled")]
+    [JsonDerivedType(typeof(AccountPermissionGranted), "account-permission-granted")]
+    [JsonDerivedType(typeof(AccountPermissionRevoked), "account-permission-revoked")]
     internal abstract partial record DomainEvent;
 }
 
@@ -45,6 +48,14 @@ namespace BeselerNet.Api.Accounts
         public override string ResourceId => AccountId.ToString();
     }
     internal sealed record AccountDisabled(int AccountId, string? DisabledBy) : DomainEvent("account")
+    {
+        public override string ResourceId => AccountId.ToString();
+    }
+    internal sealed record AccountPermissionGranted(int AccountId, Permission Permission, string Scope, int GrantedByAccountId) : DomainEvent("account")
+    {
+        public override string ResourceId => AccountId.ToString();
+    }
+    internal sealed record AccountPermissionRevoked(int AccountId, Permission Permission, string Scope, int RevokedByAccountId) : DomainEvent("account")
     {
         public override string ResourceId => AccountId.ToString();
     }

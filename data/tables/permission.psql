@@ -1,0 +1,27 @@
+/* Migration
+{
+    "title": "00:createTable"
+}
+*/
+CREATE TABLE permission (
+    permission_id INT NOT NULL DEFAULT (nextval('permission_id_seq')),
+    resource TEXT NOT NULL,
+    action TEXT NOT NULL,
+    CONSTRAINT pk_permission PRIMARY KEY (permission_id),
+    CONSTRAINT uq_permission UNIQUE (resource, action)
+);
+
+/* Migration
+{
+    "title": "01:insertData"
+}
+*/
+INSERT INTO permission (resource, action)
+VALUES
+('account', 'create'),
+('account', 'read'),
+('account', 'update'),
+('account', 'delete'),
+('account', 'list'),
+('account', 'lock'),
+('account', 'unlock');

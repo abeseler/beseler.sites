@@ -16,6 +16,7 @@ internal static class DataSourceRegistrar
     {
         builder.AddNpgsqlDataSource("Database");
 
+        _ = builder.Services.AddSingleton<PermissionDataSource>();
         _ = builder.Services.AddSingleton<OutboxDataSource>();
         _ = builder.Services.AddSingleton<EventLogDataSource>();
         _ = builder.Services.AddScoped<AccountDataSource>();

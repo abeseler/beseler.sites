@@ -63,7 +63,7 @@ internal sealed class JwtGenerator
 
         tokenId = Guid.CreateVersion7(utcNow);
         expires = utcNow.AddHours(_options.RefreshTokenLifetimeHours);
-        claims.RemoveAll(x => x.Type != JwtRegisteredClaimNames.Sub);
+        _ = claims.RemoveAll(x => x.Type != JwtRegisteredClaimNames.Sub);
         claims.Add(new Claim(JwtRegisteredClaimNames.Jti, tokenId.ToString()));
 
         var refreshToken = WriteToken(claims, utcNow, expires);
@@ -120,8 +120,8 @@ internal sealed class JwtGenerator
         var descriptor = new SecurityTokenDescriptor
         {
             Subject = new(claims),
-            IssuedAt = issuedAt.DateTime,
-            Expires = expires.DateTime,
+            IssuedAt = issuedAt.UtcDateTime,
+            Expires = expires.UtcDateTime,
             Issuer = _options.Issuer,
             Audience = _options.Audience,
             SigningCredentials = _signingCredentials

@@ -1,24 +1,36 @@
-﻿using BeselerNet.Api.Accounts.Users.EndpointHandlers;
+﻿using BeselerNet.Api.Accounts.OAuth;
+using BeselerNet.Api.Accounts.Users;
 using BeselerNet.Shared.Contracts;
+using BeselerNet.Shared.Contracts.OAuth;
 using BeselerNet.Shared.Contracts.Users;
 using static Microsoft.AspNetCore.Http.StatusCodes;
 using static System.Net.Mime.MediaTypeNames;
 
-namespace BeselerNet.Api.Accounts.Users;
+namespace BeselerNet.Api.Accounts;
 
-internal static class UserAccountEndpoints
+internal static class AccountEndpoints
 {
-    public static void MapUserAccountEndpoints(this IEndpointRouteBuilder builder)
+    public static void MapAccountEndpoints(this IEndpointRouteBuilder builder)
     {
         var v1 = builder.MapGroup("/v1/accounts")
             .WithTags("Accounts");
 
-        _ = v1.MapPost("/users", RegisterUserHandler.Handle)
+        _ = v1.MapPost("/register-user", RegisterUserHandler.Handle)
             .WithName("RegisterUser")
             .WithDescription("Register a new user account.")
             .Accepts<RegisterUserRequest>(Application.Json)
             .Produces(Status201Created)
             .ProducesValidationProblem(Status400BadRequest, Application.Json)
+            .AllowAnonymous();
+
+        _ = v1.MapPost("/oauth/tokens", CreateTokenHandler.Handle)
+            .WithName("GetOAuthToken")
+            .WithDescription("Get OAuth token")
+            .Accepts<OAuthTokenRequest>(Application.Json)
+            .Produces<OAuthTokenResponse>(Status200OK, Application.Json)
+            .ProducesValidationProblem(Status400BadRequest, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
             .AllowAnonymous();
 
         _ = v1.MapPost("/resend-email-confirmation", ResendEmailVerificationHandler.Handle)

@@ -5,7 +5,7 @@
 
 ### Register account
 
-POST {{host}}/v1/accounts/users
+POST {{host}}/v1/accounts/register-user
 Content-Type: application/json
 
 {

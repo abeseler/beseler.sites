@@ -42,7 +42,7 @@ internal static class CreateTokenHandler
     private static async Task<IResult> HandleAccessTokenGrant(string username, string secret, Parameters parameters)
     {
         using var activity = Telemetry.Source.StartActivity(AccessTokenActivityName, ActivityKind.Internal);
-        if (await parameters.Accounts.WithUsername(username, parameters.StoppingToken) is not { } account)
+        if (await parameters.Accounts.WithUsername_IncludePermissions(username, parameters.StoppingToken) is not { } account)
         {
             return TypedResults.Unauthorized();
         }
@@ -115,7 +115,7 @@ internal static class CreateTokenHandler
         if (await parameters.TokenGenerator.Validate(token) is not { } principal
             || !int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId)
             || !Guid.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Jti), out var jti)
-            || await parameters.Accounts.WithId(accountId, parameters.StoppingToken) is not { } account)
+            || await parameters.Accounts.WithId_IncludePermissions(accountId, parameters.StoppingToken) is not { } account)
         {
             return TypedResults.Unauthorized();
         }

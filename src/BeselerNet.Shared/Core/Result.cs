@@ -3,45 +3,48 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace BeselerNet.Shared.Core;
 
+public readonly struct Result
+{
+    private static readonly Result success = new();
+    private readonly Exception? _exception;
+    public static Result Success => success;
+    private Result(Exception exception) => _exception = exception;
+    public bool Succeeded() => _exception is null;
+    public bool Failed([NotNullWhen(true)] out Exception? exception)
+    {
+        exception = _exception;
+        return exception is not null;
+    }
+    public TResult Match<TResult>(Func<TResult> onSuccess, Func<Exception, TResult> onFailure) =>
+        _exception is null ? onSuccess() : onFailure(_exception!);
+    public TResult Match<TResult, TState>(TState state, Func<TState, TResult> onSuccess, Func<TState, Exception, TResult> onFailure) =>
+        _exception is null ? onSuccess(state) : onFailure(state, _exception!);
+
+    public static implicit operator Result(Exception exception) => new(exception);
+}
+
 [DebuggerDisplay("{Succeeded ? \"Success\" : \"Failure\"}")]
 public readonly struct Result<T>
 {
     private readonly T? _value;
     private readonly Exception? _exception;
-
     private Result(T value) => _value = value;
     private Result(Exception exception) => _exception = exception;
-
-    public bool HasSucceeded => _exception is null;
-    public bool HasFailed => HasSucceeded is false;
-
     public bool Succeeded([NotNullWhen(true)] out T? value)
     {
         value = _value;
-        return HasSucceeded;
+        return _exception is null;
     }
-
     public bool Failed([NotNullWhen(true)] out Exception? exception)
     {
         exception = _exception;
-        return HasFailed;
+        return _exception is not null;
     }
-
-    public void Deconstruct(out T? value, out Exception? exception)
-    {
-        value = _value;
-        exception = _exception;
-    }
-
     public TResult Match<TResult>(Func<T, TResult> onSuccess, Func<Exception, TResult> onFailure) =>
-        HasSucceeded ? onSuccess(_value!) : onFailure(_exception!);
+        _exception is null ? onSuccess(_value!) : onFailure(_exception!);
+    public TResult Match<TResult, TState>(TState state, Func<TState, T, TResult> onSuccess, Func<TState, Exception, TResult> onFailure) =>
+        _exception is null ? onSuccess(state, _value!) : onFailure(state, _exception!);
 
     public static implicit operator Result<T>(T value) => new(value);
     public static implicit operator Result<T>(Exception exception) => new(exception);
-}
-
-public readonly struct Success(string? message = null)
-{
-    public static readonly Success Default = new();
-    public string? Message { get; } = message;
 }

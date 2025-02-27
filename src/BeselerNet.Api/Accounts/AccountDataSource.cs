@@ -1,6 +1,7 @@
 ﻿using BeselerNet.Api.Events;
 using Dapper;
 using Npgsql;
+using System.Runtime.CompilerServices;
 
 namespace BeselerNet.Api.Accounts;
 
@@ -22,11 +23,56 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
             "SELECT * FROM account WHERE account_id = @id", new { id });
     }
 
+    public async Task<Account?> WithId_IncludePermissions(int id, CancellationToken stoppingToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        var results = await connection.QueryMultipleAsync(
+            """
+            SELECT * FROM account WHERE account_id = @id;
+
+            SELECT ap.account_id, p.permission_id, p.resource, p.action, ap.scope, ap.granted_at, ap.granted_by_account_id
+            FROM account_permission ap
+            INNER JOIN permission p ON ap.permission_id = p.permission_id
+            WHERE ap.account_id = @id;
+            """, new { id });
+
+        var account = await results.ReadSingleOrDefaultAsync<Account>();
+        if (account is not null)
+        {
+            var permissions = await results.ReadAsync<AccountPermission>();
+            PermissionsRef(account) = permissions.ToList();
+        }
+        return account;
+    }
+
     public async Task<Account?> WithUsername(string username, CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
         return await connection.QuerySingleOrDefaultAsync<Account>(
             "SELECT * FROM account WHERE username = @username", new { username });
+    }
+
+    public async Task<Account?> WithUsername_IncludePermissions(string username, CancellationToken stoppingToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        var results = await connection.QueryMultipleAsync(
+            """
+            SELECT * FROM account WHERE username = @username;
+
+            SELECT ap.account_id, p.permission_id, p.resource, p.action, ap.scope, ap.granted_at, ap.granted_by_account_id
+            FROM account_permission ap
+            INNER JOIN account a ON ap.account_id = a.account_id
+            INNER JOIN permission p ON ap.permission_id = p.permission_id
+            WHERE a.username = @username;
+            """, new { username });
+
+        var account = await results.ReadSingleOrDefaultAsync<Account>();
+        if (account is not null)
+        {
+            var permissions = await results.ReadAsync<AccountPermission>();
+            PermissionsRef(account) = permissions.ToList();
+        }
+        return account;
     }
 
     public async Task<Account?> WithEmail(string email, CancellationToken stoppingToken)
@@ -105,12 +151,21 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
                 account.FailedLoginAttempts
             }, transaction);
 
-            if (account.UncommittedEvents is { Count: >0 })
+            foreach (var @event in account.UncommittedEvents)
             {
-                _ = await _eventLog.Append(account.UncommittedEvents, connection, transaction, stoppingToken);
+                if (@event is AccountPermissionGranted granted)
+                {
+                    await Upsert(granted);
+                }
+                else if (@event is AccountPermissionRevoked revoked)
+                {
+                    await Delete(revoked);
+                }
+                await _eventLog.Append(@event, connection, transaction, stoppingToken);
             }
 
             await transaction.CommitAsync(stoppingToken);
+
             _logger.LogDebug("Saved account {AccountId}.", account.AccountId);
 
             account.AcceptChanges();
@@ -123,4 +178,51 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
             throw;
         }
     }
+
+    private async Task Upsert(AccountPermissionGranted granted)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync();
+        _ = await connection.ExecuteAsync("""
+            INSERT INTO account_permission (
+                account_id,
+                permission_id,
+                scope,
+                granted_at,
+                granted_by_account_id)
+            VALUES (
+                @AccountId,
+                @PermissionId,
+                @Scope,
+                @GrantedAt,
+                @GrantedByAccountId)
+            ON CONFLICT (account_id, permission_id) DO UPDATE
+            SET scope = @Scope,
+                granted_at = @GrantedAt,
+                granted_by_account_id = @GrantedByAccountId
+            """, new
+        {
+            granted.AccountId,
+            granted.Permission.PermissionId,
+            granted.Scope,
+            GrantedAt = granted.OccurredAt,
+            granted.GrantedByAccountId
+        });
+    }
+
+    private async Task Delete(AccountPermissionRevoked revoked)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync();
+        _ = await connection.ExecuteAsync("""
+            DELETE FROM account_permission
+            WHERE account_id = @AccountId
+            AND permission_id = @PermissionId
+            """, new
+            {
+                revoked.AccountId,
+                revoked.Permission.PermissionId
+            });
+    }
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_permissions")]
+    private extern static ref List<AccountPermission> PermissionsRef(Account @this);
 }

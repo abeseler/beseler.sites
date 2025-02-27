@@ -35,7 +35,7 @@ internal sealed class TokenLogDataSource(NpgsqlDataSource dataSource)
     public async Task SaveChanges(TokenLog tokenLog, CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        await connection.ExecuteAsync("""
+        _ = await connection.ExecuteAsync("""
             INSERT INTO token_log (jti, account_id, replaced_by, created_at, expires_at, revoked_at)
             VALUES (@jti, @accountId, @replacedBy, @createdAt, @expiresAt, @revokedAt)
             ON CONFLICT (jti) DO UPDATE
@@ -49,7 +49,7 @@ internal sealed class TokenLogDataSource(NpgsqlDataSource dataSource)
     public async Task RevokeAll(int accountId, CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        await connection.ExecuteAsync("""
+        _ = await connection.ExecuteAsync("""
             UPDATE token_log
             SET revoked_at = now() AT TIME ZONE 'utc'
             WHERE account_id = @accountId
@@ -60,7 +60,7 @@ internal sealed class TokenLogDataSource(NpgsqlDataSource dataSource)
     public async Task RevokeChain(Guid jti, CancellationToken stoppingToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        await connection.ExecuteAsync("""
+        _ = await connection.ExecuteAsync("""
             WITH RECURSIVE descendants AS (
                 SELECT
                     jti,

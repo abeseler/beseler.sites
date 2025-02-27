@@ -3,7 +3,7 @@ using BeselerNet.Api.Communications;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
 
-namespace BeselerNet.Api.Accounts.Users.EndpointHandlers;
+namespace BeselerNet.Api.Accounts.Users;
 
 internal sealed class ResendEmailVerificationHandler
 {
