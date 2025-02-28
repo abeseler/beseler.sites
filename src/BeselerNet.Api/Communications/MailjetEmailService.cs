@@ -1,33 +1,30 @@
-﻿using BeselerNet.Api.Accounts;
-using BeselerNet.Shared.Core;
-using Mailjet.Client.Resources;
+﻿using BeselerNet.Shared.Core;
+using Mailjet.Client;
+using Mailjet.Client.TransactionalEmails;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
-using SendGrid;
-using SendGrid.Helpers.Mail;
 
 namespace BeselerNet.Api.Communications;
 
-internal sealed record SendGridOptions
+internal sealed record MailjetOptions
 {
-    public const string SectionName = "SendGrid";
+    public const string SectionName = "Mailjet";
     public string? ApiKey { get; init; }
-    public string? WebhookApiKey { get; init; }
+    public string? ApiSecret { get; init; }
 }
 
-internal sealed class SendGridEmailService(
+internal sealed class MailjetEmailService(
     CommunicationDataSource communications,
     IOptions<CommunicationOptions> commOptions,
-    ISendGridClient client,
-    IOptions<SendGridOptions> options,
-    ILogger<SendGridEmailService> logger) : IEmailer
+    IMailjetClient client,
+    IOptions<MailjetOptions> options,
+    ILogger<MailjetEmailService> logger) : IEmailer
 {
-    private const string PROVIDER_NAME = "SendGrid";
+    private const string PROVIDER_NAME = "Mailjet";
     private readonly CommunicationDataSource _communications = communications;
     private readonly CommunicationOptions _commOptions = commOptions.Value;
-    private readonly ISendGridClient _client = client;
-    private readonly SendGridOptions _options = options.Value;
-    private readonly ILogger<SendGridEmailService> _logger = logger;
+    private readonly IMailjetClient _client = client;
+    private readonly MailjetOptions _options = options.Value;
+    private readonly ILogger<MailjetEmailService> _logger = logger;
 
     public async Task<Result<Communication>> SendEmailVerification(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
     {
@@ -60,37 +57,34 @@ internal sealed class SendGridEmailService(
 
         if (string.IsNullOrWhiteSpace(_options.ApiKey))
         {
-            _logger.LogWarning("{CommunicationName} not sent because SendGrid ApiKey is missing.", template.CommunicationName);
-            communication.Failed(DateTimeOffset.UtcNow, "SendGrid ApiKey is missing");
+            _logger.LogWarning("{CommunicationName} not sent because Mailjet ApiKey is missing.", template.CommunicationName);
+            communication.Failed(DateTimeOffset.UtcNow, "Mailjet ApiKey is missing");
             await _communications.SaveChanges(communication, stoppingToken);
             return communication;
         }
 
         try
         {
-            var emailMessage = new SendGridMessage
-            {
-                From = new EmailAddress(_commOptions.SenderEmail, _commOptions.SenderName),
-                Subject = template.Subject,
-                PlainTextContent = template.PlainTextContent,
-                HtmlContent = template.HtmlContent,
-                CustomArgs = new()
-                {
-                    ["communication_id"] = communication.CommunicationId.ToString()
-                }
-            };
-            emailMessage.AddTo(new EmailAddress(email, recipientName));
+            var emailMessage = new TransactionalEmailBuilder()
+                .WithFrom(new SendContact(_commOptions.SenderEmail, _commOptions.SenderName))
+                .WithSubject(template.Subject)
+                .WithTextPart(template.PlainTextContent)
+                .WithHtmlPart(template.HtmlContent)
+                .WithTo([new SendContact(email, recipientName)])
+                .WithCustomId(communication.CommunicationId.ToString())
+                .Build();
 
-            var response = await _client.SendEmailAsync(emailMessage, stoppingToken);
-            if (response.IsSuccessStatusCode)
+            var response = await _client.SendTransactionalEmailAsync(emailMessage);
+            var result = response.Messages.FirstOrDefault();
+            var error = result?.Errors.FirstOrDefault();
+            if (error is null)
             {
-                _logger.LogInformation("Sent {CommunicationName} email to {Email}", template.CommunicationName, email);
+                _logger.LogInformation("Email {CommunicationName} sent to {Email}", template.CommunicationName, email);
             }
             else
             {
-                var responseBody = await response.Body.ReadAsStringAsync(stoppingToken);
-                communication.Failed(DateTimeOffset.UtcNow, $"Failed to send: {responseBody}");
-                _logger.LogError("Failed to send {CommunicationName} email: {Response}", template.CommunicationName, responseBody);
+                communication.Failed(DateTimeOffset.UtcNow, error.ErrorMessage);
+                _logger.LogError("Failed to send {CommunicationName} email to {Email}: {Error}", template.CommunicationName, email, error.ErrorMessage);
             }
 
         }

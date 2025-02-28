@@ -33,9 +33,9 @@ internal sealed class Communication : IChangeTracking
         ExternalId = externalId;
         IsChanged = true;
     }
-    public void Processed(DateTimeOffset processedAt)
+    public void Sent(DateTimeOffset sentAt)
     {
-        SentAt = processedAt;
+        SentAt = sentAt;
         IsChanged = true;
     }
     public void Delivered(DateTimeOffset deliveredAt)

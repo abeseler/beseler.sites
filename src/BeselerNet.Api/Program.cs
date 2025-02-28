@@ -7,6 +7,7 @@ using BeselerNet.Api.Events;
 using BeselerNet.Api.Registrars;
 using BeselerNet.Api.Webhooks;
 using Cysharp.Serialization.Json;
+using Mailjet.Client;
 using Microsoft.AspNetCore.Identity;
 using SendGrid.Extensions.DependencyInjection;
 
@@ -38,20 +39,32 @@ builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddOptions<OpenApiOptions>().BindConfiguration(OpenApiOptions.SectionName);
 builder.Services.AddOptions<JwtOptions>().BindConfiguration(JwtOptions.SectionName);
-builder.Services.AddOptions<SendGridOptions>().BindConfiguration(SendGridOptions.SectionName);
 
 builder.Services.AddSingleton<JwtGenerator>();
 builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
 builder.Services.AddScoped<Cookies>();
-builder.Services.AddScoped<SendGridEmailService>();
 
 builder.Services.AddSingleton<DomainEventHandler>();
 builder.Services.AddAccountDomainEventHandlers();
+
+builder.Services.AddOptions<CommunicationOptions>().BindConfiguration(CommunicationOptions.SectionName);
+builder.Services.AddOptions<SendGridOptions>().BindConfiguration(SendGridOptions.SectionName);
+builder.Services.AddOptions<MailjetOptions>().BindConfiguration(MailjetOptions.SectionName);
+builder.Services.AddScoped<SendGridEmailService>();
+builder.Services.AddScoped<MailjetEmailService>();
 
 builder.Services.AddSendGrid(options =>
 {
     var key = builder.Configuration.GetValue<string>("SendGrid:ApiKey");
     options.ApiKey = string.IsNullOrWhiteSpace(key) ? "MissingApiKey" : key;
+});
+
+builder.Services.AddHttpClient<IMailjetClient, MailjetClient>(client =>
+{
+    client.SetDefaultSettings();
+    var key = builder.Configuration.GetValue<string>("Mailjet:ApiKey");
+    var secret = builder.Configuration.GetValue<string>("Mailjet:ApiSecret");
+    client.UseBasicAuthentication(key, secret);
 });
 
 var app = builder.Build();

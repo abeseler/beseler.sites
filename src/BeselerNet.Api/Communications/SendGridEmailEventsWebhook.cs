@@ -77,7 +77,7 @@ internal sealed class SendGridEmailEventService(IServiceProvider services, ILogg
                 switch (@event.Event)
                 {
                     case "processed":
-                        communication.Processed(eventDate);
+                        communication.Sent(eventDate);
                         break;
                     case "delivered":
                         communication.Delivered(eventDate);
