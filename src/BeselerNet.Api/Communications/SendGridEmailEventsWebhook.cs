@@ -18,7 +18,7 @@ internal static class SendGridEmailEventsWebhook
 
         var requestSubmitted = SendGridEmailEventService.RequestChannel.Writer.TryWrite(new SendGridEmailEventRequest(events));
         return requestSubmitted
-            ? TypedResults.Accepted((string?)null, new GenericMessageResponse { Message = "Events submitted for processing." })
+            ? TypedResults.Ok(new GenericMessageResponse { Message = "Events submitted for processing." })
             : TypedResults.Problem(Problems.TooManyRequests);
     }
 }

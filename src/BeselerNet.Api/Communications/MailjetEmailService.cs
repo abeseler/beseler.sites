@@ -10,6 +10,7 @@ internal sealed record MailjetOptions
     public const string SectionName = "Mailjet";
     public string? ApiKey { get; init; }
     public string? ApiSecret { get; init; }
+    public string? WebhookApiKey { get; init; }
 }
 
 internal sealed class MailjetEmailService(

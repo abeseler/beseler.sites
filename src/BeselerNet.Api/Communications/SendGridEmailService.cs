@@ -1,8 +1,5 @@
-﻿using BeselerNet.Api.Accounts;
-using BeselerNet.Shared.Core;
-using Mailjet.Client.Resources;
+﻿using BeselerNet.Shared.Core;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json.Linq;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 

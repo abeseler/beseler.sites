@@ -1,4 +1,5 @@
 ﻿using BeselerNet.Api.Communications;
+using BeselerNet.Shared.Contracts;
 using static Microsoft.AspNetCore.Http.StatusCodes;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -15,7 +16,14 @@ internal static class WebhookEndpoints
             .WithName("ProcessSendGridEmailEvents")
             .WithDescription("Process SendGrid email events.")
             .Accepts<SendGridEmailEvent[]>(Application.Json)
-            .Produces(Status204NoContent)
+            .Produces<GenericMessageResponse>(Status200OK)
+            .Produces(Status401Unauthorized);
+
+        _ = v1.MapPost("/mailjet-events", MailjetEmailEventsWebhook.Handle)
+            .WithName("ProcessMailjetEmailEvents")
+            .WithDescription("Process Mailjet email events.")
+            .Accepts<MailjetEmailEvent[]>(Application.Json)
+            .Produces<GenericMessageResponse>(Status200OK)
             .Produces(Status401Unauthorized);
     }
 }
