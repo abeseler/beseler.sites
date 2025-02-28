@@ -25,29 +25,34 @@ internal sealed class CommunicationDataSource(NpgsqlDataSource dataSource)
         _ = await connection.ExecuteAsync("""
             INSERT INTO communication (
                 communication_id,
-                account_id,
+                provider,
                 type,
                 name,
+                external_id,
+                account_id,
                 created_at,
-                processed_at,
+                sent_at,
                 delivered_at,
                 opened_at,
                 failed_at,
                 error
             ) VALUES (
                 @communicationId,
-                @accountId,
+                @provider,
                 @type,
                 @name,
+                @externalId,
+                @accountId,
                 @createdAt,
-                @processedAt,
+                @sentAt,
                 @deliveredAt,
                 @openedAt,
                 @failedAt,
                 @error
             )
             ON CONFLICT (communication_id) DO UPDATE SET
-                processed_at = @processedAt,
+                external_id = @externalId,
+                sent_at = @sentAt,
                 delivered_at = @deliveredAt,
                 opened_at = @openedAt,
                 failed_at = @failedAt,
@@ -55,11 +60,13 @@ internal sealed class CommunicationDataSource(NpgsqlDataSource dataSource)
             """, new
         {
             communication.CommunicationId,
-            communication.AccountId,
+            communication.Provider,
             Type = communication.Type.ToString(),
             communication.Name,
+            communication.ExternalId,
+            communication.AccountId,
             communication.CreatedAt,
-            communication.ProcessedAt,
+            communication.SentAt,
             communication.DeliveredAt,
             communication.OpenedAt,
             communication.FailedAt,

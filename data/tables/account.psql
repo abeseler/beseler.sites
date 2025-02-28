@@ -5,6 +5,7 @@
 */
 CREATE TABLE account (
     account_id INT NOT NULL DEFAULT (nextval('account_id_seq')),
+    version BIGINT NOT NULL DEFAULT (0),
     type TEXT NOT NULL,
     username TEXT NOT NULL,
     email TEXT NULL,

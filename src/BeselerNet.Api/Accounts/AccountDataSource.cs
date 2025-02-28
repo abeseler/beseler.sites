@@ -97,6 +97,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
             _ = await connection.ExecuteAsync("""
             INSERT INTO account (
                 account_id,
+                version,
                 type,
                 username,
                 email,
@@ -111,6 +112,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
                 failed_login_attempts)
             VALUES (
                 @AccountId,
+                @Version,
                 @Type,
                 @Username,
                 @Email,
@@ -124,7 +126,8 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
                 @LastLogon,
                 @FailedLoginAttempts)
             ON CONFLICT (account_id) DO UPDATE
-            SET username = @Username,
+            SET version = @Version,
+                username = @Username,
                 email = @Email,
                 secret_hash = @SecretHash,
                 secret_hashed_at = @SecretHashedAt,
@@ -137,6 +140,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
             """, new
             {
                 account.AccountId,
+                account.Version,
                 Type = account.Type.ToString(),
                 account.Username,
                 account.Email,
@@ -202,9 +206,9 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
             """, new
         {
             granted.AccountId,
-            granted.Permission.PermissionId,
+            granted.PermissionId,
             granted.Scope,
-            GrantedAt = granted.OccurredAt,
+            GrantedAt = granted.CreatedAt,
             granted.GrantedByAccountId
         });
     }
@@ -219,7 +223,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
             """, new
             {
                 revoked.AccountId,
-                revoked.Permission.PermissionId
+                revoked.PermissionId
             });
     }
 

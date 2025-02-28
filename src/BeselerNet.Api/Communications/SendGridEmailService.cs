@@ -18,13 +18,14 @@ internal sealed record SendGridOptions
 
 internal sealed class SendGridEmailService(CommunicationDataSource communications, ISendGridClient client, IOptions<SendGridOptions> options, ILogger<SendGridEmailService> logger)
 {
+    private const string PROVIDER_NAME = "SendGrid";
     private readonly CommunicationDataSource _communications = communications;
     private readonly ISendGridClient _client = client;
     private readonly SendGridOptions _options = options.Value;
     private readonly ILogger<SendGridEmailService> _logger = logger;
     public async Task<Result<Guid>> SendEmailVerification(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
     {
-        var communication = Communication.Create(CommunicationType.Email, "Email Verification", accountId);
+        var communication = Communication.Create(PROVIDER_NAME, CommunicationType.Email, "Email Verification", accountId);
         var template = EmailTemplates.EmailVerification(_options.ConfirmEmailUrl!, token);
         var emailMessage = new SendGridMessage
         {
@@ -55,7 +56,7 @@ internal sealed class SendGridEmailService(CommunicationDataSource communication
     }
     public async Task<Result<Guid>> SendAccountLocked(int accountId, string email, string recipientName, CancellationToken stoppingToken)
     {
-        var communication = Communication.Create(CommunicationType.Email, "Account Locked", accountId);
+        var communication = Communication.Create(PROVIDER_NAME, CommunicationType.Email, "Account Locked", accountId);
         var template = EmailTemplates.AccountLocked(recipientName);
         var emailMessage = new SendGridMessage
         {
@@ -86,7 +87,7 @@ internal sealed class SendGridEmailService(CommunicationDataSource communication
     }
     public async Task<Result<Guid>> SendPasswordReset(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
     {
-        var communication = Communication.Create(CommunicationType.Email, "Password Reset", accountId);
+        var communication = Communication.Create(PROVIDER_NAME, CommunicationType.Email, "Password Reset", accountId);
         var template = EmailTemplates.PasswordReset(recipientName, _options.ResetPasswordUrl!, token);
         var emailMessage = new SendGridMessage
         {

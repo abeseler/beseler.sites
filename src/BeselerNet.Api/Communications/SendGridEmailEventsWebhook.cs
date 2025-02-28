@@ -1,11 +1,14 @@
-﻿using Microsoft.Extensions.Options;
+﻿using BeselerNet.Api.Core;
+using BeselerNet.Shared.Contracts;
+using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
+using System.Threading.Channels;
 
 namespace BeselerNet.Api.Communications;
 
 internal static class SendGridEmailEventsWebhook
 {
-    public static async Task<IResult> Handle(string? apikey, SendGridEmailEvent[] events, CommunicationDataSource communications, IOptions<SendGridOptions> options, ILogger<SendGridEmailEvent> logger, CancellationToken stoppingToken)
+    public static IResult Handle(string? apikey, SendGridEmailEvent[] events, IOptions<SendGridOptions> options)
     {
         var validApiKey = options.Value.WebhookApiKey;
         if (validApiKey is { Length: > 0 } && (apikey is null || apikey != validApiKey))
@@ -13,53 +16,108 @@ internal static class SendGridEmailEventsWebhook
             return TypedResults.Unauthorized();
         }
 
-        foreach (var @event in events)
+        var requestSubmitted = SendGridEmailEventService.RequestChannel.Writer.TryWrite(new SendGridEmailEventRequest(events));
+        return requestSubmitted
+            ? TypedResults.Accepted((string?)null, new GenericMessageResponse { Message = "Events submitted for processing." })
+            : TypedResults.Problem(Problems.TooManyRequests);
+    }
+}
+
+internal sealed class SendGridEmailEventService(IServiceProvider services, ILogger<SendGridEmailEventService> logger) : BackgroundService
+{
+    private readonly IServiceProvider _services = services;
+    private readonly ILogger<SendGridEmailEventService> _logger = logger;
+
+    public static readonly Channel<SendGridEmailEventRequest> RequestChannel = Channel.CreateBounded<SendGridEmailEventRequest>(new BoundedChannelOptions(100)
+    {
+        FullMode = BoundedChannelFullMode.DropWrite,
+        SingleReader = true,
+        SingleWriter = false,
+        AllowSynchronousContinuations = false
+    });
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("SendGrid email event service started");
+
+        while (await RequestChannel.Reader.WaitToReadAsync(stoppingToken))
         {
-            if (!Guid.TryParse(@event.CommunicationId, out var communicationId))
+            while (RequestChannel.Reader.TryRead(out var request))
             {
-                logger.LogWarning("Event with invalid or no communication ID: {Data}", @event);
-                continue;
+                await ProcessRequest(request, stoppingToken);
             }
-
-            var communication = await communications.WithId(communicationId, stoppingToken);
-            if (communication is null)
-            {
-                logger.LogWarning("Communication record missing for ID: {CommunicationId}", communicationId);
-                continue;
-            }
-
-            var eventDate = DateTimeOffset.FromUnixTimeSeconds(@event.Timestamp);
-            switch (@event.Event)
-            {
-                case "processed":
-                    communication.Processed(eventDate);
-                    break;
-                case "delivered":
-                    communication.Delivered(eventDate);
-                    break;
-                case "open":
-                    communication.Opened(eventDate);
-                    break;
-                case "dropped":
-                    communication.Failed(eventDate, $"(Dropped) {@event.Reason ?? "Missing reason"}");
-                    break;
-                case "deferred":
-                    communication.Failed(eventDate, $"(Deferred) {@event.Attempt ?? @event.Status}");
-                    break;
-                case "bounce":
-                    var type = @event.Type is "blocked" ? "Blocked" : "Bounced";
-                    communication.Failed(eventDate, $"({type}) {@event.BounceClassification ?? "Missing classification"}");
-                    break;
-                default:
-                    logger.LogWarning("Unhandled event type: {Event}", @event.Event);
-                    break;
-            }
-
-            await communications.SaveChanges(communication, stoppingToken);
         }
 
-        return TypedResults.NoContent();
+        _logger.LogInformation("SendGrid email event service stopped");
     }
+
+    private async Task ProcessRequest(SendGridEmailEventRequest request, CancellationToken stoppingToken)
+    {
+        try
+        {
+            using var scope = _services.CreateAsyncScope();
+            var communications = scope.ServiceProvider.GetRequiredService<CommunicationDataSource>();
+
+            foreach (var @event in request.Events)
+            {
+                if (!Guid.TryParse(@event.CommunicationId, out var communicationId))
+                {
+                    _logger.LogWarning("Event with invalid or no communication ID: {Data}", @event);
+                    continue;
+                }
+
+                var communication = await communications.WithId(communicationId, stoppingToken);
+                if (communication is null)
+                {
+                    _logger.LogWarning("Communication record missing for ID: {CommunicationId}", communicationId);
+                    continue;
+                }
+
+                var eventDate = DateTimeOffset.FromUnixTimeSeconds(@event.Timestamp);
+                switch (@event.Event)
+                {
+                    case "processed":
+                        communication.Processed(eventDate);
+                        break;
+                    case "delivered":
+                        communication.Delivered(eventDate);
+                        break;
+                    case "open":
+                        communication.Opened(eventDate);
+                        break;
+                    case "dropped":
+                        communication.Failed(eventDate, $"(Dropped) {@event.Reason ?? "Missing reason"}");
+                        break;
+                    case "deferred":
+                        communication.Failed(eventDate, $"(Deferred) {@event.Attempt ?? @event.Status}");
+                        break;
+                    case "bounce":
+                        var type = @event.Type is "blocked" ? "Blocked" : "Bounced";
+                        communication.Failed(eventDate, $"({type}) {@event.BounceClassification ?? "Missing classification"}");
+                        break;
+                    default:
+                        _logger.LogWarning("Unhandled event type: {Event}", @event.Event);
+                        break;
+                }
+
+                if (@event.SgMessageId is not null)
+                {
+                    communication.SetExternalId(@event.SgMessageId);
+                }
+
+                await communications.SaveChanges(communication, stoppingToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing SendGrid email event request: {Message}", ex.Message);
+        }
+    }
+}
+
+internal readonly struct SendGridEmailEventRequest(SendGridEmailEvent[] events)
+{
+    public SendGridEmailEvent[] Events { get; } = events;
 }
 
 /// <summary>

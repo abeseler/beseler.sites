@@ -12,7 +12,7 @@ namespace BeselerNet.Api.Accounts.Users;
 
 internal sealed class ForgotPasswordHandler
 {
-    public static IResult Handle(ForgotPasswordRequest request, CancellationToken stoppingToken)
+    public static IResult Handle(ForgotPasswordRequest request)
     {
         if (request.HasValidationErrors(out var errors))
         {
@@ -42,6 +42,8 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogInformation("Forgot password service started.");
+
         while (await RequestChannel.Reader.WaitToReadAsync(stoppingToken))
         {
             while (RequestChannel.Reader.TryRead(out var request))
@@ -49,6 +51,8 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
                 await ProcessRequest(request, stoppingToken);
             }
         }
+
+        _logger.LogInformation("Forgot password service stopped.");
     }
 
     private async Task ProcessRequest(ForgotPasswordRequest request, CancellationToken stoppingToken)

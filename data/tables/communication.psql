@@ -5,11 +5,13 @@
 */
 CREATE TABLE communication (
     communication_id UUID NOT NULL,
-    account_id INT NOT NULL,
+    provider TEXT NOT NULL,
     type TEXT NOT NULL,
     name TEXT NOT NULL,
+    external_id TEXT NULL,
+    account_id INT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
-    processed_at TIMESTAMPTZ NULL,
+    sent_at TIMESTAMPTZ NULL,
     delivered_at TIMESTAMPTZ NULL,
     opened_at TIMESTAMPTZ NULL,
     failed_at TIMESTAMPTZ NULL,

@@ -14,6 +14,7 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
     private readonly List<AccountPermission> _permissions = [];
     private readonly List<DomainEvent> _events = [];
     public int AccountId { get; private init; }
+    public long Version { get; private set; }
     public AccountType Type { get; private init; }
     public string Username { get; private set; } = default!;
     public string? Email { get; private set; }
@@ -39,44 +40,49 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
     public bool IsLocked => LockedAt.HasValue;
     public IReadOnlyCollection<DomainEvent> UncommittedEvents => _events ?? [];
     public bool IsChanged { get; private set; }
-    public static Account CreateUser(int accountId, string username, string secretHash, string email, string givenName, string familyName) =>
-        Create(new AccountCreated(accountId, AccountType.User, username, email, secretHash, givenName, familyName));
+    public static Account CreateUser(int accountId, string username, string secretHash, string email, string givenName, string familyName)
+    {
+        var account = new Account()
+        {
+            AccountId = accountId,
+            Version = 1,
+            Type = AccountType.User,
+            Username = username,
+            SecretHash = secretHash,
+            SecretHashedAt = DateTimeOffset.UtcNow,
+            Email = email,
+            GivenName = givenName,
+            FamilyName = familyName,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        account.Append(new AccountCreated(accountId, AccountType.User, username, email, secretHash, givenName, familyName) { Version = account.Version });
+        return account;
+    }
     public void Login()
     {
         LastLogon = DateTimeOffset.UtcNow;
         FailedLoginAttempts = 0;
-        IsChanged = true;
-        _events.Add(new AccountLoginSucceeded(AccountId));
+        Append(new AccountLoginSucceeded(AccountId) { Version = ++Version });
     }
     public void FailLogin()
     {
-        FailedLoginAttempts += 1;
-        if (FailedLoginAttempts >= 5)
+        if (++FailedLoginAttempts == 5)
         {
             LockedAt = DateTimeOffset.UtcNow;
         }
-        IsChanged = true;
-        _events.Add(new AccountLoginFailed(AccountId, FailedLoginAttempts, IsLocked));
+        Append(new AccountLoginFailed(AccountId, FailedLoginAttempts, LockedAt.HasValue) { Version = ++Version });
     }
     public void VerifyEmail(string email)
     {
         Email = email;
         EmailVerifiedAt = DateTimeOffset.UtcNow;
-        IsChanged = true;
-        _events.Add(new AccountEmailVerified(AccountId, email));
+        Append(new AccountEmailVerified(AccountId, email) { Version = ++Version });
     }
     public void ChangePassword(string hash)
     {
         SecretHash = hash;
         SecretHashedAt = DateTimeOffset.UtcNow;
-        IsChanged = true;
-        _events.Add(new AccountPasswordChanged(AccountId, hash));
-    }
-    public void Disable(string? disabledBy = null)
-    {
-        DisabledAt = DateTimeOffset.UtcNow;
-        IsChanged = true;
-        _events.Add(new AccountDisabled(AccountId, disabledBy));
+        Append(new AccountPasswordChanged(AccountId, hash) { Version = ++Version });
     }
     public void Grant(Permission permission, string scope, int grantedBy)
     {
@@ -93,8 +99,7 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
                 GrantedAt = DateTimeOffset.UtcNow,
                 GrantedByAccountId = grantedBy
             });
-            _events.Add(new AccountPermissionGranted(AccountId, permission, scope, grantedBy));
-            IsChanged = true;
+            Append(new AccountPermissionGranted(AccountId, permission.PermissionId, permission.Resource, permission.Action, scope, grantedBy) { Version = ++Version });
         }
         else if (existing.Scope != scope)
         {
@@ -109,8 +114,7 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
                 GrantedAt = DateTimeOffset.UtcNow,
                 GrantedByAccountId = grantedBy
             });
-            _events.Add(new AccountPermissionGranted(AccountId, permission, scope, grantedBy));
-            IsChanged = true;
+            Append(new AccountPermissionRevoked(AccountId, permission.PermissionId, permission.Resource, permission.Action, existing.Scope, grantedBy) { Version = ++Version });
         }
     }
     public void Revoke(Permission permission, int revokedBy)
@@ -119,16 +123,9 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
         if (existing is not null)
         {
             _ = _permissions.Remove(existing);
-            _events.Add(new AccountPermissionRevoked(AccountId, permission, existing.Scope, revokedBy));
-            IsChanged = true;
+            Append(new AccountPermissionRevoked(AccountId, permission.PermissionId, permission.Resource, permission.Action, existing.Scope, revokedBy) { Version = ++Version });
         }
     }
-    public void AcceptChanges()
-    {
-        _events.Clear();
-        IsChanged = false;
-    }
-
     public ClaimsPrincipal ToClaimsPrincipal()
     {
         var claims = new List<Claim>
@@ -147,25 +144,16 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
         var identity = new ClaimsIdentity(claims);
         return new ClaimsPrincipal(identity);
     }
-
     public bool IsOwnedBy(ClaimsPrincipal user) => int.TryParse(user.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId) && accountId == AccountId;
-    private static Account Create(AccountCreated domainEvent)
+    private void Append(DomainEvent @event)
     {
-        var account = new Account()
-        {
-            AccountId = domainEvent.AccountId,
-            Type = domainEvent.Type,
-            Username = domainEvent.Username,
-            SecretHash = domainEvent.SecretHash!,
-            SecretHashedAt = domainEvent.OccurredAt,
-            Email = domainEvent.Email,
-            GivenName = domainEvent.GivenName,
-            FamilyName = domainEvent.FamilyName,
-            CreatedAt = domainEvent.OccurredAt,
-            IsChanged = true
-        };
-        account._events.Add(domainEvent);
-        return account;
+        _events.Add(@event);
+        IsChanged = true;
+    }
+    public void AcceptChanges()
+    {
+        _events.Clear();
+        IsChanged = false;
     }
 }
 

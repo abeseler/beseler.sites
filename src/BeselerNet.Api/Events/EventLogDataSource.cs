@@ -20,17 +20,18 @@ internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxData
 
         try
         {
-            var details = JsonSerializer.Serialize(@event, JsonSerializerOptions.Web);
+            var payload = JsonSerializer.Serialize(@event, JsonSerializerOptions.Web);
             _ = await conn.ExecuteAsync("""
-                INSERT INTO event_log (event_id, resource_type, resource_id, details, occurred_at)
-                VALUES (@EventId, @Resource, @ResourceId, @Details::jsonb, @OccurredAt)
+                INSERT INTO event_log (event_id, aggregate_type, aggregate_id, version, payload, created_at)
+                VALUES (@EventId, @AggregateType, @AggregateId, @Version, @payload::jsonb, @CreatedAt)
                 """, new
                 {
                     @event.EventId,
-                    @event.ResourceType,
-                    @event.ResourceId,
-                    Details = details,
-                    @event.OccurredAt
+                    @event.AggregateType,
+                    @event.AggregateId,
+                    @event.Version,
+                    payload,
+                    @event.CreatedAt
                 }, tran);
 
             if (@event.SendToOutbox)
@@ -39,8 +40,8 @@ internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxData
                 {
                     MessageId = @event.EventId,
                     MessageType = nameof(DomainEvent),
-                    MessageData = details,
-                    InvisibleUntil = @event.OccurredAt,
+                    MessageData = payload,
+                    InvisibleUntil = @event.CreatedAt,
                     ReceivesRemaining = 3
                 };
                 await _outbox.Enqueue(outboxMessage, conn, tran, stoppingToken);
