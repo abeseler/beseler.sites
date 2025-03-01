@@ -4,10 +4,10 @@ using System.Diagnostics;
 
 namespace BeselerNet.Api.Accounts.EventHandlers;
 
-internal sealed class AccountLoginFailedHandler(AccountDataSource accounts, SendGridEmailService emailer)
+internal sealed class AccountLoginFailedHandler(AccountDataSource accounts, EmailerProvider emailerProvider)
 {
     private readonly AccountDataSource _accounts = accounts;
-    private readonly SendGridEmailService _emailer = emailer;
+    private readonly IEmailer _emailer = emailerProvider.GetEmailer();
     public async Task Handle(AccountLoginFailed domainEvent, CancellationToken cancellationToken)
     {
         using var activity = Telemetry.Source.StartActivity("AccountLoginFailedHandler.Handle", ActivityKind.Internal, domainEvent.TraceId);

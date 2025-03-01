@@ -79,7 +79,7 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
             }
 
             activity?.SetTag_AccountId(account.AccountId);
-            var emailer = scope.ServiceProvider.GetRequiredService<SendGridEmailService>();
+            var emailer = scope.ServiceProvider.GetRequiredService<EmailerProvider>().GetEmailer();
             var subjectClaim = new Claim(JwtRegisteredClaimNames.Sub, account.AccountId.ToString(), ClaimValueTypes.Integer);
             var token = _tokens.Generate(subjectClaim, TimeSpan.FromMinutes(20)).AccessToken;
 

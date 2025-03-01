@@ -48,10 +48,11 @@ builder.Services.AddSingleton<DomainEventHandler>();
 builder.Services.AddAccountDomainEventHandlers();
 
 builder.Services.AddOptions<CommunicationOptions>().BindConfiguration(CommunicationOptions.SectionName);
-builder.Services.AddOptions<SendGridOptions>().BindConfiguration(SendGridOptions.SectionName);
 builder.Services.AddOptions<MailjetOptions>().BindConfiguration(MailjetOptions.SectionName);
-builder.Services.AddScoped<SendGridEmailService>();
+builder.Services.AddOptions<SendGridOptions>().BindConfiguration(SendGridOptions.SectionName);
 builder.Services.AddScoped<MailjetEmailService>();
+builder.Services.AddScoped<SendGridEmailService>();
+builder.Services.AddScoped<EmailerProvider>();
 
 builder.Services.AddSendGrid(options =>
 {

@@ -7,10 +7,10 @@ using System.Security.Claims;
 
 namespace BeselerNet.Api.Accounts.EventHandlers;
 
-internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, SendGridEmailService emailer)
+internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, EmailerProvider emailerProvider)
 {
     private readonly JwtGenerator _tokenGenerator = tokenGenerator;
-    private readonly SendGridEmailService _emailer = emailer;
+    private readonly IEmailer _emailer = emailerProvider.GetEmailer();
     public async Task Handle(AccountCreated domainEvent, CancellationToken stoppingToken)
     {
         using var activity = Telemetry.Source.StartActivity("AccountCreatedHandler.Handle", ActivityKind.Internal, domainEvent.TraceId);
