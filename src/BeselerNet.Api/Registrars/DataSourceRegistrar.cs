@@ -16,12 +16,13 @@ internal static class DataSourceRegistrar
     {
         builder.AddNpgsqlDataSource("Database");
 
-        _ = builder.Services.AddSingleton<PermissionDataSource>();
-        _ = builder.Services.AddSingleton<OutboxDataSource>();
-        _ = builder.Services.AddSingleton<EventLogDataSource>();
-        _ = builder.Services.AddScoped<AccountDataSource>();
-        _ = builder.Services.AddScoped<TokenLogDataSource>();
-        _ = builder.Services.AddScoped<CommunicationDataSource>();
+        _ = builder.Services
+            .AddScoped<AccountDataSource>()
+            .AddScoped<CommunicationDataSource>()
+            .AddSingleton<EventLogDataSource>()
+            .AddSingleton<OutboxDataSource>()
+            .AddSingleton<PermissionDataSource>()
+            .AddScoped<TokenLogDataSource>();
 
         DefaultTypeMap.MatchNamesWithUnderscores = true;
         SqlMapper.AddTypeHandler(new StringUlidHandler());

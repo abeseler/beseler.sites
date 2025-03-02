@@ -1,11 +1,12 @@
-﻿using BeselerNet.Api.Accounts.OAuth;
+﻿using BeselerNet.Api.Accounts;
+using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Diagnostics;
 using System.Security.Claims;
 
-namespace BeselerNet.Api.Accounts.EventHandlers;
+namespace BeselerNet.Api.Events.Handlers;
 
 internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, EmailerProvider emailerProvider)
 {

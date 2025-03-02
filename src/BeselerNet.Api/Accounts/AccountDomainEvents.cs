@@ -1,5 +1,4 @@
 ﻿using BeselerNet.Api.Accounts;
-using BeselerNet.Api.Accounts.EventHandlers;
 using BeselerNet.Api.Core;
 using System.Text.Json.Serialization;
 
@@ -32,13 +31,4 @@ namespace BeselerNet.Api.Accounts
         : DomainEvent("account", AccountId.ToString());
     internal sealed record AccountPermissionRevoked(int AccountId, int PermissionId, string Resource, string Action, string Scope, int RevokedByAccountId)
         : DomainEvent("account", AccountId.ToString());
-
-    internal static class AccountDomainEventHandlerRegistrar
-    {
-        public static void AddAccountDomainEventHandlers(this IServiceCollection services)
-        {
-            _ = services.AddScoped<AccountCreatedHandler>();
-            _ = services.AddScoped<AccountLoginFailedHandler>();
-        }
-    }
 }

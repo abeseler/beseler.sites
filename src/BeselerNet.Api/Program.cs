@@ -44,8 +44,7 @@ builder.Services.AddSingleton<JwtGenerator>();
 builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
 builder.Services.AddScoped<Cookies>();
 
-builder.Services.AddSingleton<DomainEventHandler>();
-builder.Services.AddAccountDomainEventHandlers();
+builder.Services.AddDomainEventHandlers();
 
 builder.Services.AddOptions<CommunicationOptions>().BindConfiguration(CommunicationOptions.SectionName);
 builder.Services.AddOptions<MailjetOptions>().BindConfiguration(MailjetOptions.SectionName);
