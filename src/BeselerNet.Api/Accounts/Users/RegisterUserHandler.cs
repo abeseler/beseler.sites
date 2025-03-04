@@ -25,7 +25,7 @@ internal static class RegisterUserHandler
         var permissions = await permissionDataSource.GetCollection(stoppingToken);
         var secretHash = passwordHasher.HashPassword(default!, request.Password!);
         account = Account.CreateUser(accountId, request.Email, secretHash, request.Email, request.GivenName, request.FamilyName);
-        
+
         foreach (var permission in DefaultPermissions(permissions).Where(x => x is not null))
         {
             account.Grant(permission!, "owned", account.AccountId);

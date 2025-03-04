@@ -174,7 +174,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
 
             account.AcceptChanges();
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save account changes.");
 
@@ -221,10 +221,10 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
             WHERE account_id = @AccountId
             AND permission_id = @PermissionId
             """, new
-            {
-                revoked.AccountId,
-                revoked.PermissionId
-            });
+        {
+            revoked.AccountId,
+            revoked.PermissionId
+        });
     }
 
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_permissions")]

@@ -42,7 +42,7 @@ internal sealed class OutboxMonitor(OutboxDataSource dataSource, DomainEventHand
 
                     _backoffPow = 0;
                     continue;
-                }                
+                }
             }
             catch (Exception ex)
             {

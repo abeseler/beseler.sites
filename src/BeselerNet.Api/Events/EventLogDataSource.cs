@@ -25,14 +25,14 @@ internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxData
                 INSERT INTO event_log (event_id, aggregate_type, aggregate_id, version, payload, created_at)
                 VALUES (@EventId, @AggregateType, @AggregateId, @Version, @payload::jsonb, @CreatedAt)
                 """, new
-                {
-                    @event.EventId,
-                    @event.AggregateType,
-                    @event.AggregateId,
-                    @event.Version,
-                    payload,
-                    @event.CreatedAt
-                }, tran);
+            {
+                @event.EventId,
+                @event.AggregateType,
+                @event.AggregateId,
+                @event.Version,
+                payload,
+                @event.CreatedAt
+            }, tran);
 
             if (@event.SendToOutbox)
             {
