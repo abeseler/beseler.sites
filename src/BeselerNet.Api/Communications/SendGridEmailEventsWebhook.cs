@@ -51,7 +51,7 @@ internal static class SendGridEmailEventsWebhook
         }
         catch (JsonException ex)
         {
-            logger.LogError(ex, "Failed to deserialize request body: {Message}", ex.Message);
+            logger.LogError(ex, "Failed to deserialize request body: {Message}\n{Body}", ex.Message, body);
             return TypedResults.BadRequest("Failed to deserialize request body.");
         }
 

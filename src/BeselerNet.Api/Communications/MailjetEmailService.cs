@@ -1,7 +1,6 @@
 ﻿using BeselerNet.Shared.Core;
 using Mailjet.Client;
 using Mailjet.Client.Resources;
-using Mailjet.Client.TransactionalEmails;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
