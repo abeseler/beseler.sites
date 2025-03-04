@@ -1,7 +1,6 @@
 ﻿using BeselerNet.Api.Core;
 using BeselerNet.Shared.Contracts;
 using Microsoft.Extensions.Options;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 
@@ -9,56 +8,12 @@ namespace BeselerNet.Api.Communications;
 
 internal static class SendGridEmailEventsWebhook
 {
-    public static async Task<IResult> Handle(string? apikey, HttpRequest request, IOptions<SendGridOptions> options, ILogger<SendGridEmailEventService> logger)
+    public static IResult Handle(string? apikey, SendGridEmailEvent[] events, IOptions<SendGridOptions> options, ILogger<SendGridEmailEventService> logger)
     {
         var validApiKey = options.Value.WebhookApiKey;
         if (validApiKey is { Length: > 0 } && (apikey is null || apikey != validApiKey))
         {
             return TypedResults.Unauthorized();
-        }
-
-        if (!request.HasJsonContentType())
-        {
-            return TypedResults.BadRequest("Invalid content type. Expected application/json.");
-        }
-
-        var reader = new StreamReader(request.Body);
-        var body = await reader.ReadToEndAsync();
-
-        if (string.IsNullOrWhiteSpace(body))
-        {
-            logger.LogWarning("Request body is empty.");
-            return TypedResults.BadRequest("Request body is empty.");
-        }
-
-        SendGridEmailEvent[]? events;
-        try
-        {
-            if (body[0] == '[')
-            {
-                events = JsonSerializer.Deserialize<SendGridEmailEvent[]>(body, JsonSerializerOptions.Web);
-            }
-            else
-            {
-                var @event = JsonSerializer.Deserialize<SendGridEmailEvent>(body, JsonSerializerOptions.Web);
-                if (@event is null)
-                {
-                    logger.LogWarning("Failed to deserialize request body: {Body}", body);
-                    return TypedResults.BadRequest("Failed to deserialize request body.");
-                }
-                events = [@event];
-            }
-        }
-        catch (JsonException ex)
-        {
-            logger.LogError(ex, "Failed to deserialize request body: {Message}\n{Body}", ex.Message, body);
-            return TypedResults.BadRequest("Failed to deserialize request body.");
-        }
-
-        if (events is null || events.Length == 0)
-        {
-            logger.LogWarning("No events found in request body.");
-            return TypedResults.BadRequest("No events found in request body.");
         }
 
         var requestSubmitted = SendGridEmailEventService.RequestChannel.Writer.TryWrite(new SendGridEmailEventRequest(events));
@@ -141,7 +96,7 @@ internal sealed class SendGridEmailEventService(IServiceProvider services, ILogg
                         communication.Failed(eventDate, $"({type}) {@event.BounceClassification ?? "Missing classification"}");
                         break;
                     default:
-                        _logger.LogWarning("Unhandled event type: {Event}", @event.Event);
+                        _logger.LogWarning("Unhandled event: {Event}", @event.Event);
                         break;
                 }
 
@@ -174,7 +129,7 @@ internal sealed record SendGridEmailEvent
     public required string Email { get; init; }
     public required long Timestamp { get; init; }
     public required string Event { get; init; }
-    public required string? Type { get; init; }
+    public string? Type { get; init; }
     [JsonPropertyName("smtp-id")]
     public string? SmtpId { get; init; }
     public string? Useragent { get; init; }
