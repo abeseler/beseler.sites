@@ -1,7 +1,9 @@
 ﻿using BeselerNet.Shared.Core;
 using Mailjet.Client;
+using Mailjet.Client.Resources;
 using Mailjet.Client.TransactionalEmails;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json.Linq;
 
 namespace BeselerNet.Api.Communications;
 
@@ -66,28 +68,41 @@ internal sealed class MailjetEmailService(
 
         try
         {
-            var emailMessage = new TransactionalEmailBuilder()
-                .WithFrom(new SendContact(_commOptions.SenderEmail, _commOptions.SenderName))
-                .WithSubject(template.Subject)
-                .WithTextPart(template.PlainTextContent)
-                .WithHtmlPart(template.HtmlContent)
-                .WithTo([new SendContact(email, recipientName)])
-                .WithCustomId(communication.CommunicationId.ToString())
-                .Build();
+            var request = new MailjetRequest
+            {
+                Resource = SendV31.Resource,
+            }
+            .Property(Mailjet.Client.Resources.Send.Messages,
+                new JArray {
+                    new JObject {
+                        {"From", new JObject {
+                            {"Email", _commOptions.SenderEmail},
+                            {"Name", _commOptions.SenderName}
+                        }},
+                        {"To", new JArray {
+                            new JObject {
+                                {"Email", email},
+                                {"Name", recipientName}
+                            }
+                        }},
+                        {"Subject", template.Subject},
+                        {"TextPart", template.PlainTextContent},
+                        {"HTMLPart", template.HtmlContent},
+                        {"CustomID", communication.CommunicationId.ToString()}
+                    }
+                });
 
-            var response = await _client.SendTransactionalEmailAsync(emailMessage);
-            var result = response.Messages.FirstOrDefault();
-            var error = result?.Errors.FirstOrDefault();
-            if (error is null)
+            var response = await _client.PostAsync(request);
+            if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Email {CommunicationName} sent to {Email}", template.CommunicationName, email);
             }
             else
             {
-                communication.Failed(DateTimeOffset.UtcNow, error.ErrorMessage);
-                _logger.LogError("Failed to send {CommunicationName} email to {Email}: {Error}", template.CommunicationName, email, error.ErrorMessage);
+                var errorMessage = response.GetErrorMessage();
+                communication.Failed(DateTimeOffset.UtcNow, errorMessage);
+                _logger.LogError("Failed to send {CommunicationName} email to {Email}: {StatusCode} - {ResponseData}", template.CommunicationName, email, response.StatusCode, response.GetData());
             }
-
         }
         catch (Exception ex)
         {
