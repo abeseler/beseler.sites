@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace BeselerNet.Shared.Core;
 
@@ -23,7 +22,6 @@ public readonly struct Result
     public static implicit operator Result(Exception exception) => new(exception);
 }
 
-[DebuggerDisplay("{Succeeded ? \"Success\" : \"Failure\"}")]
 public readonly struct Result<T>
 {
     private readonly T? _value;

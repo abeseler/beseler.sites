@@ -1,6 +1,5 @@
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -11,8 +10,6 @@ using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Serilog;
-using System.Text;
-using System.Text.Json;
 
 namespace Beseler.ServiceDefaults;
 
@@ -35,20 +32,16 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        app.MapHealthChecks("/_health", new HealthCheckOptions()
-        {
-            ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-        }).CacheOutput("HealthCheck").WithRequestTimeout(TimeSpan.FromSeconds(10));
+        app.MapHealthChecks("/_health", new() { ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse })
+            .CacheOutput("HealthCheck")
+            .WithRequestTimeout(TimeSpan.FromSeconds(10))
+            .DisableHttpMetrics();
 
-        app.MapHealthChecks("/_alive", new HealthCheckOptions()
-        {
-            Predicate = r => r.Tags.Contains("live")
-        });
+        app.MapHealthChecks("/_alive", new() { Predicate = r => r.Tags.Contains("live") })
+            .DisableHttpMetrics();
 
-        app.MapHealthChecks("/_ready", new HealthCheckOptions()
-        {
-            Predicate = r => r.Tags.Contains("ready")
-        });
+        app.MapHealthChecks("/_ready", new() { Predicate = r => r.Tags.Contains("ready") })
+            .DisableHttpMetrics();
 
         app.MapGet("/coffee", () => TypedResults.Text("I'm a teapot!", statusCode: StatusCodes.Status418ImATeapot))
             .ExcludeFromDescription();
