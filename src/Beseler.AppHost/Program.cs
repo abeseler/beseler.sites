@@ -1,14 +1,13 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var cache = builder.AddRedis("Cache")
-    .WithLifetime(ContainerLifetime.Persistent)
+    //.WithLifetime(ContainerLifetime.Persistent)
     .WithRedisInsight();
 
 var postgresPassword = builder.AddParameter("postgres-password", "default_password", secret: true);
 var postgres = builder.AddPostgres("postgres", password: postgresPassword, port: 15432)
-    .WithBindMount("../../data", "/docker-entrypoint-initdb.d")
-    .WithLifetime(ContainerLifetime.Persistent)
-    .WithPgWeb();
+    //.WithLifetime(ContainerLifetime.Persistent)
+    .WithPgAdmin();
 
 var database = postgres.AddDatabase("Database", "bnet")
     .WithParentRelationship(postgres);
