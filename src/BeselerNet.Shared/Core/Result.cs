@@ -40,8 +40,8 @@ public readonly struct Result<T>
     }
     public TResult Match<TResult>(Func<T, TResult> onSuccess, Func<Exception, TResult> onFailure) =>
         _exception is null ? onSuccess(_value!) : onFailure(_exception!);
-    public TResult Match<TResult, TState>(TState state, Func<TState, T, TResult> onSuccess, Func<TState, Exception, TResult> onFailure) =>
-        _exception is null ? onSuccess(state, _value!) : onFailure(state, _exception!);
+    public TResult Match<TResult, TState>(TState state, Func<T, TState, TResult> onSuccess, Func<Exception, TState, TResult> onFailure) =>
+        _exception is null ? onSuccess(_value!, state) : onFailure(_exception!, state);
 
     public static implicit operator Result<T>(T value) => new(value);
     public static implicit operator Result<T>(Exception exception) => new(exception);

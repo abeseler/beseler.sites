@@ -24,7 +24,7 @@ internal sealed class ResendEmailVerificationHandler
             },
             { IsDisabled: true } => AccountProblems.Disabled,
             { IsLocked: true } => AccountProblems.Locked,
-            { EmailVerifiedAt: not null } => AccountProblems.EmailAlreadyVerified,
+            { EmailVerifiedAt: not null } => AccountProblems.EmailAlreadyVerified(account.Email),
             _ => null
         };
 

@@ -16,10 +16,10 @@ internal static class AccountProblems
         Detail = "Your account is disabled. Please contact support.",
         Status = StatusCodes.Status403Forbidden
     };
-    public static ProblemDetails EmailAlreadyVerified { get; } = new()
+    public static ProblemDetails EmailAlreadyVerified(string email) => new()
     {
         Title = "Email Already Verified",
-        Detail = "Your email address has already been verified.",
+        Detail = $"Your email address ({email}) has already been verified.",
         Status = StatusCodes.Status400BadRequest
     };
 }
