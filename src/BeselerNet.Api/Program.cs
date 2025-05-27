@@ -6,7 +6,6 @@ using BeselerNet.Api.Core;
 using BeselerNet.Api.Events;
 using BeselerNet.Api.Registrars;
 using BeselerNet.Api.Webhooks;
-using Cysharp.Serialization.Json;
 using Mailjet.Client;
 using Microsoft.AspNetCore.Identity;
 using SendGrid.Extensions.DependencyInjection;
@@ -20,26 +19,21 @@ builder.Services.AddOpenTelemetry()
 
 builder.AddAuthentication();
 builder.AddDataSources();
-builder.AddCaches();
+builder.AddCaching();
 builder.AddHostedServices();
 
+builder.Services.AddOptions<OpenApiOptions>().BindConfiguration(OpenApiOptions.SectionName);
 builder.Services.AddOpenApi(options =>
 {
-    _ = options.AddDocumentTransformer<OpenApiDefaultTransformer>();
-    _ = options.AddDocumentTransformer<AuthenticationSchemeTransformer>();
-});
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.Converters.Add(new UlidJsonConverter());
+    options.AddDocumentTransformer<OpenApiDefaultTransformer>();
+    options.AddDocumentTransformer<AuthenticationSchemeTransformer>();
 });
 builder.Services.AddProblemDetails();
 builder.Services.AddRequestTimeouts();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton(TimeProvider.System);
 
-builder.Services.AddOptions<OpenApiOptions>().BindConfiguration(OpenApiOptions.SectionName);
 builder.Services.AddOptions<JwtOptions>().BindConfiguration(JwtOptions.SectionName);
-
 builder.Services.AddSingleton<JwtGenerator>();
 builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
 builder.Services.AddScoped<Cookies>();

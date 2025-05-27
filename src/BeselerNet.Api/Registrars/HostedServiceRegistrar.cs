@@ -7,12 +7,15 @@ namespace BeselerNet.Api.Registrars;
 
 internal static class HostedServiceRegistrar
 {
-    public static void AddHostedServices(this IHostApplicationBuilder builder)
+    public static IHostApplicationBuilder AddHostedServices(this IHostApplicationBuilder builder)
     {
-        _ = builder.Services.AddHostedService<StartupService>();
-        _ = builder.Services.AddHostedService<OutboxMonitor>();
-        _ = builder.Services.AddHostedService<ForgotPasswordService>();
-        _ = builder.Services.AddHostedService<SendGridEmailEventService>();
-        _ = builder.Services.AddHostedService<MailjetEmailEventService>();
+        builder.Services
+            .AddHostedService<StartupService>()
+            .AddHostedService<OutboxMonitor>()
+            .AddHostedService<ForgotPasswordService>()
+            .AddHostedService<SendGridEmailEventService>()
+            .AddHostedService<MailjetEmailEventService>();
+
+        return builder;
     }
 }

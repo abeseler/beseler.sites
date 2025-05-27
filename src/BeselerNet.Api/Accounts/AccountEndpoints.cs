@@ -15,7 +15,7 @@ internal static class AccountEndpoints
         var v1 = builder.MapGroup("/v1/accounts")
             .WithTags("Accounts");
 
-        _ = v1.MapPost("/register-user", RegisterUserHandler.Handle)
+        v1.MapPost("/register-user", RegisterUserHandler.Handle)
             .WithName("RegisterUser")
             .WithDescription("Register a new user account.")
             .Accepts<RegisterUserRequest>(Application.Json)
@@ -23,7 +23,7 @@ internal static class AccountEndpoints
             .ProducesValidationProblem(Status400BadRequest, Application.Json)
             .AllowAnonymous();
 
-        _ = v1.MapPost("/oauth/tokens", CreateTokenHandler.Handle)
+        v1.MapPost("/oauth/tokens", CreateTokenHandler.Handle)
             .WithName("GetOAuthToken")
             .WithDescription("Get OAuth token")
             .Accepts<OAuthTokenRequest>(Application.Json)
@@ -33,7 +33,7 @@ internal static class AccountEndpoints
             .ProducesProblem(Status403Forbidden, Application.Json)
             .AllowAnonymous();
 
-        _ = v1.MapPost("/resend-email-confirmation", ResendEmailVerificationHandler.Handle)
+        v1.MapPost("/resend-email-confirmation", ResendEmailVerificationHandler.Handle)
             .WithName("ResendEmailConfirmation")
             .WithDescription("Resend the email verification link.")
             .Produces(Status202Accepted)
@@ -43,7 +43,7 @@ internal static class AccountEndpoints
             .ProducesProblem(Status422UnprocessableEntity, Application.Json)
             .RequireAuthorization();
 
-        _ = v1.MapPost("/confirm-email", ConfirmEmailHandler.Handle)
+        v1.MapPost("/confirm-email", ConfirmEmailHandler.Handle)
             .WithName("ConfirmEmail")
             .WithDescription("Confirm the email address.")
             .Produces(Status204NoContent)
@@ -51,7 +51,7 @@ internal static class AccountEndpoints
             .ProducesProblem(Status403Forbidden, Application.Json)
             .RequireAuthorization();
 
-        _ = v1.MapPost("/forgot-password", ForgotPasswordHandler.Handle)
+        v1.MapPost("/forgot-password", ForgotPasswordHandler.Handle)
             .WithName("SendForgotPassword")
             .WithDescription("Send a password reset link to the email address.")
             .Accepts<ForgotPasswordRequest>(Application.Json)
@@ -60,7 +60,7 @@ internal static class AccountEndpoints
             .ProducesProblem(Status429TooManyRequests, Application.Json)
             .AllowAnonymous();
 
-        _ = v1.MapPost("/reset-password", ResetPasswordHandler.Handle)
+        v1.MapPost("/reset-password", ResetPasswordHandler.Handle)
             .WithName("ResetUserPassword")
             .WithDescription("Reset the password.")
             .Accepts<ResetPasswordRequest>(Application.Json)

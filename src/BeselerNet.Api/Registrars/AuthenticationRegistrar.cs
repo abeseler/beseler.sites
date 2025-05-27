@@ -15,7 +15,7 @@ internal static class AuthenticationRegistrar
 {
     public static void AddAuthentication(this IHostApplicationBuilder builder)
     {
-        _ = builder.Services.AddAuthentication(options =>
+        builder.Services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -41,7 +41,7 @@ internal static class AuthenticationRegistrar
             };
         }).AddScheme<ApiKeyAuthOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthOptions.Scheme, null);
 
-        _ = builder.Services.AddAuthorizationBuilder()
+        builder.Services.AddAuthorizationBuilder()
             .AddDefaultPolicy("BearerOrApiKey", policy =>
             {
                 _ = policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, ApiKeyAuthOptions.Scheme);

@@ -14,7 +14,7 @@ public static class Encryptor
         aes.Key = Convert.FromBase64String(key);
         aes.GenerateIV();
         
-        var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+        using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
         using var ms = new MemoryStream();
         using var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write);
         using var sw = new StreamWriter(cs);
@@ -35,7 +35,7 @@ public static class Encryptor
         aes.Key = Convert.FromBase64String(key);
         aes.IV = Convert.FromBase64String(iv);
 
-        var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+        using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
         using var ms = new MemoryStream(Convert.FromBase64String(encryptedText));
         using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
         using var sr = new StreamReader(cs);
