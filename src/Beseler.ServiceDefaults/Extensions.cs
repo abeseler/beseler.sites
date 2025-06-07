@@ -71,7 +71,9 @@ public static class Extensions
             .WriteTo.OpenTelemetry(options =>
             {
                 options.Endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]!;
-                options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.HttpProtobuf;
+                options.Protocol = builder.Configuration["OTEL_EXPORTER_OTLP_PROTOCOL"] == "grpc"
+                    ? Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc
+                    : Serilog.Sinks.OpenTelemetry.OtlpProtocol.HttpProtobuf;
                 var headers = builder.Configuration["OTEL_EXPORTER_OTLP_HEADERS"]?.Split(',') ?? [];
                 foreach (var header in headers)
                 {
@@ -118,6 +120,10 @@ public static class Extensions
         });
 
         var endpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+        var protocol = builder.Configuration["OTEL_EXPORTER_OTLP_PROTOCOL"] == "grpc"
+            ? OtlpExportProtocol.Grpc
+            : OtlpExportProtocol.HttpProtobuf;
+
         builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics =>
             {
@@ -149,7 +155,7 @@ public static class Extensions
                     tracing.AddOtlpExporter(options =>
                     {
                         options.Endpoint = new Uri($"{endpoint}v1/traces");
-                        options.Protocol = OtlpExportProtocol.HttpProtobuf;
+                        options.Protocol = protocol;
                     });
                 }
             });
