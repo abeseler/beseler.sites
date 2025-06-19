@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="Beseler.AppHost/Beseler.AppHost.csproj" />
+  <Project Path="Beseler.Console/Beseler.Console.csproj" />
+  <Project Path="Beseler.Deploy/Beseler.Deploy.csproj" />
+  <Project Path="Beseler.ServiceDefaults/Beseler.ServiceDefaults.csproj" />
+  <Project Path="BeselerDev.Web/BeselerDev.Web.csproj" />
+  <Project Path="BeselerNet.Api/BeselerNet.Api.csproj" />
+  <Project Path="BeselerNet.Shared/BeselerNet.Shared.csproj" />
+  <Project Path="BeselerNet.Web/BeselerNet.Web.csproj" />
+</Solution>

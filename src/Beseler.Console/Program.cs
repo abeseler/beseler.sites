@@ -3,9 +3,10 @@
 var key = Encryptor.GenerateKey();
 Console.WriteLine($"Key: {key}\n");
 
-var (encryptedText, iv) = Encryptor.Encrypt("Hello World", key);
+var plainText = "Hello World!";
+Console.WriteLine($"Plain Text: {plainText}");
+var encryptedText = Encryptor.Encrypt(plainText, key);
 Console.WriteLine("Encrypted Text: " + encryptedText);
-Console.WriteLine("IV: " + iv);
 
-var decryptedText = Encryptor.Decrypt(encryptedText, iv, key);
+var decryptedText = Encryptor.Decrypt(encryptedText, key);
 Console.WriteLine("Decrypted Text: " + decryptedText);

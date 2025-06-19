@@ -12,17 +12,17 @@ jobs:
       matrix:
         include:
           - image: abeseler/beseler-net-dbdeploy
-            dockerfile: docker/beseler-net-dbdeploy.Dockerfile
-            context: .
+            dockerfile: src/beseler-net-dbdeploy.Dockerfile
+            context: ./data
           - image: abeseler/beseler-dev-web
-            dockerfile: docker/beseler-dev-web.Dockerfile
-            context: .
+            dockerfile: src/beseler-dev-web.Dockerfile
+            context: ./src
           - image: abeseler/beseler-net-api
-            dockerfile: docker/beseler-net-api.Dockerfile
-            context: .
+            dockerfile: src/beseler-net-api.Dockerfile
+            context: ./src
           - image: abeseler/beseler-net-web
-            dockerfile: docker/beseler-net-web.Dockerfile
-            context: .
+            dockerfile: src/beseler-net-web.Dockerfile
+            context: ./src
 
     steps:
       - name: Checkout code

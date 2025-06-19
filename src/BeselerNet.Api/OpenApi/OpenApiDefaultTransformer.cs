@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 
-namespace BeselerNet.Api.Core;
+namespace BeselerNet.Api.OpenApi;
 
 internal sealed record OpenApiOptions
 {

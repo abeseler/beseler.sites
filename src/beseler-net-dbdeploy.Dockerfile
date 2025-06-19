@@ -1,2 +1,2 @@
 FROM abeseler/dbdeploy:latest
-COPY ./data /app/Migrations
+COPY . /app/Migrations
