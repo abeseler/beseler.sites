@@ -1,11 +1,10 @@
-﻿using BeselerNet.Api.Accounts;
-using BeselerNet.Api.Communications;
+﻿using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
 using System.Diagnostics;
 
-namespace BeselerNet.Api.Events.Handlers;
+namespace BeselerNet.Api.Accounts.EventHandlers;
 
-internal sealed class AccountLoginFailedHandler(AccountDataSource accounts, EmailerProvider emailerProvider)
+internal sealed class AccountLoginFailedHandler(AccountDataSource accounts, EmailerProvider emailerProvider) : IHandler<AccountLoginFailed>
 {
     private readonly AccountDataSource _accounts = accounts;
     private readonly IEmailer _emailer = emailerProvider.GetEmailer();

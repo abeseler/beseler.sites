@@ -3,6 +3,11 @@ using System.Text.Json.Serialization;
 
 namespace BeselerNet.Api.Core;
 
+internal interface IHandler<T> where T : DomainEvent
+{
+    Task Handle(T domainEvent, CancellationToken stoppingToken);
+}
+
 [JsonPolymorphic]
 internal abstract partial record DomainEvent(string AggregateType, string AggregateId, bool SendToOutbox = false)
 {

@@ -34,6 +34,14 @@ builder.AddProject<Projects.BeselerDev_Web>("beseler-dev-web")
     .WithExplicitStart();
 
 var beselerNetApi = builder.AddProject<Projects.BeselerNet_Api>("beseler-net-api")
+    .WithUrlForEndpoint("https", _ =>
+    {
+        return new ResourceUrlAnnotation()
+        {
+            Url = "/swagger",
+            DisplayText = "Swagger (https)"
+        };
+    })
     .WithReference(cache)
     .WaitFor(cache)
     .WithReference(database)

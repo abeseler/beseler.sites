@@ -1,9 +1,9 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Api.Accounts;
+using BeselerNet.Api.Accounts.EventHandlers;
 using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
-using BeselerNet.Api.Events;
 using BeselerNet.Api.OpenApi;
 using BeselerNet.Api.Registrars;
 using BeselerNet.Api.Webhooks;
@@ -37,7 +37,8 @@ builder.Services.AddSingleton<JwtGenerator>();
 builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
 builder.Services.AddScoped<Cookies>();
 
-builder.Services.AddDomainEventHandlers();
+builder.Services.AddTransient<IHandler<AccountCreated>, AccountCreatedHandler>();
+builder.Services.AddTransient<IHandler<AccountLoginFailed>, AccountLoginFailedHandler>();
 
 builder.Services.AddOptions<CommunicationOptions>().BindConfiguration(CommunicationOptions.SectionName);
 builder.AddEmailProviders();

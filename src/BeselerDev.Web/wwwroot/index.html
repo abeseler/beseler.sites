@@ -1,0 +1,332 @@
+﻿<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Adam Beseler Resume - Software Engineer">
+    <meta name="author" content="Adam Beseler">
+    <title>Beseler Resume</title>
+    <style>
+        :root {
+            --color-primary: #121212;
+            --color-light: #181a1b;
+            --color-foreground: #e0e0e0;
+            --color-accent: #00bcd4;
+            --color-highlight: #39ff14;
+            --color-orange: #ff9800;
+        }
+
+        body {
+            font-family: 'Consolas', 'Menlo', 'Monaco', 'Liberation Mono', 'Courier New', monospace;
+            margin: 0;
+            padding: 0;
+            background-color: var(--color-primary);
+            color: var(--color-foreground);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        section {
+            padding: 0;
+        }
+
+        .sidebar {
+            width: 180px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background-color: var(--color-light);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 2px solid var(--color-accent);
+        }
+
+            .sidebar ul {
+                list-style-type: none;
+                padding: 0;
+            }
+
+                .sidebar ul li {
+                    position: relative;
+                    overflow: visible;
+                    margin: 18px 0;
+                }
+
+                    .sidebar ul li a {
+                        text-decoration: none;
+                        color: var(--color-accent);
+                        font-weight: bold;
+                        font-size: 1.15em;
+                        transition: color 0.18s cubic-bezier(.4,0,.2,1), transform 0.18s cubic-bezier(.4,0,.2,1);
+                        will-change: transform;
+                        display: inline-block;
+                        transform-origin: left center;
+                    }
+
+                        .sidebar ul li a:hover {
+                            color: #ff9800;
+                            transform: scale(1.35);
+                            background: rgba(30,30,30,0.95);
+                            z-index: 2;
+                        }
+
+                        .sidebar ul li a.active {
+                            color: #ff9800;
+                        }
+
+        .content {
+            margin-left: 240px;
+            padding-left: 80px;
+            padding-right: 80px;
+        }
+
+            .content section {
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: stretch;
+                overflow: visible;
+            }
+
+            .content article {
+                margin-bottom: 20px;
+                min-height: 40vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                background: rgba(18,18,18,0.92);
+                border-radius: 8px;
+                padding: 24px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            }
+
+        h1, h2, h3, h4 {
+            color: var(--color-accent);
+            font-weight: bold;
+            margin-bottom: 0.5em;
+        }
+
+        h1 {
+            font-size: 2.5em;
+        }
+
+        h2 {
+            font-size: 2em;
+        }
+
+        h3 {
+            font-size: 1.3em;
+        }
+
+        h4 {
+            font-size: 1.1em;
+        }
+
+        p, li {
+            font-size: 1em;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid var(--color-accent);
+            margin: 40px 0;
+        }
+
+        ul, li {
+            color: var(--color-foreground);
+        }
+
+            ul li {
+                margin-bottom: 0.6em;
+            }
+
+        h1::before, h2::before, h3::before {
+            content: "$ ";
+            color: var(--color-accent);
+        }
+
+        @keyframes blink {
+            0%, 50% {
+                opacity: 1;
+            }
+
+            51%, 100% {
+                opacity: 0;
+            }
+        }
+
+        h1::after {
+            content: "_";
+            color: var(--color-accent);
+            animation: blink 1s infinite;
+            margin-left: 4px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            background: var(--color-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-dark);
+            border-radius: 4px;
+        }
+
+        .exp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .exp-title {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+            .exp-title h3 {
+                margin-bottom: 0.2em;
+            }
+
+            .exp-title h4 {
+                margin-top: 0;
+            }
+
+        .exp-dates {
+            color: #ff9800;
+            font-style: italic;
+            font-size: 1em;
+            text-align: right;
+            min-width: 120px;
+            margin-top: 0;
+        }
+
+        .sec-content {
+            padding: 40px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <ul>
+            <li><a href="#about">ABOUT</a></li>
+            <li><a href="#experience">EXPERIENCE</a></li>
+            <li><a href="#skills">SKILLS</a></li>
+        </ul>
+    </div>
+    <main class="content">
+        <section id="about">
+            <div class="sec-content">
+                <h1>ADAM <span style="color: var(--color-accent);">BESELER</span></h1>
+                <p>Self-taught software engineer with a passion for designing, developing, and deploying scalable applications. I leverage problem-solving skills and an understanding of full-stack development to build innovate projects and well as continuously learning and adapting to new technologies.</p>
+            </div>
+        </section>
+        <hr />
+        <section id="experience">
+            <div class="sec-content">
+                <h2>EXPERIENCE</h2>
+                <article>
+                    <header class="exp-header">
+                        <div class="exp-title">
+                            <h3>Senior Software Engineer</h3>
+                            <h4>Wine.com</h4>
+                        </div>
+                        <div class="exp-dates">May 2021 - Present</div>
+                    </header>
+                    <ul>
+                        <li>Maintain backend services and applications: fixing legacy bugs, adding features to existing services and building new ones when required to solve changing business requirements.</li>
+                    </ul>
+                </article>
+                <article>
+                    <header class="exp-header">
+                        <div class="exp-title">
+                            <h3>Support Analyst & WMS Administrator</h3>
+                            <h4>Körber Supply Chain Solutions</h4>
+                        </div>
+                        <div class="exp-dates">June 2019 - May 2021</div>
+                    </header>
+                    <ul>
+                        <li>Provided technical support for the Warehouse Advantage application suite.</li>
+                        <li>Worked with companies to maintain their software, performing version upgrades and troubleshooting issues in their customized implementations.</li>
+                        <li>Designed, built and rolled out new process workflows to meet operational requirements and standards.</li>
+                    </ul>
+                </article>
+                <article>
+                    <header class="exp-header">
+                        <div class="exp-title">
+                            <h3>Operations Technology Person, Level 3</h3>
+                            <h4>Santoro Org, McDonald's Franchise</h4>
+                        </div>
+                        <div class="exp-dates">September 2011 - June 2019</div>
+                    </header>
+                    <ul>
+                        <li>Communicate, repair and replace, and manage the technology for the organization.</li>
+                        <li>Act as a single point of contact when pushing new initiatives, and provide staff with training and support, both during and after completion.</li>
+                    </ul>
+                </article>
+                <article>
+                    <header class="exp-header">
+                        <div class="exp-title">
+                            <h3>General Manager</h3>
+                            <h4>McDonald's</h4>
+                        </div>
+                        <div class="exp-dates">September 2000 - June 2019</div>
+                    </header>
+                    <ul>
+                        <li>Manage all aspects of restaurant operations.</li>
+                        <li>Hire and retain quality employees. Provide training and development opportunities to enhance their skills.</li>
+                        <li>Identify opportunities to increase profitability or ease of service and provide solutions to achieve them.</li>
+                    </ul>
+                </article>
+            </div>
+        </section>
+        <hr />
+        <section id="skills">
+            <div class="sec-content">
+                <h2>SKILLS</h2>
+                <h3>Languages</h3>
+                <ul>
+                    <li>C#</li>
+                    <li>SQL</li>
+                    <li>HTML</li>
+                    <li>CSS</li>
+                    <li>Javascript</li>
+                </ul>
+                <h3>Technologies</h3>
+                <ul>
+                    <li>.NET</li>
+                    <li>Docker</li>
+                    <li>Kubernetes</li>
+                    <li>Microsoft SqlServer</li>
+                    <li>PostgreSQL</li>
+                    <li>Redis</li>
+                </ul>
+                <h3>Cloud Providers</h3>
+                <ul>
+                    <li>AWS</li>
+                    <li>Azure</li>
+                </ul>
+            </div>
+        </section>
+    </main>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.sidebar ul li a');
+            function activateNav() {
+                let index = sections.length;
+                while (--index && window.scrollY + 120 < sections[index].offsetTop) { }
+                navLinks.forEach(link => link.classList.remove('active'));
+                if (navLinks[index]) navLinks[index].classList.add('active');
+            }
+            activateNav();
+            window.addEventListener('scroll', activateNav);
+        });
+    </script>
+</body>
