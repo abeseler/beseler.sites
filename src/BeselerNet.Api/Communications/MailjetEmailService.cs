@@ -28,32 +28,32 @@ internal sealed class MailjetEmailService(
     private readonly MailjetOptions _options = options.Value;
     private readonly ILogger<MailjetEmailService> _logger = logger;
 
-    public async Task<Result<Communication>> SendEmailVerification(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
+    public async Task<Result<Communication>> SendEmailVerification(int accountId, string email, string recipientName, string token, CancellationToken cancellationToken)
     {
         var template = EmailTemplates.EmailVerification(_commOptions.ConfirmEmailUrl!, token);
-        var communication = await Send(template, accountId, email, recipientName, stoppingToken);
+        var communication = await Send(template, accountId, email, recipientName, cancellationToken);
         if (communication.FailedAt.HasValue)
         {
             _logger.LogInformation("Token not sent: {Token}", token);
         }
         return communication;
     }
-    public async Task<Result<Communication>> SendAccountLocked(int accountId, string email, string recipientName, CancellationToken stoppingToken)
+    public async Task<Result<Communication>> SendAccountLocked(int accountId, string email, string recipientName, CancellationToken cancellationToken)
     {
         var template = EmailTemplates.AccountLocked(recipientName);
-        return await Send(template, accountId, email, recipientName, stoppingToken);
+        return await Send(template, accountId, email, recipientName, cancellationToken);
     }
-    public async Task<Result<Communication>> SendPasswordReset(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
+    public async Task<Result<Communication>> SendPasswordReset(int accountId, string email, string recipientName, string token, CancellationToken cancellationToken)
     {
         var template = EmailTemplates.PasswordReset(recipientName, _commOptions.ResetPasswordUrl!, token);
-        var communication = await Send(template, accountId, email, recipientName, stoppingToken);
+        var communication = await Send(template, accountId, email, recipientName, cancellationToken);
         if (communication.FailedAt.HasValue)
         {
             _logger.LogInformation("Token not sent: {Token}", token);
         }
         return communication;
     }
-    private async Task<Communication> Send(EmailTemplate template, int accountId, string email, string recipientName, CancellationToken stoppingToken)
+    private async Task<Communication> Send(EmailTemplate template, int accountId, string email, string recipientName, CancellationToken cancellationToken)
     {
         var communication = Communication.Create(PROVIDER_NAME, CommunicationType.Email, template.CommunicationName, accountId);
 
@@ -61,7 +61,7 @@ internal sealed class MailjetEmailService(
         {
             _logger.LogWarning("{CommunicationName} not sent because Mailjet ApiKey is missing.", template.CommunicationName);
             communication.Failed(DateTimeOffset.UtcNow, "Mailjet ApiKey is missing");
-            await _communications.SaveChanges(communication, stoppingToken);
+            await _communications.SaveChanges(communication, cancellationToken);
             return communication;
         }
 
@@ -109,7 +109,7 @@ internal sealed class MailjetEmailService(
             communication.Failed(DateTimeOffset.UtcNow, ex.Message);
         }
 
-        await _communications.SaveChanges(communication, stoppingToken);
+        await _communications.SaveChanges(communication, cancellationToken);
         return communication;
     }
 }

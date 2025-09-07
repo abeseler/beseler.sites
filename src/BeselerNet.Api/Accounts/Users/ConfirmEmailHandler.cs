@@ -5,7 +5,7 @@ namespace BeselerNet.Api.Accounts.Users;
 
 internal sealed class ConfirmEmailHandler
 {
-    public static async Task<IResult> Handle(ClaimsPrincipal principal, AccountDataSource accounts, CancellationToken stoppingToken)
+    public static async Task<IResult> Handle(ClaimsPrincipal principal, AccountDataSource accounts, CancellationToken cancellationToken)
     {
         if (!int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId)
             || principal.FindFirstValue(JwtRegisteredClaimNames.Email) is not { } email
@@ -14,7 +14,7 @@ internal sealed class ConfirmEmailHandler
             return TypedResults.Unauthorized();
         }
 
-        var account = await accounts.WithId(accountId, stoppingToken);
+        var account = await accounts.WithId(accountId, cancellationToken);
         var problem = account switch
         {
             null or { Email: null } => new()
@@ -41,7 +41,7 @@ internal sealed class ConfirmEmailHandler
         }
 
         account!.VerifyEmail(email);
-        await accounts.SaveChanges(account, stoppingToken);
+        await accounts.SaveChanges(account, cancellationToken);
 
         return TypedResults.NoContent();
     }

@@ -1,41 +1,27 @@
 ﻿using System.Security.Cryptography;
-using System.Text;
 
 namespace BeselerNet.Shared.Core;
 
 public static class Encryptor
 {
     /// <summary>
-    /// Encrypts the specified plain text using AES-GCM with the provided key.
+    /// Encrypts the specified input data using AES-GCM with the provided key.
     /// </summary>
-    /// <param name="plainText">The text to encrypt. If <paramref name="plainText"/> is <see langword="null"/> or empty,  the method returns the
-    /// input value unchanged.</param>
-    /// <param name="key">A Base64-encoded string representing the encryption key. The key must be 128, 192, or 256 bits  in length. This
-    /// parameter cannot be <see langword="null"/> or empty.</param>
-    /// <returns>A Base64-encoded string containing the encrypted data, including the nonce, ciphertext, and  authentication tag.</returns>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="key"/> is <see langword="null"/>, empty, not a valid Base64 string, or does not
-    /// represent a key of 128, 192, or 256 bits.</exception>
+    /// <param name="input">The data to encrypt. If <paramref name="input"/> is empty, the method returns an empty array.</param>
+    /// <param name="key">A byte array representing the encryption key. The key must be 128, 192, or 256 bits in length. This parameter cannot be
+    /// <see langword="null"/> or empty.</param>
+    /// <returns>A byte array containing the encrypted data, including the nonce, ciphertext, and authentication tag.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="key"/> is <see langword="null"/>, empty, or does not represent a key of 128,
+    /// 192, or 256 bits.</exception>
     /// <exception cref="CryptographicException">Thrown if the encryption process fails.</exception>
-    public static string Encrypt(string plainText, string key)
+    public static byte[] Encrypt(ReadOnlySpan<byte> input, byte[] key)
     {
-        ArgumentException.ThrowIfNullOrEmpty(key, nameof(key));
-
-        if (string.IsNullOrEmpty(plainText))
+        if (input is not { Length: > 0 })
         {
-            return plainText;
+            return [];
         }
 
-        byte[] keyBytes;
-        try
-        {
-            keyBytes = Convert.FromBase64String(key);
-        }
-        catch (FormatException)
-        {
-            throw new ArgumentException("Key is not a valid Base64 string.", nameof(key));
-        }
-
-        if (keyBytes.Length is not 16 and not 24 and not 32)
+        if (key is not { Length: 16 or 24 or 32 })
         {
             throw new ArgumentException("Key must be 128, 192, or 256 bits.", nameof(key));
         }
@@ -45,21 +31,19 @@ public static class Encryptor
             Span<byte> nonce = stackalloc byte[12];
             RandomNumberGenerator.Fill(nonce);
 
-            var plainBytes = Encoding.UTF8.GetBytes(plainText);
-            Span<byte> ciphertext = plainBytes.Length < 256 ? stackalloc byte[plainBytes.Length] : new byte[plainBytes.Length];
+            Span<byte> ciphertext = input.Length < 256 ? stackalloc byte[input.Length] : new byte[input.Length];
             Span<byte> tag = stackalloc byte[16];
 
-            using (var gcm = new AesGcm(keyBytes, 16))
+            using (var gcm = new AesGcm(key, 16))
             {
-                gcm.Encrypt(nonce, plainBytes, ciphertext, tag);
+                gcm.Encrypt(nonce, input, ciphertext, tag);
             }
 
-            var encryptedBytes = new byte[12 + plainBytes.Length + 16];
+            var encryptedBytes = new byte[12 + input.Length + 16];
             nonce.CopyTo(encryptedBytes.AsSpan(0));
             ciphertext.CopyTo(encryptedBytes.AsSpan(12));
-            tag.CopyTo(encryptedBytes.AsSpan(12 + plainBytes.Length));
-
-            return Convert.ToBase64String(encryptedBytes);
+            tag.CopyTo(encryptedBytes.AsSpan(12 + input.Length));
+            return encryptedBytes;
         }
         catch (Exception ex)
         {
@@ -68,67 +52,38 @@ public static class Encryptor
     }
 
     /// <summary>
-    /// Decrypts the specified encrypted text using the provided key.
+    /// Decrypts the specified encrypted data using AES-GCM with the provided key.
     /// </summary>
-    /// <param name="encryptedText">The encrypted text to decrypt, encoded as a Base64 string. Must be a valid Base64 string and at least 28 bytes
-    /// long.</param>
-    /// <param name="key">The encryption key, encoded as a Base64 string. Must be a valid Base64 string and represent a key size of 128,
-    /// 192, or 256 bits.</param>
-    /// <returns>The decrypted plaintext as a UTF-8 string. If <paramref name="encryptedText"/> is null or empty, the method
-    /// returns the same value.</returns>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="encryptedText"/> is not a valid Base64 string, is too short, or if <paramref
-    /// name="key"/> is not a valid Base64 string or does not represent a valid key size.</exception>
+    /// <param name="encryptedBytes">The encrypted data to decrypt. Must be at least 28 bytes long (12 bytes for the nonce, at least 0 bytes for the
+    /// ciphertext, and 16 bytes for the authentication tag).</param>
+    /// <param name="key">A byte array representing the decryption key. The key must be 128, 192, or 256 bits in length. This parameter cannot be
+    /// <see langword="null"/> or empty.</param>
+    /// <returns>A byte array containing the decrypted data.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="encryptedBytes"/> is too short or if <paramref name="key"/> is <see
+    /// langword="null"/>, empty, or does not represent a key of 128, 192, or 256 bits.</exception>
     /// <exception cref="CryptographicException">Thrown if decryption or authentication fails.</exception>
-    public static string Decrypt(string encryptedText, string key)
+    public static byte[] Decrypt(ReadOnlySpan<byte> encryptedBytes, byte[] key)
     {
-        ArgumentException.ThrowIfNullOrEmpty(key, nameof(key));
-
-        if (string.IsNullOrEmpty(encryptedText))
-        {
-            return encryptedText;
-        }
-
-        byte[] encryptedBytes;
-        try
-        {
-            encryptedBytes = Convert.FromBase64String(encryptedText);
-        }
-        catch (FormatException)
-        {
-            throw new ArgumentException("Encrypted text is not a valid Base64 string.", nameof(encryptedText));
-        }
-
         if (encryptedBytes.Length < 28)
         {
-            throw new ArgumentException("Encrypted text is too short.", nameof(encryptedText));
-        }            
-
-        byte[] keyBytes;
-        try
-        {
-            keyBytes = Convert.FromBase64String(key);
+            throw new ArgumentException("Encrypted data is too short.", nameof(encryptedBytes));
         }
-        catch (FormatException)
+        if (key is not { Length: 16 or 24 or 32 })
         {
-            throw new ArgumentException("Key is not a valid Base64 string.", nameof(key));
-        }
-
-        if (keyBytes.Length is not 16 and not 24 and not 32)
             throw new ArgumentException("Key must be 128, 192, or 256 bits.", nameof(key));
+        }
 
         try
         {
-            var nonce = encryptedBytes.AsSpan()[..12];
-            var tag = encryptedBytes.AsSpan()[^16..];
-            var ciphertext = encryptedBytes.AsSpan()[12..^16];
+            var nonce = encryptedBytes[..12];
+            var tag = encryptedBytes[^16..];
+            var ciphertext = encryptedBytes[12..^16];
             Span<byte> plainBytes = ciphertext.Length < 256 ? stackalloc byte[ciphertext.Length] : new byte[ciphertext.Length];
-
-            using (var gcm = new AesGcm(keyBytes, 16))
+            using (var gcm = new AesGcm(key, 16))
             {
                 gcm.Decrypt(nonce, ciphertext, tag, plainBytes);
             }
-
-            return Encoding.UTF8.GetString(plainBytes);
+            return plainBytes.ToArray();
         }
         catch (Exception ex)
         {
@@ -142,7 +97,7 @@ public static class Encryptor
     /// <param name="keySize">The size of the key, in bits. Valid values are 128, 192, or 256.</param>
     /// <returns>A Base64-encoded string representing the generated cryptographic key.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="keySize"/> is not 128, 192, or 256.</exception>
-    public static string GenerateKey(int keySize = 256)
+    public static byte[] GenerateKey(int keySize = 256)
     {
         if (keySize is not 128 and not 192 and not 256)
         {
@@ -152,6 +107,6 @@ public static class Encryptor
         using var aes = Aes.Create();
         aes.KeySize = keySize;
         aes.GenerateKey();
-        return Convert.ToBase64String(aes.Key);
+        return aes.Key;
     }
 }

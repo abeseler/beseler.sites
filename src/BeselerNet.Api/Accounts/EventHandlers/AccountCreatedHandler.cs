@@ -11,7 +11,7 @@ internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, Emailer
 {
     private readonly JwtGenerator _tokenGenerator = tokenGenerator;
     private readonly IEmailer _emailer = emailerProvider.GetEmailer();
-    public async Task Handle(AccountCreated domainEvent, CancellationToken stoppingToken)
+    public async Task Handle(AccountCreated domainEvent, CancellationToken cancellationToken)
     {
         using var activity = Telemetry.Source.StartActivity("AccountCreatedHandler.Handle", ActivityKind.Internal, domainEvent.TraceId);
         activity?.SetTag_AccountId(domainEvent.AccountId);
@@ -32,7 +32,7 @@ internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, Emailer
         };
         var token = _tokenGenerator.Generate(subjectClaim, TimeSpan.FromMinutes(10), [emailClaim, emailVerifiedClaim]);
 
-        var result = await _emailer.SendEmailVerification(domainEvent.AccountId, domainEvent.Email, name, token.AccessToken, stoppingToken);
+        var result = await _emailer.SendEmailVerification(domainEvent.AccountId, domainEvent.Email, name, token.AccessToken, cancellationToken);
         if (result.Failed(out var exception))
         {
             throw exception;

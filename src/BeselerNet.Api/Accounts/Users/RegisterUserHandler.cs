@@ -6,14 +6,14 @@ namespace BeselerNet.Api.Accounts.Users;
 
 internal static class RegisterUserHandler
 {
-    public static async Task<IResult> Handle(RegisterUserRequest request, AccountDataSource accounts, PermissionDataSource permissionDataSource, IPasswordHasher<Account> passwordHasher, CancellationToken stoppingToken)
+    public static async Task<IResult> Handle(RegisterUserRequest request, AccountDataSource accounts, PermissionDataSource permissionDataSource, IPasswordHasher<Account> passwordHasher, CancellationToken cancellationToken)
     {
         if (request.HasValidationErrors(out var errors))
         {
             return TypedResults.ValidationProblem(errors);
         }
 
-        var account = await accounts.WithEmail(request.Email, stoppingToken);
+        var account = await accounts.WithEmail(request.Email, cancellationToken);
         if (account is not null)
         {
             errors = [];
@@ -21,8 +21,8 @@ internal static class RegisterUserHandler
             return TypedResults.ValidationProblem(errors);
         }
 
-        var accountId = await accounts.NextId(stoppingToken);
-        var permissions = await permissionDataSource.GetCollection(stoppingToken);
+        var accountId = await accounts.NextId(cancellationToken);
+        var permissions = await permissionDataSource.GetCollection(cancellationToken);
         var secretHash = passwordHasher.HashPassword(default!, request.Password!);
         account = Account.CreateUser(accountId, request.Email, secretHash, request.Email, request.GivenName, request.FamilyName);
 
@@ -31,7 +31,7 @@ internal static class RegisterUserHandler
             account.Grant(permission!, "owned", account.AccountId);
         }
 
-        await accounts.SaveChanges(account, stoppingToken);
+        await accounts.SaveChanges(account, cancellationToken);
 
         return TypedResults.Created($"/v1/accounts/users/{accountId}");
     }

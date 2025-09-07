@@ -20,7 +20,7 @@ internal static class CreateTokenHandler
         public JwtGenerator TokenGenerator { get; init; }
         public TokenLogDataSource TokenLogs { get; init; }
         public Cookies Cookies { get; init; }
-        public CancellationToken StoppingToken { get; init; }
+        public CancellationToken cancellationToken { get; init; }
     }
 
     public static async Task<IResult> Handle([AsParameters] Parameters parameters)
@@ -42,7 +42,7 @@ internal static class CreateTokenHandler
     private static async Task<IResult> HandleAccessTokenGrant(string username, string secret, Parameters parameters)
     {
         using var activity = Telemetry.Source.StartActivity(AccessTokenActivityName, ActivityKind.Internal);
-        if (await parameters.Accounts.WithUsername_IncludePermissions(username, parameters.StoppingToken) is not { } account)
+        if (await parameters.Accounts.WithUsername_IncludePermissions(username, parameters.cancellationToken) is not { } account)
         {
             return TypedResults.Unauthorized();
         }
@@ -64,7 +64,7 @@ internal static class CreateTokenHandler
         if (result is PasswordVerificationResult.Failed)
         {
             account.FailLogin();
-            await parameters.Accounts.SaveChanges(account, parameters.StoppingToken);
+            await parameters.Accounts.SaveChanges(account, parameters.cancellationToken);
             return TypedResults.Unauthorized();
         }
         else if (result is PasswordVerificationResult.SuccessRehashNeeded)
@@ -74,7 +74,7 @@ internal static class CreateTokenHandler
         }
 
         account.Login();
-        await parameters.Accounts.SaveChanges(account, parameters.StoppingToken);
+        await parameters.Accounts.SaveChanges(account, parameters.cancellationToken);
 
         var principal = account.ToClaimsPrincipal();
         var tokenResult = parameters.TokenGenerator.Generate(principal);
@@ -82,7 +82,7 @@ internal static class CreateTokenHandler
         if (tokenResult.RefreshToken is not null)
         {
             var log = TokenLog.Create(tokenResult, account.AccountId);
-            await parameters.TokenLogs.SaveChanges(log, parameters.StoppingToken);
+            await parameters.TokenLogs.SaveChanges(log, parameters.cancellationToken);
 
             parameters.Cookies.Set(Cookies.RefreshToken, tokenResult.RefreshToken, new()
             {
@@ -115,16 +115,16 @@ internal static class CreateTokenHandler
         if (await parameters.TokenGenerator.Validate(token) is not { } principal
             || !int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId)
             || !Guid.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Jti), out var jti)
-            || await parameters.Accounts.WithId_IncludePermissions(accountId, parameters.StoppingToken) is not { } account)
+            || await parameters.Accounts.WithId_IncludePermissions(accountId, parameters.cancellationToken) is not { } account)
         {
             return TypedResults.Unauthorized();
         }
 
         activity?.SetTag_AccountId(accountId);
-        var log = await parameters.TokenLogs.WithJti(jti, parameters.StoppingToken);
+        var log = await parameters.TokenLogs.WithJti(jti, parameters.cancellationToken);
         if (log is { ReplacedBy: not null })
         {
-            await parameters.TokenLogs.RevokeChain(jti, parameters.StoppingToken);
+            await parameters.TokenLogs.RevokeChain(jti, parameters.cancellationToken);
             return TypedResults.Unauthorized();
         }
         else if (log is null or { RevokedAt: not null })
@@ -149,10 +149,10 @@ internal static class CreateTokenHandler
         var newLog = TokenLog.Create(tokenResult, account.AccountId);
         log?.ReplaceWith(newLog.Jti);
 
-        await parameters.TokenLogs.SaveChanges(newLog, parameters.StoppingToken);
+        await parameters.TokenLogs.SaveChanges(newLog, parameters.cancellationToken);
         if (log is not null)
         {
-            await parameters.TokenLogs.SaveChanges(log, parameters.StoppingToken);
+            await parameters.TokenLogs.SaveChanges(log, parameters.cancellationToken);
         }
 
         var response = new OAuthTokenResponse

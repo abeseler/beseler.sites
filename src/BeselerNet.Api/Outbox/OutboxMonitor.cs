@@ -1,4 +1,5 @@
-﻿using BeselerNet.Api.Core;
+﻿using Beseler.ServiceDefaults;
+using BeselerNet.Api.Core;
 using BeselerNet.Shared.Core;
 using System.Collections.Concurrent;
 using System.Reflection;
@@ -6,26 +7,29 @@ using System.Text.Json;
 
 namespace BeselerNet.Api.Outbox;
 
-internal sealed class OutboxMonitor(OutboxDataSource dataSource, IServiceScopeFactory scopeFactory, ILogger<OutboxMonitor> logger) : BackgroundService
+internal sealed class OutboxMonitor(OutboxDataSource dataSource, IServiceScopeFactory scopeFactory, IAppStartup appStartup, ILogger<OutboxMonitor> logger) : BackgroundService
 {
     private const int DEQUEUE_MSG_LIMIT = 10;
     private const int MAX_BACKOFF_POW = 7;
     private readonly OutboxDataSource _dataSource = dataSource;
     private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    private readonly IAppStartup _appStartup = appStartup;
     private readonly ILogger<OutboxMonitor> _logger = logger;
     private int _backoffPow = 0;
     private TimeSpan Delay => TimeSpan.FromSeconds((int)Math.Pow(2, _backoffPow));
     private static ConcurrentDictionary<string, (Type, MethodInfo)> _eventTypeCache = [];
     private static ConcurrentDictionary<string, Func<DomainEvent, CancellationToken, Task>> _handlerCache = [];
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        await _appStartup.WaitUntilStartupCompletedAsync(cancellationToken);
+
         _logger.LogInformation("OutboxMonitor has started");
 
-        while (!stoppingToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
-                var messages = await _dataSource.Dequeue(DEQUEUE_MSG_LIMIT, stoppingToken);
+                var messages = await _dataSource.Dequeue(DEQUEUE_MSG_LIMIT, cancellationToken);
                 if (messages.Length == 0)
                 {
                     _backoffPow = Math.Min(_backoffPow + 1, MAX_BACKOFF_POW);
@@ -53,7 +57,7 @@ internal sealed class OutboxMonitor(OutboxDataSource dataSource, IServiceScopeFa
                 _logger.LogError(ex, "Error processing outbox messages. Next attempt in {Seconds} seconds", Delay.TotalSeconds);
             }
 
-            await Task.Delay(Delay, stoppingToken);
+            await Task.Delay(Delay, cancellationToken);
         }
 
         _logger.LogInformation("OutboxMonitor has stopped");

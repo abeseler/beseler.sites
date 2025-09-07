@@ -13,9 +13,18 @@ using Serilog;
 
 namespace Beseler.ServiceDefaults;
 
+public sealed record ServiceDefaultsOptions
+{
+    public bool UseDefaultStartupService { get; init; } = true;
+}
+
 public static class Extensions
 {
-    public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    private const string HealthEndpoint = "/_health";
+    private const string AliveEndpoint = "/_alive";
+    private const string ReadyEndpoint = "/_ready";
+
+    public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder, Action<ServiceDefaultsOptions>? options = null) where TBuilder : IHostApplicationBuilder
     {
         builder.ConfigureOpenTelemetry();
         builder.AddDefaultHealthChecks();
@@ -27,20 +36,27 @@ public static class Extensions
             http.AddServiceDiscovery();
         });
 
+        var opts = new ServiceDefaultsOptions();
+        options?.Invoke(opts);
+        if (opts.UseDefaultStartupService)
+        {
+            builder.Services.AddHostedService<DefaultStartupService>();
+        }
+
         return builder;
     }
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        app.MapHealthChecks("/_health", new() { ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse })
+        app.MapHealthChecks(HealthEndpoint, new() { ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse })
             .CacheOutput("HealthCheck")
             .WithRequestTimeout(TimeSpan.FromSeconds(10))
             .DisableHttpMetrics();
 
-        app.MapHealthChecks("/_alive", new() { Predicate = r => r.Tags.Contains("live") })
+        app.MapHealthChecks(AliveEndpoint, new() { Predicate = r => r.Tags.Contains("live") })
             .DisableHttpMetrics();
 
-        app.MapHealthChecks("/_ready", new() { Predicate = r => r.Tags.Contains("ready") })
+        app.MapHealthChecks(ReadyEndpoint, new() { Predicate = r => r.Tags.Contains("ready") })
             .DisableHttpMetrics();
 
         app.MapGet("/coffee", () => TypedResults.Text("I'm a teapot!", statusCode: StatusCodes.Status418ImATeapot))
@@ -141,12 +157,10 @@ public static class Extensions
                 tracing.AddSource(builder.Environment.ApplicationName)
                     .AddAspNetCoreInstrumentation(options =>
                     {
-                        options.Filter = (context) =>
-                        {
-                            if (!context.Request.Path.HasValue) return true;
-                            if (context.Request.Path.Value.StartsWith("/_")) return false;
-                            return true;
-                        };
+                        options.Filter = (ctx) => ctx.Request.Path.HasValue
+                            && !ctx.Request.Path.StartsWithSegments(HealthEndpoint)
+                            && !ctx.Request.Path.StartsWithSegments(AliveEndpoint)
+                            && !ctx.Request.Path.StartsWithSegments(ReadyEndpoint);
                     })
                     .AddHttpClientInstrumentation();
 
@@ -175,8 +189,10 @@ public static class Extensions
                 caching.AddPolicy("HealthCheck",
                 build: static policy => policy.Expire(TimeSpan.FromSeconds(10))));
 
-        builder.Services.AddSingleton<StartupHealthCheck>();
-        builder.Services.AddHealthChecks().AddCheck<StartupHealthCheck>("ready", tags: ["ready"]);
+        var appStartup = new ServiceStartup();
+        builder.Services.AddSingleton<IAppStartup>(appStartup);
+        builder.Services.AddHealthChecks().AddCheck("ready", appStartup, tags: ["ready"]);
+
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"]);
 
         return builder;

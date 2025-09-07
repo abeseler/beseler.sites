@@ -25,16 +25,16 @@ internal sealed record TokenLog
 internal sealed class TokenLogDataSource(NpgsqlDataSource dataSource)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
-    public async Task<TokenLog?> WithJti(Guid jti, CancellationToken stoppingToken)
+    public async Task<TokenLog?> WithJti(Guid jti, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.QuerySingleOrDefaultAsync<TokenLog>(
             "SELECT * FROM token_log WHERE jti = @jti", new { jti });
     }
 
-    public async Task SaveChanges(TokenLog tokenLog, CancellationToken stoppingToken)
+    public async Task SaveChanges(TokenLog tokenLog, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         _ = await connection.ExecuteAsync("""
             INSERT INTO token_log (jti, account_id, replaced_by, created_at, expires_at, revoked_at)
             VALUES (@jti, @accountId, @replacedBy, @createdAt, @expiresAt, @revokedAt)
@@ -46,9 +46,9 @@ internal sealed class TokenLogDataSource(NpgsqlDataSource dataSource)
             """, tokenLog);
     }
 
-    public async Task RevokeAll(int accountId, CancellationToken stoppingToken)
+    public async Task RevokeAll(int accountId, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         _ = await connection.ExecuteAsync("""
             UPDATE token_log
             SET revoked_at = now() AT TIME ZONE 'utc'
@@ -57,9 +57,9 @@ internal sealed class TokenLogDataSource(NpgsqlDataSource dataSource)
             """, new { accountId });
     }
 
-    public async Task RevokeChain(Guid jti, CancellationToken stoppingToken)
+    public async Task RevokeChain(Guid jti, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         _ = await connection.ExecuteAsync("""
             WITH RECURSIVE descendants AS (
                 SELECT

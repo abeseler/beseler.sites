@@ -7,21 +7,21 @@ internal sealed class CommunicationDataSource(NpgsqlDataSource dataSource)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
 
-    public async Task<Communication?> WithId(Guid id, CancellationToken stoppingToken)
+    public async Task<Communication?> WithId(Guid id, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.QuerySingleOrDefaultAsync<Communication>(
             "SELECT * FROM communication WHERE communication_id = @id", new { id });
     }
 
-    public async Task SaveChanges(Communication communication, CancellationToken stoppingToken)
+    public async Task SaveChanges(Communication communication, CancellationToken cancellationToken)
     {
         if (communication.IsChanged is false)
         {
             return;
         }
 
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         _ = await connection.ExecuteAsync("""
             INSERT INTO communication (
                 communication_id,

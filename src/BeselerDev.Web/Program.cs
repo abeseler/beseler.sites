@@ -1,12 +1,10 @@
 using Beseler.ServiceDefaults;
-using BeselerDev.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.ConfigureLogging();
 builder.AddServiceDefaults();
 builder.Services.AddRequestTimeouts();
-builder.Services.AddHostedService<StartupService>();
 
 builder.Services.AddResponseCompression(options =>
 {

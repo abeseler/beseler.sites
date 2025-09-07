@@ -1,4 +1,3 @@
-using Beseler.Deploy.Core;
 using Beseler.Deploy.Deployments;
 using Beseler.ServiceDefaults;
 using System.Threading.Channels;
@@ -15,7 +14,6 @@ builder.Services.AddSingleton(x => Channel.CreateUnbounded<WebhookRequest>(new()
     SingleWriter = false,
     AllowSynchronousContinuations = false
 }));
-builder.Services.AddHostedService<StartupService>();
 builder.Services.AddHostedService<Worker>();
 builder.Services.AddOptions<WebhookOptions>().BindConfiguration("Webhook");
 

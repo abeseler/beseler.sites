@@ -13,9 +13,9 @@ internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxData
     private readonly OutboxDataSource _outbox = outbox;
     private readonly ILogger<EventLogDataSource> _logger = logger;
 
-    public async Task Append(DomainEvent @event, IDbConnection? connection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
+    public async Task Append(DomainEvent @event, IDbConnection? connection = null, IDbTransaction? transaction = null, CancellationToken cancellationToken = default)
     {
-        var conn = connection ?? await _dataSource.OpenConnectionAsync(stoppingToken);
+        var conn = connection ?? await _dataSource.OpenConnectionAsync(cancellationToken);
         var tran = transaction ?? conn.BeginTransaction();
 
         try
@@ -44,7 +44,7 @@ internal sealed class EventLogDataSource(NpgsqlDataSource dataSource, OutboxData
                     InvisibleUntil = @event.CreatedAt,
                     ReceivesRemaining = 3
                 };
-                await _outbox.Enqueue(outboxMessage, conn, tran, stoppingToken);
+                await _outbox.Enqueue(outboxMessage, conn, tran, cancellationToken);
             }
         }
         finally

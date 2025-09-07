@@ -28,7 +28,7 @@ internal sealed class PermissionDataSource(NpgsqlDataSource dataSource, HybridCa
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
     private readonly HybridCache _cache = cache;
-    public async ValueTask<PermissionCollecton> GetCollection(CancellationToken stoppingToken)
+    public async ValueTask<PermissionCollecton> GetCollection(CancellationToken cancellationToken)
     {
         return await _cache.GetOrCreateAsync("Permissions", async token =>
         {
@@ -43,12 +43,12 @@ internal sealed class PermissionDataSource(NpgsqlDataSource dataSource, HybridCa
         {
             LocalCacheExpiration = TimeSpan.FromHours(1),
             Expiration = TimeSpan.FromHours(4)
-        }, cancellationToken: stoppingToken);
+        }, cancellationToken: cancellationToken);
     }
 
-    private async Task<IEnumerable<Permission>> GetAll(CancellationToken stoppingToken)
+    private async Task<IEnumerable<Permission>> GetAll(CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.QueryAsync<Permission>("SELECT * FROM permission");
     }
 }

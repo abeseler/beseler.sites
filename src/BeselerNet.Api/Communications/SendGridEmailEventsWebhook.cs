@@ -1,4 +1,5 @@
-﻿using BeselerNet.Api.Core;
+﻿using Beseler.ServiceDefaults;
+using BeselerNet.Api.Core;
 using BeselerNet.Shared.Contracts;
 using Microsoft.Extensions.Options;
 using System.Text.Json.Serialization;
@@ -23,9 +24,10 @@ internal static class SendGridEmailEventsWebhook
     }
 }
 
-internal sealed class SendGridEmailEventService(IServiceProvider services, ILogger<SendGridEmailEventService> logger) : BackgroundService
+internal sealed class SendGridEmailEventService(IServiceProvider services, IAppStartup appStartup, ILogger<SendGridEmailEventService> logger) : BackgroundService
 {
     private readonly IServiceProvider _services = services;
+    private readonly IAppStartup _appStartup = appStartup;
     private readonly ILogger<SendGridEmailEventService> _logger = logger;
 
     public static readonly Channel<SendGridEmailEventRequest> RequestChannel = Channel.CreateBounded<SendGridEmailEventRequest>(new BoundedChannelOptions(100)
@@ -36,22 +38,24 @@ internal sealed class SendGridEmailEventService(IServiceProvider services, ILogg
         AllowSynchronousContinuations = false
     });
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        await _appStartup.WaitUntilStartupCompletedAsync(cancellationToken);
+
         _logger.LogInformation("SendGrid email event service started");
 
-        while (await RequestChannel.Reader.WaitToReadAsync(stoppingToken))
+        while (await RequestChannel.Reader.WaitToReadAsync(cancellationToken))
         {
             while (RequestChannel.Reader.TryRead(out var request))
             {
-                await ProcessRequest(request, stoppingToken);
+                await ProcessRequest(request, cancellationToken);
             }
         }
 
         _logger.LogInformation("SendGrid email event service stopped");
     }
 
-    private async Task ProcessRequest(SendGridEmailEventRequest request, CancellationToken stoppingToken)
+    private async Task ProcessRequest(SendGridEmailEventRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -66,7 +70,7 @@ internal sealed class SendGridEmailEventService(IServiceProvider services, ILogg
                     continue;
                 }
 
-                var communication = await communications.WithId(communicationId, stoppingToken);
+                var communication = await communications.WithId(communicationId, cancellationToken);
                 if (communication is null)
                 {
                     _logger.LogWarning("Communication record missing for ID: {CommunicationId}", communicationId);
@@ -105,7 +109,7 @@ internal sealed class SendGridEmailEventService(IServiceProvider services, ILogg
                     communication.SetExternalId(@event.SgMessageId);
                 }
 
-                await communications.SaveChanges(communication, stoppingToken);
+                await communications.SaveChanges(communication, cancellationToken);
             }
         }
         catch (Exception ex)

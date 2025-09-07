@@ -1,32 +1,38 @@
-﻿using k8s;
+﻿using Beseler.ServiceDefaults;
+using k8s;
 using k8s.Models;
 using System.Threading.Channels;
 
 namespace Beseler.Deploy.Deployments;
 
-public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : BackgroundService
+public class Worker(Channel<WebhookRequest> channel, IAppStartup appStartup, ILogger<Worker> logger) : BackgroundService
 {
     private readonly Channel<WebhookRequest> _channel = channel;
+    private readonly IAppStartup _appStartup = appStartup;
     private readonly ILogger<Worker> _logger = logger;
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        while (await _channel.Reader.WaitToReadAsync(stoppingToken))
+        await _appStartup.WaitUntilStartupCompletedAsync(cancellationToken);
+
+        _logger.LogInformation("Deployment worker started.");
+
+        while (await _channel.Reader.WaitToReadAsync(cancellationToken))
         {
             while (_channel.Reader.TryRead(out var request))
             {
                 if (request.Repository?.Name == "beseler-net-dbdeploy")
                 {
-                    await ProcessJob(request, stoppingToken);
+                    await ProcessJob(request, cancellationToken);
                 }
                 else
                 {
-                    await ProcessDeployment(request, stoppingToken);
+                    await ProcessDeployment(request, cancellationToken);
                 }
             }
         }
     }
 
-    private async Task ProcessJob(WebhookRequest request, CancellationToken stoppingToken)
+    private async Task ProcessJob(WebhookRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -56,13 +62,13 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
                 """;
 
             var job = KubernetesYaml.Deserialize<V1Job>(yaml);
-            var result = await client.CreateNamespacedJobAsync(job, k8sNamespace, cancellationToken: stoppingToken);
+            var result = await client.CreateNamespacedJobAsync(job, k8sNamespace, cancellationToken: cancellationToken);
             _logger.LogInformation("Job {Name} created in namespace {Namespace}.", result.Metadata.Name, k8sNamespace);
 
             var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-            while (!stoppingToken.IsCancellationRequested)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                 if (cts.Token.IsCancellationRequested)
                 {
                     _logger.LogWarning("Job {Name} timed out.", result.Metadata.Name);
@@ -88,7 +94,7 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
         }
     }
 
-    private async Task ProcessDeployment(WebhookRequest request, CancellationToken stoppingToken)
+    private async Task ProcessDeployment(WebhookRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -103,7 +109,7 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
                 return;
             }
 
-            var deployment = await client.ReadNamespacedDeploymentAsync(name, k8sNamespace, cancellationToken: stoppingToken);
+            var deployment = await client.ReadNamespacedDeploymentAsync(name, k8sNamespace, cancellationToken: cancellationToken);
             if (deployment is null)
             {
                 _logger.LogWarning("Deployment {Name} not found", name);
@@ -124,11 +130,11 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
                 }
                 """, V1Patch.PatchType.MergePatch);
 
-            var patchResult = await client.PatchNamespacedDeploymentAsync(patch, name, k8sNamespace, cancellationToken: stoppingToken);
+            var patchResult = await client.PatchNamespacedDeploymentAsync(patch, name, k8sNamespace, cancellationToken: cancellationToken);
 
             _logger.LogInformation("Deployment {Name} update applied.", name);
 
-            await MonitorDeploymentRollout(client, k8sNamespace, name, stoppingToken);
+            await MonitorDeploymentRollout(client, k8sNamespace, name, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -136,12 +142,12 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
         }
     }
 
-    private async Task MonitorDeploymentRollout(Kubernetes client, string k8sNamespace, string? name, CancellationToken stoppingToken)
+    private async Task MonitorDeploymentRollout(Kubernetes client, string k8sNamespace, string? name, CancellationToken cancellationToken)
     {
         var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-        while (!stoppingToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
 
             if (cts.Token.IsCancellationRequested)
             {
@@ -170,12 +176,12 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
             _logger.LogInformation("Deployment {Name} is in progress. Status: {Status}, Reason: {Reason}.", name, condition.Status, condition.Reason);
         }
 
-        while (!stoppingToken.IsCancellationRequested)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            var deployment = await client.ReadNamespacedDeploymentAsync(name, k8sNamespace, cancellationToken: stoppingToken);
+            var deployment = await client.ReadNamespacedDeploymentAsync(name, k8sNamespace, cancellationToken: cancellationToken);
             var desired = deployment.Status?.UpdatedReplicas;
 
-            var pods = await client.ListNamespacedPodAsync(k8sNamespace, labelSelector: $"app={name}", cancellationToken: stoppingToken);
+            var pods = await client.ListNamespacedPodAsync(k8sNamespace, labelSelector: $"app={name}", cancellationToken: cancellationToken);
             var total = pods.Items.Count;
             var running = pods.Items.Count(p => p.Status?.Phase == "Running");
             var ready = pods.Items.Count(p => p.Status?.Phase == "Running" && p.Status?.ContainerStatuses?.All(c => c.Ready) == true);
@@ -195,7 +201,7 @@ public class Worker(Channel<WebhookRequest> channel, ILogger<Worker> logger) : B
 
             _logger.LogInformation("Deployment {Name} is in progress. Desired: {Desired}, Total: {Total}, Running: {Running}, Ready: {Ready}, Terminating: {Terminating}", name, desired, total, running, ready, terminating);
 
-            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
         }
     }
 }

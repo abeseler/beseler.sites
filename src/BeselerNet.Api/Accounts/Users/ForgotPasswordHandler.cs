@@ -1,4 +1,5 @@
-﻿using BeselerNet.Api.Accounts.OAuth;
+﻿using Beseler.ServiceDefaults;
+using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
 using BeselerNet.Shared.Contracts;
@@ -26,10 +27,11 @@ internal sealed class ForgotPasswordHandler
     }
 }
 
-internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenerator tokens, ILogger<ForgotPasswordService> logger) : BackgroundService
+internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenerator tokens, IAppStartup appStartup, ILogger<ForgotPasswordService> logger) : BackgroundService
 {
     private readonly IServiceProvider _services = services;
     private readonly JwtGenerator _tokens = tokens;
+    private readonly IAppStartup _appStartup = appStartup;
     private readonly ILogger<ForgotPasswordService> _logger = logger;
 
     public static readonly Channel<ForgotPasswordRequest> RequestChannel = Channel.CreateBounded<ForgotPasswordRequest>(new BoundedChannelOptions(100)
@@ -40,22 +42,24 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
         AllowSynchronousContinuations = false
     });
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        await _appStartup.WaitUntilStartupCompletedAsync(cancellationToken);
+
         _logger.LogInformation("Forgot password service started.");
 
-        while (await RequestChannel.Reader.WaitToReadAsync(stoppingToken))
+        while (await RequestChannel.Reader.WaitToReadAsync(cancellationToken))
         {
             while (RequestChannel.Reader.TryRead(out var request))
             {
-                await ProcessRequest(request, stoppingToken);
+                await ProcessRequest(request, cancellationToken);
             }
         }
 
         _logger.LogInformation("Forgot password service stopped.");
     }
 
-    private async Task ProcessRequest(ForgotPasswordRequest request, CancellationToken stoppingToken)
+    private async Task ProcessRequest(ForgotPasswordRequest request, CancellationToken cancellationToken)
     {
         using var activity = Telemetry.Source.StartActivity("ForgotPasswordService.ProcessRequest", ActivityKind.Consumer, request.TraceId);
 
@@ -71,7 +75,7 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
         {
             using var scope = _services.CreateAsyncScope();
             var accounts = scope.ServiceProvider.GetRequiredService<AccountDataSource>();
-            var account = await accounts.WithEmail(request.Email, stoppingToken);
+            var account = await accounts.WithEmail(request.Email, cancellationToken);
             if (account is null or { IsDisabled: true })
             {
                 _logger.LogWarning("Password reset request for {Email} failed: account {Status}", request.Email, account is null ? "not found" : "disabled");
@@ -84,8 +88,8 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
             var token = _tokens.Generate(subjectClaim, TimeSpan.FromMinutes(20)).AccessToken;
 
             var sendResult = account.IsLocked
-                ? await emailer.SendAccountLocked(account.AccountId, request.Email, account.Name, stoppingToken)
-                : await emailer.SendPasswordReset(account.AccountId, request.Email, account.Name, token, stoppingToken);
+                ? await emailer.SendAccountLocked(account.AccountId, request.Email, account.Name, cancellationToken)
+                : await emailer.SendPasswordReset(account.AccountId, request.Email, account.Name, token, cancellationToken);
 
             if (sendResult.Failed(out var exception))
             {

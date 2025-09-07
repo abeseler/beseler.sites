@@ -26,32 +26,32 @@ internal sealed class SendGridEmailService(
     private readonly SendGridOptions _options = options.Value;
     private readonly ILogger<SendGridEmailService> _logger = logger;
 
-    public async Task<Result<Communication>> SendEmailVerification(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
+    public async Task<Result<Communication>> SendEmailVerification(int accountId, string email, string recipientName, string token, CancellationToken cancellationToken)
     {
         var template = EmailTemplates.EmailVerification(_commOptions.ConfirmEmailUrl!, token);
-        var communication = await Send(template, accountId, email, recipientName, stoppingToken);
+        var communication = await Send(template, accountId, email, recipientName, cancellationToken);
         if (communication.FailedAt.HasValue)
         {
             _logger.LogInformation("Token not sent: {Token}", token);
         }
         return communication;
     }
-    public async Task<Result<Communication>> SendAccountLocked(int accountId, string email, string recipientName, CancellationToken stoppingToken)
+    public async Task<Result<Communication>> SendAccountLocked(int accountId, string email, string recipientName, CancellationToken cancellationToken)
     {
         var template = EmailTemplates.AccountLocked(recipientName);
-        return await Send(template, accountId, email, recipientName, stoppingToken);
+        return await Send(template, accountId, email, recipientName, cancellationToken);
     }
-    public async Task<Result<Communication>> SendPasswordReset(int accountId, string email, string recipientName, string token, CancellationToken stoppingToken)
+    public async Task<Result<Communication>> SendPasswordReset(int accountId, string email, string recipientName, string token, CancellationToken cancellationToken)
     {
         var template = EmailTemplates.PasswordReset(recipientName, _commOptions.ResetPasswordUrl!, token);
-        var communication = await Send(template, accountId, email, recipientName, stoppingToken);
+        var communication = await Send(template, accountId, email, recipientName, cancellationToken);
         if (communication.FailedAt.HasValue)
         {
             _logger.LogInformation("Token not sent: {Token}", token);
         }
         return communication;
     }
-    private async Task<Communication> Send(EmailTemplate template, int accountId, string email, string recipientName, CancellationToken stoppingToken)
+    private async Task<Communication> Send(EmailTemplate template, int accountId, string email, string recipientName, CancellationToken cancellationToken)
     {
         var communication = Communication.Create(PROVIDER_NAME, CommunicationType.Email, template.CommunicationName, accountId);
 
@@ -59,7 +59,7 @@ internal sealed class SendGridEmailService(
         {
             _logger.LogWarning("{CommunicationName} not sent because SendGrid ApiKey is missing.", template.CommunicationName);
             communication.Failed(DateTimeOffset.UtcNow, "SendGrid ApiKey is missing");
-            await _communications.SaveChanges(communication, stoppingToken);
+            await _communications.SaveChanges(communication, cancellationToken);
             return communication;
         }
 
@@ -78,14 +78,14 @@ internal sealed class SendGridEmailService(
             };
             emailMessage.AddTo(new EmailAddress(email, recipientName));
 
-            var response = await _client.SendEmailAsync(emailMessage, stoppingToken);
+            var response = await _client.SendEmailAsync(emailMessage, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 _logger.LogInformation("Sent {CommunicationName} email to {Email}", template.CommunicationName, email);
             }
             else
             {
-                var responseBody = await response.Body.ReadAsStringAsync(stoppingToken);
+                var responseBody = await response.Body.ReadAsStringAsync(cancellationToken);
                 communication.Failed(DateTimeOffset.UtcNow, $"Failed to send: {responseBody}");
                 _logger.LogError("Failed to send {CommunicationName} email: {Response}", template.CommunicationName, responseBody);
             }
@@ -97,7 +97,7 @@ internal sealed class SendGridEmailService(
             communication.Failed(DateTimeOffset.UtcNow, ex.Message);
         }
 
-        await _communications.SaveChanges(communication, stoppingToken);
+        await _communications.SaveChanges(communication, cancellationToken);
         return communication;
     }
 }

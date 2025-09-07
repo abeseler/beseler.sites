@@ -10,22 +10,22 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
     private readonly NpgsqlDataSource _dataSource = dataSource;
     private readonly EventLogDataSource _eventLog = eventLog;
     private readonly ILogger<AccountDataSource> _logger = logger;
-    public async Task<int> NextId(CancellationToken stoppingToken)
+    public async Task<int> NextId(CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.ExecuteScalarAsync<int>("SELECT nextval('account_id_seq')");
     }
 
-    public async Task<Account?> WithId(int id, CancellationToken stoppingToken)
+    public async Task<Account?> WithId(int id, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.QuerySingleOrDefaultAsync<Account>(
             "SELECT * FROM account WHERE account_id = @id", new { id });
     }
 
-    public async Task<Account?> WithId_IncludePermissions(int id, CancellationToken stoppingToken)
+    public async Task<Account?> WithId_IncludePermissions(int id, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         var results = await connection.QueryMultipleAsync(
             """
             SELECT * FROM account WHERE account_id = @id;
@@ -45,16 +45,16 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
         return account;
     }
 
-    public async Task<Account?> WithUsername(string username, CancellationToken stoppingToken)
+    public async Task<Account?> WithUsername(string username, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.QuerySingleOrDefaultAsync<Account>(
             "SELECT * FROM account WHERE username = @username", new { username });
     }
 
-    public async Task<Account?> WithUsername_IncludePermissions(string username, CancellationToken stoppingToken)
+    public async Task<Account?> WithUsername_IncludePermissions(string username, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         var results = await connection.QueryMultipleAsync(
             """
             SELECT * FROM account WHERE username = @username;
@@ -75,22 +75,22 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
         return account;
     }
 
-    public async Task<Account?> WithEmail(string email, CancellationToken stoppingToken)
+    public async Task<Account?> WithEmail(string email, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.QuerySingleOrDefaultAsync<Account>(
             "SELECT * FROM account WHERE email = @email", new { email });
     }
 
-    public async Task SaveChanges(Account account, CancellationToken stoppingToken)
+    public async Task SaveChanges(Account account, CancellationToken cancellationToken)
     {
         if (account.IsChanged is false)
         {
             return;
         }
 
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
-        using var transaction = await connection.BeginTransactionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
         try
         {
@@ -165,10 +165,10 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
                 {
                     await Delete(revoked);
                 }
-                await _eventLog.Append(@event, connection, transaction, stoppingToken);
+                await _eventLog.Append(@event, connection, transaction, cancellationToken);
             }
 
-            await transaction.CommitAsync(stoppingToken);
+            await transaction.CommitAsync(cancellationToken);
 
             _logger.LogDebug("Saved account {AccountId}.", account.AccountId);
 
@@ -178,7 +178,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
         {
             _logger.LogError(ex, "Failed to save account changes.");
 
-            await transaction.RollbackAsync(stoppingToken);
+            await transaction.RollbackAsync(cancellationToken);
             throw;
         }
     }

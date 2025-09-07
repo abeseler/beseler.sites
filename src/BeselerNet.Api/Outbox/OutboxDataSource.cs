@@ -8,9 +8,9 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
 
-    public async Task Enqueue(OutboxMessage message, IDbConnection? openConnection = null, IDbTransaction? transaction = null, CancellationToken stoppingToken = default)
+    public async Task Enqueue(OutboxMessage message, IDbConnection? openConnection = null, IDbTransaction? transaction = null, CancellationToken cancellationToken = default)
     {
-        var connection = openConnection ?? await _dataSource.OpenConnectionAsync(stoppingToken);
+        var connection = openConnection ?? await _dataSource.OpenConnectionAsync(cancellationToken);
 
         try
         {
@@ -29,9 +29,9 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
         }
     }
 
-    public async Task<OutboxMessage[]> Dequeue(int dequeueMessageLimit, CancellationToken stoppingToken)
+    public async Task<OutboxMessage[]> Dequeue(int dequeueMessageLimit, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         var messages = await connection.QueryAsync<OutboxMessage>(
             """
             WITH messages AS (
@@ -52,9 +52,9 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
         return [.. messages];
     }
 
-    public async Task<int> Delete(Guid messageId, CancellationToken stoppingToken)
+    public async Task<int> Delete(Guid messageId, CancellationToken cancellationToken)
     {
-        using var connection = await _dataSource.OpenConnectionAsync(stoppingToken);
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.ExecuteAsync("DELETE FROM outbox WHERE message_id = @messageId", new { messageId });
     }
 }

@@ -5,7 +5,7 @@ namespace BeselerNet.Api.Core;
 
 internal interface IHandler<T> where T : DomainEvent
 {
-    Task Handle(T domainEvent, CancellationToken stoppingToken);
+    Task Handle(T domainEvent, CancellationToken cancellationToken);
 }
 
 [JsonPolymorphic]

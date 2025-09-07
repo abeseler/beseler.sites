@@ -1,12 +1,17 @@
 ﻿using BeselerNet.Shared.Core;
 
-var key = Encryptor.GenerateKey();
-Console.WriteLine($"Key: {key}\n");
+var keyBytes = Encryptor.GenerateKey();
+var keyBase64 = Convert.ToBase64String(keyBytes);
+Console.WriteLine($"Key: {keyBase64}\n");
 
 var plainText = "Hello World!";
+var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+
 Console.WriteLine($"Plain Text: {plainText}");
-var encryptedText = Encryptor.Encrypt(plainText, key);
+var encryptedBytes = Encryptor.Encrypt(plainTextBytes, keyBytes);
+var encryptedText = Convert.ToBase64String(encryptedBytes);
 Console.WriteLine("Encrypted Text: " + encryptedText);
 
-var decryptedText = Encryptor.Decrypt(encryptedText, key);
+var decryptedBytes = Encryptor.Decrypt(encryptedBytes, keyBytes);
+var decryptedText = System.Text.Encoding.UTF8.GetString(decryptedBytes);
 Console.WriteLine("Decrypted Text: " + decryptedText);

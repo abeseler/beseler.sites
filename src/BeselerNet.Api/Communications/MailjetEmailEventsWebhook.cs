@@ -1,4 +1,5 @@
-﻿using BeselerNet.Api.Core;
+﻿using Beseler.ServiceDefaults;
+using BeselerNet.Api.Core;
 using BeselerNet.Shared.Contracts;
 using Microsoft.Extensions.Options;
 using System.Threading.Channels;
@@ -22,9 +23,10 @@ internal static class MailjetEmailEventsWebhook
     }
 }
 
-internal sealed class MailjetEmailEventService(IServiceProvider services, ILogger<MailjetEmailEventService> logger) : BackgroundService
+internal sealed class MailjetEmailEventService(IServiceProvider services, IAppStartup appStartup, ILogger<MailjetEmailEventService> logger) : BackgroundService
 {
     private readonly IServiceProvider _services = services;
+    private readonly IAppStartup _appStartup = appStartup;
     private readonly ILogger<MailjetEmailEventService> _logger = logger;
 
     public static readonly Channel<MailjetEmailEventRequest> RequestChannel = Channel.CreateBounded<MailjetEmailEventRequest>(new BoundedChannelOptions(100)
@@ -35,22 +37,24 @@ internal sealed class MailjetEmailEventService(IServiceProvider services, ILogge
         AllowSynchronousContinuations = false
     });
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
+        await _appStartup.WaitUntilStartupCompletedAsync(cancellationToken);
+
         _logger.LogInformation("Mailjet email event service started");
 
-        while (await RequestChannel.Reader.WaitToReadAsync(stoppingToken))
+        while (await RequestChannel.Reader.WaitToReadAsync(cancellationToken))
         {
             while (RequestChannel.Reader.TryRead(out var request))
             {
-                await ProcessRequest(request, stoppingToken);
+                await ProcessRequest(request, cancellationToken);
             }
         }
 
         _logger.LogInformation("Mailjet email event service stopped");
     }
 
-    private async Task ProcessRequest(MailjetEmailEventRequest request, CancellationToken stoppingToken)
+    private async Task ProcessRequest(MailjetEmailEventRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -65,7 +69,7 @@ internal sealed class MailjetEmailEventService(IServiceProvider services, ILogge
                     continue;
                 }
 
-                var communication = await communications.WithId(communicationId, stoppingToken);
+                var communication = await communications.WithId(communicationId, cancellationToken);
                 if (communication is null)
                 {
                     _logger.LogWarning("Communication record missing for ID: {CommunicationId}", communicationId);
