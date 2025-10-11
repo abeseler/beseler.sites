@@ -1,19 +1,23 @@
 ﻿using BeselerNet.Shared.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace BeselerNet.Api.Communications;
 
-internal static class AzureEmailEventsWebhook
+internal sealed class AzureEmailEventsWebhook
 {
     private static readonly GenericMessageResponse s_okResponse = new() { Message = "Events submitted for processing." };
-    public static IResult Handle(string? apikey, IOptions<AzureOptions> options)
+    public static IResult Handle(JsonDocument request, string? apikey, IOptions<AzureOptions> options, ILogger<AzureEmailEventsWebhook> logger)
     {
         var validApiKey = options.Value.WebhookApiKey;
         if (validApiKey is { Length: > 0 } && (apikey is null || apikey != validApiKey))
         {
             return TypedResults.Unauthorized();
         }
+
+        var json = JsonSerializer.Serialize(request, JsonSerializerOptions.Web);
+        logger.LogInformation("Received Azure Email Events: {Request}", json);
 
         return TypedResults.Ok(s_okResponse);
     }

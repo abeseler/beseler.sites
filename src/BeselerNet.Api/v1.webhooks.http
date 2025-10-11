@@ -1,7 +1,17 @@
 #@host=https://api.beseler.net
 @host={{$projectUrl}}
 
-### test webhook for email events
+###
+
+POST {{host}}/v1/webhooks/azure-events
+Content-Type: application/json
+
+{
+  "test": "example",
+  "id": 42
+}
+
+###
 
 OPTIONS {{host}}/v1/webhooks/azure-events
 WebHook-Request-Origin: https://example.com
