@@ -7,11 +7,11 @@ using System.Security.Claims;
 
 namespace BeselerNet.Api.Accounts.EventHandlers;
 
-internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, Emailer emailer) : IHandler<AccountCreated>
+internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, CommunicationService communicationService) : IHandler<AccountCreated>
 {
     private const string ActivityName = $"{nameof(AccountCreatedHandler)}.{nameof(Handle)}";
     private readonly JwtGenerator _tokenGenerator = tokenGenerator;
-    private readonly Emailer _emailer = emailer;
+    private readonly CommunicationService _communicationService = communicationService;
     public async Task Handle(AccountCreated domainEvent, IEventMetadata metadata, CancellationToken cancellationToken)
     {
         using var activity = Telemetry.Source.StartActivity(ActivityName, ActivityKind.Internal, metadata.TraceId);
@@ -33,7 +33,7 @@ internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, Emailer
         };
         var token = _tokenGenerator.Generate(subjectClaim, TimeSpan.FromMinutes(10), [emailClaim, emailVerifiedClaim]);
 
-        var result = await _emailer.SendEmailVerification(domainEvent.AccountId, domainEvent.Email, name, token.AccessToken, cancellationToken);
+        var result = await _communicationService.SendEmailVerification(domainEvent.AccountId, domainEvent.Email, name, token.AccessToken, cancellationToken);
         if (result.Failed(out var exception))
         {
             throw exception;

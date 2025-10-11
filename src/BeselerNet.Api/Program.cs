@@ -45,7 +45,10 @@ builder.Services.AddScoped<IHandler<AccountCreated>, AccountCreatedHandler>();
 builder.Services.AddScoped<IHandler<AccountLoginFailed>, AccountLoginFailedHandler>();
 
 builder.Services.AddOptions<CommunicationOptions>().BindConfiguration(CommunicationOptions.SectionName);
-builder.AddEmailProviders();
+builder.AddEmailProvider(options =>
+{
+    options.Provider = EmailProvider.Azure;
+});
 
 var app = builder.Build();
 

@@ -1,4 +1,4 @@
-﻿using BeselerNet.Api.Communications;
+﻿using BeselerNet.Api.Communications.Emails;
 using BeselerNet.Shared.Contracts;
 using static Microsoft.AspNetCore.Http.StatusCodes;
 using static System.Net.Mime.MediaTypeNames;

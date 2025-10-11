@@ -3,12 +3,10 @@ using Projects;
 var builder = DistributedApplication.CreateBuilder(args);
 
 var cache = builder.AddRedis("Cache")
-    //.WithLifetime(ContainerLifetime.Persistent)
     .WithRedisInsight();
 
 var postgres = builder.AddPostgres("postgres")
-    //.WithLifetime(ContainerLifetime.Persistent)
-    .WithPgAdmin();
+    .WithPgWeb();
 
 var database = postgres.AddDatabase("Database", "bnet")
     .WithParentRelationship(postgres);
@@ -34,7 +32,9 @@ builder.AddProject<BeselerDev_Web>("beseler-dev-web")
     .WaitFor(cache)
     .WithExplicitStart();
 
+var azureCommunicationService = builder.AddParameter("AzureCommunicaionService", secret: true);
 var beselerNetApi = builder.AddProject<BeselerNet_Api>("beseler-net-api")
+    .WithEnvironment("Azure__CommunicationConnectionString", azureCommunicationService)
     .WithReference(cache)
     .WaitFor(cache)
     .WithReference(database)

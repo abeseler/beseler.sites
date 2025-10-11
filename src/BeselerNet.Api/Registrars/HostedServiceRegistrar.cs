@@ -1,5 +1,5 @@
 ﻿using BeselerNet.Api.Accounts.Users;
-using BeselerNet.Api.Communications;
+using BeselerNet.Api.Communications.Emails;
 using BeselerNet.Api.Outbox;
 
 namespace BeselerNet.Api.Registrars;

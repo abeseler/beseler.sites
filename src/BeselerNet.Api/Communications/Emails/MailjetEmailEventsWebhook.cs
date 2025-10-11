@@ -4,7 +4,7 @@ using BeselerNet.Shared.Contracts;
 using Microsoft.Extensions.Options;
 using System.Threading.Channels;
 
-namespace BeselerNet.Api.Communications;
+namespace BeselerNet.Api.Communications.Emails;
 
 internal static class MailjetEmailEventsWebhook
 {

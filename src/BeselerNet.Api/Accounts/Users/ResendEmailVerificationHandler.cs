@@ -7,7 +7,7 @@ namespace BeselerNet.Api.Accounts.Users;
 
 internal sealed class ResendEmailVerificationHandler
 {
-    public static async Task<IResult> Handle(ClaimsPrincipal principal, AccountDataSource accounts, JwtGenerator tokens, Emailer emailer, CancellationToken cancellationToken)
+    public static async Task<IResult> Handle(ClaimsPrincipal principal, AccountDataSource accounts, JwtGenerator tokens, CommunicationService communicationService, CancellationToken cancellationToken)
     {
         if (!int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId))
         {
@@ -39,7 +39,7 @@ internal sealed class ResendEmailVerificationHandler
 
         var token = tokens.Generate(subjectClaim, TimeSpan.FromMinutes(10), [emailClaim, emailVerifiedClaim]);
 
-        var result = await emailer.SendEmailVerification(account.AccountId, account.Email!, account.Name, token.AccessToken, cancellationToken);
+        var result = await communicationService.SendEmailVerification(account.AccountId, account.Email!, account.Name, token.AccessToken, cancellationToken);
 
         return result.Match<IResult>(
             _ => TypedResults.NoContent(),

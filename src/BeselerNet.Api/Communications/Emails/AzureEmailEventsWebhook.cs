@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
-namespace BeselerNet.Api.Communications;
+namespace BeselerNet.Api.Communications.Emails;
 
 internal sealed class AzureEmailEventsWebhook
 {

@@ -1,7 +1,9 @@
-﻿namespace BeselerNet.Api.Communications;
+﻿namespace BeselerNet.Api.Communications.Emails;
 
 internal readonly struct EmailTemplate
 {
+    public readonly string SenderEmail { get; init; }
+    public readonly string SenderName { get; init; }
     public required string CommunicationName { get; init; }
     public required string Subject { get; init; }
     public required string PlainTextContent { get; init; }
@@ -10,11 +12,13 @@ internal readonly struct EmailTemplate
 
 internal static class EmailTemplates
 {
-    public static EmailTemplate EmailVerification(string confirmEmailUrl, string token) => new()
+    public static EmailTemplate EmailVerification(CommunicationOptions options, string token) => new()
     {
+        SenderEmail = options.SenderEmail ?? throw new Exception("SenderEmail is not configured."),
+        SenderName = options.SenderName ?? "Beseler .NET",
         CommunicationName = "Email Verification",
         Subject = "Activate Your Account 🚀",
-        PlainTextContent = $"To confirm your email, navigate to the following url in your browser: {confirmEmailUrl}?token={token}",
+        PlainTextContent = $"To confirm your email, navigate to the following url in your browser: {options.ConfirmEmailUrl}?token={token}",
         HtmlContent = $"""
             <!DOCTYPE html>
             <html lang="en">
@@ -27,9 +31,9 @@ internal static class EmailTemplates
             <div style="max-width: 600px; margin: 20px auto; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
               <h2>Welcome to Beseler dotNET! 🌟</h2>
               <p>We're thrilled to have you join our community! To start your journey with us, please click the button below to verify your email address and activate your account:</p>
-              <p style="text-align: center;"><a href="{confirmEmailUrl}?token={token}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: #fff; text-decoration: none; border-radius: 4px;">Verify My Email</a></p>
+              <p style="text-align: center;"><a href="{options.ConfirmEmailUrl}?token={token}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: #fff; text-decoration: none; border-radius: 4px;">Verify My Email</a></p>
               <p>If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
-              <p>{confirmEmailUrl}?token={token}</p>
+              <p>{options.ConfirmEmailUrl}?token={token}</p>
               <p>If you didn't create an account with us, no worries! Just ignore this email, and your information will remain safe.</p>
               <p>Happy exploring! 🎉</p>
               <p>Best regards,<br>The Beseler dotNET Team</p>
@@ -39,8 +43,10 @@ internal static class EmailTemplates
             """
     };
 
-    public static EmailTemplate AccountLocked(string recipientName) => new()
+    public static EmailTemplate AccountLocked(CommunicationOptions options, string recipientName) => new()
     {
+        SenderEmail = options.SenderEmail ?? throw new Exception("SenderEmail is not configured."),
+        SenderName = options.SenderName ?? "Beseler .NET",
         CommunicationName = "Account Locked",
         Subject = "Your Account is Locked 🔒",
         PlainTextContent = $"Your account has been locked due to too many failed login attempts. Please contact support.",
@@ -66,11 +72,13 @@ internal static class EmailTemplates
             """
     };
 
-    public static EmailTemplate PasswordReset(string recipientName, string resetPasswordUrl, string token) => new()
+    public static EmailTemplate PasswordReset(CommunicationOptions options, string recipientName, string token) => new()
     {
+        SenderEmail = options.SenderEmail ?? throw new Exception("SenderEmail is not configured."),
+        SenderName = options.SenderName ?? "Beseler .NET",
         CommunicationName = "Password Reset",
         Subject = "Reset Your Password 🔑",
-        PlainTextContent = $"To reset your password, navigate to the following url in your browser: {resetPasswordUrl}?token={token}",
+        PlainTextContent = $"To reset your password, navigate to the following url in your browser: {options.ResetPasswordUrl}?token={token}",
         HtmlContent = $"""
             <!DOCTYPE html>
             <html lang="en">
@@ -84,9 +92,9 @@ internal static class EmailTemplates
               <h2>Reset Your Password 🔑</h2>
               <p>Dear {recipientName},</p>
               <p>We received a request to reset your password. To proceed, please click the button below:</p>
-              <p style="text-align: center;"><a href="{resetPasswordUrl}?token={token}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: #fff; text-decoration: none; border-radius: 4px;">Reset My Password</a></p>
+              <p style="text-align: center;"><a href="{options.ResetPasswordUrl}?token={token}" style="display: inline-block; padding: 12px 24px; background-color: #007bff; color: #fff; text-decoration: none; border-radius: 4px;">Reset My Password</a></p>
               <p>If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
-              <p>{resetPasswordUrl}?token={token}</p>
+              <p>{options.ResetPasswordUrl}?token={token}</p>
               <p>If you didn't request a password reset, please ignore this email.</p>
               <p>Best regards,<br>The Beseler dotNET Team</p>
             </div>
