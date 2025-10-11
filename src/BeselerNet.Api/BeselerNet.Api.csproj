@@ -13,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Npgsql" Version="9.4.2" />
-    <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" Version="9.4.2" />
+    <PackageReference Include="Aspire.Npgsql" Version="9.5.1" />
+    <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" Version="9.5.1" />
     <PackageReference Include="Azure.Communication.Email" Version="1.0.2" />
     <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="Mailjet.Api" Version="3.0.0" />
