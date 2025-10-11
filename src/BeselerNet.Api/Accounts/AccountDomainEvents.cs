@@ -17,18 +17,11 @@ namespace BeselerNet.Api.Core
 
 namespace BeselerNet.Api.Accounts
 {
-    internal sealed record AccountCreated(int AccountId, AccountType Type, string Username, string? Email, string SecretHash, string? GivenName, string? FamilyName)
-        : DomainEvent("account", AccountId.ToString(), !string.IsNullOrWhiteSpace(Email));
-    internal sealed record AccountEmailVerified(int AccountId, string Email)
-        : DomainEvent("account", AccountId.ToString());
-    internal sealed record AccountPasswordChanged(int AccountId, string SecretHash)
-        : DomainEvent("account", AccountId.ToString());
-    internal sealed record AccountLoginSucceeded(int AccountId)
-        : DomainEvent("account", AccountId.ToString());
-    internal sealed record AccountLoginFailed(int AccountId, int Attempt, bool Locked)
-        : DomainEvent("account", AccountId.ToString(), Locked);
-    internal sealed record AccountPermissionGranted(int AccountId, int PermissionId, string Resource, string Action, string Scope, int GrantedByAccountId)
-        : DomainEvent("account", AccountId.ToString());
-    internal sealed record AccountPermissionRevoked(int AccountId, int PermissionId, string Resource, string Action, string Scope, int RevokedByAccountId)
-        : DomainEvent("account", AccountId.ToString());
+    internal sealed record AccountCreated(int AccountId, AccountType Type, string Username, string? Email, string SecretHash, string? GivenName, string? FamilyName) : DomainEvent;
+    internal sealed record AccountEmailVerified(int AccountId, string Email) : DomainEvent;
+    internal sealed record AccountPasswordChanged(int AccountId, string SecretHash) : DomainEvent;
+    internal sealed record AccountLoginSucceeded(int AccountId) : DomainEvent;
+    internal sealed record AccountLoginFailed(int AccountId, int Attempt, bool Locked) : DomainEvent;
+    internal sealed record AccountPermissionGranted(int AccountId, int PermissionId, string Resource, string Action, string Scope, int GrantedByAccountId, DateTimeOffset GrantedAt) : DomainEvent;
+    internal sealed record AccountPermissionRevoked(int AccountId, int PermissionId, string Resource, string Action, string Scope, int RevokedByAccountId, DateTimeOffset RevokedAt) : DomainEvent;
 }

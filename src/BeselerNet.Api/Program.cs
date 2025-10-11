@@ -5,6 +5,7 @@ using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
 using BeselerNet.Api.OpenApi;
+using BeselerNet.Api.Outbox;
 using BeselerNet.Api.Registrars;
 using BeselerNet.Api.Webhooks;
 using Microsoft.AspNetCore.Identity;
@@ -37,8 +38,11 @@ builder.Services.AddSingleton<JwtGenerator>();
 builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
 builder.Services.AddScoped<Cookies>();
 
-builder.Services.AddTransient<IHandler<AccountCreated>, AccountCreatedHandler>();
-builder.Services.AddTransient<IHandler<AccountLoginFailed>, AccountLoginFailedHandler>();
+builder.Services.AddSingleton<OutboxMessageProcessor>();
+builder.Services.AddSingleton<DomainEventDispatcher>();
+
+builder.Services.AddScoped<IHandler<AccountCreated>, AccountCreatedHandler>();
+builder.Services.AddScoped<IHandler<AccountLoginFailed>, AccountLoginFailedHandler>();
 
 builder.Services.AddOptions<CommunicationOptions>().BindConfiguration(CommunicationOptions.SectionName);
 builder.AddEmailProviders();

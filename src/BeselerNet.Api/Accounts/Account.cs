@@ -1,13 +1,12 @@
 ﻿using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Core;
 using Microsoft.IdentityModel.JsonWebTokens;
-using System.ComponentModel;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 
 namespace BeselerNet.Api.Accounts;
 
-internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedResource
+internal sealed class Account : IAuthorizableResource, IOwnedResource
 {
     public static string ResourceName { get; } = "account";
     private Account() { }
@@ -55,14 +54,14 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
             FamilyName = familyName,
             CreatedAt = DateTimeOffset.UtcNow
         };
-        account.Append(new AccountCreated(accountId, AccountType.User, username, email, secretHash, givenName, familyName) { Version = account.Version });
+        account.Append(new AccountCreated(accountId, AccountType.User, username, email, secretHash, givenName, familyName));
         return account;
     }
     public void Login()
     {
         LastLogon = DateTimeOffset.UtcNow;
         FailedLoginAttempts = 0;
-        Append(new AccountLoginSucceeded(AccountId) { Version = ++Version });
+        Append(new AccountLoginSucceeded(AccountId));
     }
     public void FailLogin()
     {
@@ -70,19 +69,19 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
         {
             LockedAt = DateTimeOffset.UtcNow;
         }
-        Append(new AccountLoginFailed(AccountId, FailedLoginAttempts, LockedAt.HasValue) { Version = ++Version });
+        Append(new AccountLoginFailed(AccountId, FailedLoginAttempts, LockedAt.HasValue));
     }
     public void VerifyEmail(string email)
     {
         Email = email;
         EmailVerifiedAt = DateTimeOffset.UtcNow;
-        Append(new AccountEmailVerified(AccountId, email) { Version = ++Version });
+        Append(new AccountEmailVerified(AccountId, email));
     }
     public void ChangePassword(string hash)
     {
         SecretHash = hash;
         SecretHashedAt = DateTimeOffset.UtcNow;
-        Append(new AccountPasswordChanged(AccountId, hash) { Version = ++Version });
+        Append(new AccountPasswordChanged(AccountId, hash));
     }
     public void Grant(Permission permission, string scope, int grantedBy)
     {
@@ -99,7 +98,7 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
                 GrantedAt = DateTimeOffset.UtcNow,
                 GrantedByAccountId = grantedBy
             });
-            Append(new AccountPermissionGranted(AccountId, permission.PermissionId, permission.Resource, permission.Action, scope, grantedBy) { Version = ++Version });
+            Append(new AccountPermissionGranted(AccountId, permission.PermissionId, permission.Resource, permission.Action, scope, grantedBy, DateTimeOffset.UtcNow));
         }
         else if (existing.Scope != scope)
         {
@@ -114,7 +113,7 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
                 GrantedAt = DateTimeOffset.UtcNow,
                 GrantedByAccountId = grantedBy
             });
-            Append(new AccountPermissionRevoked(AccountId, permission.PermissionId, permission.Resource, permission.Action, existing.Scope, grantedBy) { Version = ++Version });
+            Append(new AccountPermissionRevoked(AccountId, permission.PermissionId, permission.Resource, permission.Action, existing.Scope, grantedBy, DateTimeOffset.UtcNow));
         }
     }
     public void Revoke(Permission permission, int revokedBy)
@@ -123,7 +122,7 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
         if (existing is not null)
         {
             _ = _permissions.Remove(existing);
-            Append(new AccountPermissionRevoked(AccountId, permission.PermissionId, permission.Resource, permission.Action, existing.Scope, revokedBy) { Version = ++Version });
+            Append(new AccountPermissionRevoked(AccountId, permission.PermissionId, permission.Resource, permission.Action, existing.Scope, revokedBy, DateTimeOffset.UtcNow));
         }
     }
     public ClaimsPrincipal ToClaimsPrincipal()
@@ -150,7 +149,9 @@ internal sealed class Account : IChangeTracking, IAuthorizableResource, IOwnedRe
         _events.Add(@event);
         IsChanged = true;
     }
-    public void AcceptChanges()
+
+    // This is called by the repository after model is saved.
+    private void AcceptChanges()
     {
         _events.Clear();
         IsChanged = false;

@@ -7,13 +7,14 @@ using System.Security.Claims;
 
 namespace BeselerNet.Api.Accounts.EventHandlers;
 
-internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, EmailerProvider emailerProvider) : IHandler<AccountCreated>
+internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, Emailer emailer) : IHandler<AccountCreated>
 {
+    private const string ActivityName = $"{nameof(AccountCreatedHandler)}.{nameof(Handle)}";
     private readonly JwtGenerator _tokenGenerator = tokenGenerator;
-    private readonly IEmailer _emailer = emailerProvider.GetEmailer();
-    public async Task Handle(AccountCreated domainEvent, CancellationToken cancellationToken)
+    private readonly Emailer _emailer = emailer;
+    public async Task Handle(AccountCreated domainEvent, IEventMetadata metadata, CancellationToken cancellationToken)
     {
-        using var activity = Telemetry.Source.StartActivity("AccountCreatedHandler.Handle", ActivityKind.Internal, domainEvent.TraceId);
+        using var activity = Telemetry.Source.StartActivity(ActivityName, ActivityKind.Internal, metadata.TraceId);
         activity?.SetTag_AccountId(domainEvent.AccountId);
 
         if (domainEvent.Email is null)

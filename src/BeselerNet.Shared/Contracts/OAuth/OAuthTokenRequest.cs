@@ -32,6 +32,11 @@ public sealed record OAuthTokenRequest
                 errors ??= [];
                 errors["password"] = ["Password is required."];
             }
+            if (string.IsNullOrWhiteSpace(ClientId))
+            {
+                errors ??= [];
+                errors["client_id"] = ["Client ID is required."];
+            }
         }
         else if (GrantType == OAuthGrantType.client_credentials)
         {

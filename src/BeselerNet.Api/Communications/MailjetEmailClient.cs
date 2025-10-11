@@ -1,5 +1,4 @@
-﻿using BeselerNet.Shared.Core;
-using Mailjet.Client;
+﻿using Mailjet.Client;
 using Mailjet.Client.Resources;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
@@ -14,46 +13,21 @@ internal sealed record MailjetOptions
     public string? WebhookApiKey { get; init; }
 }
 
-internal sealed class MailjetEmailService(
-    CommunicationDataSource communications,
-    IOptions<CommunicationOptions> commOptions,
+internal sealed class MailjetEmailClient(
     IMailjetClient client,
     IOptions<MailjetOptions> options,
-    ILogger<MailjetEmailService> logger) : IEmailer
+    IOptions<CommunicationOptions> commOptions,
+    CommunicationDataSource communications,
+    ILogger<MailjetEmailClient> logger) : IEmailClient
 {
-    private const string PROVIDER_NAME = "Mailjet";
-    private readonly CommunicationDataSource _communications = communications;
-    private readonly CommunicationOptions _commOptions = commOptions.Value;
+    public const string PROVIDER_NAME = "Mailjet";
     private readonly IMailjetClient _client = client;
     private readonly MailjetOptions _options = options.Value;
-    private readonly ILogger<MailjetEmailService> _logger = logger;
+    private readonly CommunicationOptions _commOptions = commOptions.Value;
+    private readonly CommunicationDataSource _communications = communications;
+    private readonly ILogger<MailjetEmailClient> _logger = logger;
 
-    public async Task<Result<Communication>> SendEmailVerification(int accountId, string email, string recipientName, string token, CancellationToken cancellationToken)
-    {
-        var template = EmailTemplates.EmailVerification(_commOptions.ConfirmEmailUrl!, token);
-        var communication = await Send(template, accountId, email, recipientName, cancellationToken);
-        if (communication.FailedAt.HasValue)
-        {
-            _logger.LogInformation("Token not sent: {Token}", token);
-        }
-        return communication;
-    }
-    public async Task<Result<Communication>> SendAccountLocked(int accountId, string email, string recipientName, CancellationToken cancellationToken)
-    {
-        var template = EmailTemplates.AccountLocked(recipientName);
-        return await Send(template, accountId, email, recipientName, cancellationToken);
-    }
-    public async Task<Result<Communication>> SendPasswordReset(int accountId, string email, string recipientName, string token, CancellationToken cancellationToken)
-    {
-        var template = EmailTemplates.PasswordReset(recipientName, _commOptions.ResetPasswordUrl!, token);
-        var communication = await Send(template, accountId, email, recipientName, cancellationToken);
-        if (communication.FailedAt.HasValue)
-        {
-            _logger.LogInformation("Token not sent: {Token}", token);
-        }
-        return communication;
-    }
-    private async Task<Communication> Send(EmailTemplate template, int accountId, string email, string recipientName, CancellationToken cancellationToken)
+    public async Task<Communication> Send(EmailTemplate template, int accountId, string email, string recipientName, CancellationToken cancellationToken)
     {
         var communication = Communication.Create(PROVIDER_NAME, CommunicationType.Email, template.CommunicationName, accountId);
 

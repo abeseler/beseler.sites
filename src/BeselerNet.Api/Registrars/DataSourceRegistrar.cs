@@ -17,8 +17,8 @@ internal static class DataSourceRegistrar
         builder.Services
             .AddScoped<AccountDataSource>()
             .AddScoped<CommunicationDataSource>()
-            .AddSingleton<EventLogDataSource>()
             .AddSingleton<OutboxDataSource>()
+            .AddSingleton<EventLogDataSource>()
             .AddSingleton<PermissionDataSource>()
             .AddScoped<TokenLogDataSource>();
 

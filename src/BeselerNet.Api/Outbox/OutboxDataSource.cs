@@ -14,10 +14,10 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
 
         try
         {
-            _ = await connection.ExecuteAsync(
+            await connection.ExecuteAsync(
                 """
                 INSERT INTO outbox (message_id, message_type, message_data, invisible_until, receives_remaining)
-                VALUES (@MessageId, @MessageType, @MessageData::json, @InvisibleUntil, @ReceivesRemaining)              
+                VALUES (@MessageId, @MessageType, @MessageData::json, @InvisibleUntil, @ReceivesRemaining)
                 """, message, transaction);
         }
         finally

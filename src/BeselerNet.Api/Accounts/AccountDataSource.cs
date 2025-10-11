@@ -1,14 +1,15 @@
-﻿using BeselerNet.Api.Events;
+﻿using BeselerNet.Api.Core;
+using BeselerNet.Api.Outbox;
 using Dapper;
 using Npgsql;
 using System.Runtime.CompilerServices;
 
 namespace BeselerNet.Api.Accounts;
 
-internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDataSource eventLog, ILogger<AccountDataSource> logger)
+internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataSource outbox, ILogger<AccountDataSource> logger)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
-    private readonly EventLogDataSource _eventLog = eventLog;
+    private readonly OutboxDataSource _outbox = outbox;
     private readonly ILogger<AccountDataSource> _logger = logger;
     public async Task<int> NextId(CancellationToken cancellationToken)
     {
@@ -155,24 +156,31 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
                 account.FailedLoginAttempts
             }, transaction);
 
-            foreach (var @event in account.UncommittedEvents)
+            var notifyMessageQueued = false;
+            foreach (var domainEvent in account.UncommittedEvents)
             {
-                if (@event is AccountPermissionGranted granted)
+                if (domainEvent is AccountPermissionGranted granted)
                 {
                     await Upsert(granted);
                 }
-                else if (@event is AccountPermissionRevoked revoked)
+                else if (domainEvent is AccountPermissionRevoked revoked)
                 {
                     await Delete(revoked);
                 }
-                await _eventLog.Append(@event, connection, transaction, cancellationToken);
+                var domainEventMessage = DomainEventMessage.Wrap(domainEvent).ToOutboxMessage();
+                await _outbox.Enqueue(domainEventMessage, connection, transaction, cancellationToken);
+                notifyMessageQueued = true;
             }
 
             await transaction.CommitAsync(cancellationToken);
-
+            
             _logger.LogDebug("Saved account {AccountId}.", account.AccountId);
 
-            account.AcceptChanges();
+            FinalizeChanges(account);
+            if (notifyMessageQueued)
+            {
+                OutboxMonitor.NotifyMessageAvailable();
+            }
         }
         catch (Exception ex)
         {
@@ -208,7 +216,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
             granted.AccountId,
             granted.PermissionId,
             granted.Scope,
-            GrantedAt = granted.CreatedAt,
+            granted.GrantedAt,
             granted.GrantedByAccountId
         });
     }
@@ -228,5 +236,8 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, EventLogDat
     }
 
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_permissions")]
-    private extern static ref List<AccountPermission> PermissionsRef(Account @this);
+    private static extern ref List<AccountPermission> PermissionsRef(Account @this);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "AcceptChanges")]
+    private static extern void FinalizeChanges(Account @this);
 }

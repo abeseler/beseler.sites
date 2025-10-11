@@ -4,13 +4,13 @@ using System.Diagnostics;
 
 namespace BeselerNet.Api.Accounts.EventHandlers;
 
-internal sealed class AccountLoginFailedHandler(AccountDataSource accounts, EmailerProvider emailerProvider) : IHandler<AccountLoginFailed>
+internal sealed class AccountLoginFailedHandler(AccountDataSource accounts, Emailer emailer) : IHandler<AccountLoginFailed>
 {
     private readonly AccountDataSource _accounts = accounts;
-    private readonly IEmailer _emailer = emailerProvider.GetEmailer();
-    public async Task Handle(AccountLoginFailed domainEvent, CancellationToken cancellationToken)
+    private readonly Emailer _emailer = emailer;
+    public async Task Handle(AccountLoginFailed domainEvent, IEventMetadata metadata, CancellationToken cancellationToken)
     {
-        using var activity = Telemetry.Source.StartActivity("AccountLoginFailedHandler.Handle", ActivityKind.Internal, domainEvent.TraceId);
+        using var activity = Telemetry.Source.StartActivity("AccountLoginFailedHandler.Handle", ActivityKind.Internal, metadata.TraceId);
         activity?.SetTag_AccountId(domainEvent.AccountId);
 
         var account = await _accounts.WithId(domainEvent.AccountId, cancellationToken);

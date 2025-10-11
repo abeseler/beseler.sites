@@ -11,8 +11,8 @@ Content-Type: application/json
 {
   "email": "{{email}}",
   "password": "{{password}}",
-  "givenName": "Adam",
-  "familyName": "Beseler"
+  "given_name": "Adam",
+  "family_name": "Beseler"
 }
 
 ### Login account

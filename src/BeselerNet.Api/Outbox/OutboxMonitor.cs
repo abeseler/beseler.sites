@@ -1,124 +1,73 @@
 ﻿using Beseler.ServiceDefaults;
-using BeselerNet.Api.Core;
-using BeselerNet.Shared.Core;
-using System.Collections.Concurrent;
-using System.Reflection;
-using System.Text.Json;
+using System.Threading.Channels;
 
 namespace BeselerNet.Api.Outbox;
 
-internal sealed class OutboxMonitor(OutboxDataSource dataSource, IServiceScopeFactory scopeFactory, IAppStartup appStartup, ILogger<OutboxMonitor> logger) : BackgroundService
+internal sealed class OutboxMonitor(OutboxDataSource dataSource, OutboxMessageProcessor processor, IAppStartup appStartup, ILogger<OutboxMonitor> logger) : BackgroundService
 {
     private const int DEQUEUE_MSG_LIMIT = 10;
-    private const int MAX_BACKOFF_POW = 7;
+    private static readonly Channel<int> _queue = Channel.CreateBounded<int>(new BoundedChannelOptions(1)
+    {
+        SingleReader = true,
+        SingleWriter = false,
+        AllowSynchronousContinuations = false,
+        FullMode = BoundedChannelFullMode.DropWrite
+    });
+    public static void NotifyMessageAvailable() => _queue.Writer.TryWrite(1);
     private readonly OutboxDataSource _dataSource = dataSource;
-    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    private readonly OutboxMessageProcessor _processor = processor;
     private readonly IAppStartup _appStartup = appStartup;
     private readonly ILogger<OutboxMonitor> _logger = logger;
-    private int _backoffPow = 0;
-    private TimeSpan Delay => TimeSpan.FromSeconds((int)Math.Pow(2, _backoffPow));
-    private static ConcurrentDictionary<string, (Type, MethodInfo)> _eventTypeCache = [];
-    private static ConcurrentDictionary<string, Func<DomainEvent, CancellationToken, Task>> _handlerCache = [];
     protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         await _appStartup.WaitUntilStartupCompletedAsync(cancellationToken);
 
-        _logger.LogInformation("OutboxMonitor has started");
+        _logger.LogInformation("{ServiceName} has started", nameof(OutboxMonitor));
 
-        while (!cancellationToken.IsCancellationRequested)
+        _ = Task.Run(async () =>
         {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                _queue.Writer.TryWrite(0);
+                await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
+            }
+        }, cancellationToken);
+
+        await foreach (var value in _queue.Reader.ReadAllAsync(cancellationToken))
+        {
+            if (value == 0)
+            {
+                _logger.LogDebug("{ServiceName} triggered to check for messages to process periodically", nameof(OutboxMonitor));
+            }
+            else if (value == 1)
+            {
+                _logger.LogDebug("{ServiceName} triggered to check for messages to process immediately", nameof(OutboxMonitor));
+            }
+            else
+            {
+                _logger.LogWarning("{ServiceName} received unknown trigger value {Value}", nameof(OutboxMonitor), value);
+            }
+
             try
             {
-                var messages = await _dataSource.Dequeue(DEQUEUE_MSG_LIMIT, cancellationToken);
-                if (messages.Length == 0)
-                {
-                    _backoffPow = Math.Min(_backoffPow + 1, MAX_BACKOFF_POW);
-                    _logger.LogDebug("No outbox messages to process. Next check in {Seconds} seconds", Delay.TotalSeconds);
-                }
-                else
+                while (await _dataSource.Dequeue(DEQUEUE_MSG_LIMIT, cancellationToken) is { Length: > 0 } messages)
                 {
                     _logger.LogInformation("Received {Count} messages from the outbox to process", messages.Length);
-
-                    await foreach (var task in Task.WhenEach(messages.Select(Process)))
+                    await foreach (var task in Task.WhenEach(messages.Select(msg => _processor.Process(msg, cancellationToken))))
                     {
                         if (task.Result.Succeeded(out var message))
                         {
-                            _ = await _dataSource.Delete(message.MessageId, CancellationToken.None);
+                            _ = await _dataSource.Delete(message.MessageId, cancellationToken);
                         }
                     }
-
-                    _backoffPow = 0;
-                    continue;
                 }
             }
             catch (Exception ex)
             {
-                _backoffPow = Math.Min(_backoffPow + 1, MAX_BACKOFF_POW);
-                _logger.LogError(ex, "Error processing outbox messages. Next attempt in {Seconds} seconds", Delay.TotalSeconds);
-            }
-
-            await Task.Delay(Delay, cancellationToken);
-        }
-
-        _logger.LogInformation("OutboxMonitor has stopped");
-    }
-
-    private async Task<Result<OutboxMessage>> Process(OutboxMessage message)
-    {
-        _logger.LogDebug("Processing outbox message {MessageId}. {Data}", message.MessageId, message.MessageData);
-
-        try
-        {
-            if (message.MessageType is nameof(DomainEvent))
-            {
-                var domainEvent = JsonSerializer.Deserialize<DomainEvent>(message.MessageData, JsonSerializerOptions.Web)
-                    ?? throw new InvalidOperationException("Failed to deserialize domain event.");
-
-                _logger.LogDebug("Outbox message {MessageId} deserialized to: {EventType}", message.MessageId, domainEvent.GetType().Name);
-
-                await Handle(domainEvent, _scopeFactory);
-            }
-            else
-            {
-                _logger.LogWarning("Unknown message type {MessageType} for outbox message {MessageId}", message.MessageType, message.MessageId);
+                _logger.LogError(ex, "Error processing outbox messages.");
             }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing outbox message {MessageId}", message.MessageId);
-            return ex;
-        }
 
-        return message;
-    }
-
-    private static Task Handle(DomainEvent domainEvent, IServiceScopeFactory scopeFactory)
-    {
-        var eventTypeName = domainEvent.GetType().AssemblyQualifiedName ?? throw new InvalidOperationException("Domain event type name is null.");
-        var (handlerType, handlerMethod) = _eventTypeCache.GetOrAdd(eventTypeName, _ =>
-        {
-            var type = typeof(IHandler<>).MakeGenericType(domainEvent.GetType());
-            var method = type.GetMethod(nameof(IHandler<DomainEvent>.Handle))
-                ?? throw new InvalidOperationException($"Handler method not found for {domainEvent.GetType().Name}.");
-            return (type, method);
-        });
-        var handlerFunc = _handlerCache.GetOrAdd(eventTypeName, _ =>
-        {
-            var eventType = domainEvent.GetType();
-            var handlerType = typeof(IHandler<>).MakeGenericType(eventType);
-            var method = handlerType.GetMethod(nameof(IHandler<DomainEvent>.Handle))
-                ?? throw new InvalidOperationException($"Handler method not found for {eventType.Name}.");
-
-            return (domainEvent, cancellationToken) =>
-            {
-                using var scope = scopeFactory.CreateScope();
-                var handler = scope.ServiceProvider.GetRequiredService(handlerType);
-                return (Task)method.Invoke(handler, [domainEvent, cancellationToken])!;
-            };
-        });
-
-        using var scope = scopeFactory.CreateScope();
-        var handler = scope.ServiceProvider.GetRequiredService(handlerType);
-        return (Task)handlerMethod.Invoke(handler, [domainEvent, CancellationToken.None])!;
+        _logger.LogInformation("{ServiceName} has stopped", nameof(OutboxMonitor));
     }
 }

@@ -46,7 +46,7 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
     {
         await _appStartup.WaitUntilStartupCompletedAsync(cancellationToken);
 
-        _logger.LogInformation("Forgot password service started.");
+        _logger.LogInformation("{ServiceName} started.", nameof(ForgotPasswordService));
 
         while (await RequestChannel.Reader.WaitToReadAsync(cancellationToken))
         {
@@ -56,7 +56,7 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
             }
         }
 
-        _logger.LogInformation("Forgot password service stopped.");
+        _logger.LogInformation("{ServiceName} stopped.", nameof(ForgotPasswordService));
     }
 
     private async Task ProcessRequest(ForgotPasswordRequest request, CancellationToken cancellationToken)
@@ -83,7 +83,7 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
             }
 
             activity?.SetTag_AccountId(account.AccountId);
-            var emailer = scope.ServiceProvider.GetRequiredService<EmailerProvider>().GetEmailer();
+            var emailer = scope.ServiceProvider.GetRequiredService<Emailer>();
             var subjectClaim = new Claim(JwtRegisteredClaimNames.Sub, account.AccountId.ToString(), ClaimValueTypes.Integer);
             var token = _tokens.Generate(subjectClaim, TimeSpan.FromMinutes(20)).AccessToken;
 

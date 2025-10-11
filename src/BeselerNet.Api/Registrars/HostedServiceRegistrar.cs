@@ -11,7 +11,6 @@ internal static class HostedServiceRegistrar
         builder.Services
             .AddHostedService<OutboxMonitor>()
             .AddHostedService<ForgotPasswordService>()
-            .AddHostedService<SendGridEmailEventService>()
             .AddHostedService<MailjetEmailEventService>();
 
         return builder;

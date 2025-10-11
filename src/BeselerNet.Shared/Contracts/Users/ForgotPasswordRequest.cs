@@ -16,17 +16,17 @@ public sealed record ForgotPasswordRequest
         if (string.IsNullOrWhiteSpace(Email))
         {
             errors ??= [];
-            errors["Email"] = ["Email is required."];
+            errors["email"] = ["Email is required."];
         }
         else if (Email is not { Length: < 320 })
         {
             errors ??= [];
-            errors["Email"] = ["Email is too long. It must be less than 320 characters."];
+            errors["email"] = ["Email is too long. It must be less than 320 characters."];
         }
         else if (!Extensions.BasicEmailRegex().IsMatch(Email))
         {
             errors ??= [];
-            errors["Email"] = ["Email is invalid."];
+            errors["email"] = ["Email is invalid."];
         }
 
         return errors is not null;

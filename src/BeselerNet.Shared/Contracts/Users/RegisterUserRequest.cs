@@ -4,10 +4,12 @@ namespace BeselerNet.Shared.Contracts.Users;
 
 public sealed partial record RegisterUserRequest
 {
-    public required string Email { get; init; }
-    public required string Password { get; init; }
-    public required string GivenName { get; init; }
-    public required string FamilyName { get; init; }
+    public string Email { get; init; } = "";
+    public string Password { get; init; } = "";
+    [JsonPropertyName("given_name")]
+    public string GivenName { get; init; } = "";
+    [JsonPropertyName("family_name")]
+    public string FamilyName { get; init; } = "";
 
     public bool HasValidationErrors([NotNullWhen(true)] out Dictionary<string, string[]>? errors)
     {
@@ -16,37 +18,37 @@ public sealed partial record RegisterUserRequest
         if (string.IsNullOrWhiteSpace(Email))
         {
             errors ??= [];
-            errors["Email"] = ["Email is required."];
+            errors["email"] = ["Email is required."];
         }
         else if (Email is not { Length: < 320 })
         {
             errors ??= [];
-            errors["Email"] = ["Email is too long. It must be less than 320 characters."];
+            errors["email"] = ["Email is too long. It must be less than 320 characters."];
         }
         else if (!Extensions.BasicEmailRegex().IsMatch(Email))
         {
             errors ??= [];
-            errors["Email"] = ["Email is invalid."];
+            errors["email"] = ["Email is invalid."];
         }
         if (string.IsNullOrWhiteSpace(Password))
         {
             errors ??= [];
-            errors["Password"] = ["Password is required."];
+            errors["password"] = ["Password is required."];
         }
         else if (Password is not { Length: > 7 })
         {
             errors ??= [];
-            errors["Password"] = ["Password is too short. It must be at least 8 characters."];
+            errors["password"] = ["Password is too short. It must be at least 8 characters."];
         }
         if (string.IsNullOrWhiteSpace(GivenName))
         {
             errors ??= [];
-            errors["GivenName"] = ["Given name is required."];
+            errors["given_name"] = ["Given name is required."];
         }
         if (string.IsNullOrWhiteSpace(FamilyName))
         {
             errors ??= [];
-            errors["FamilyName"] = ["Family name is required."];
+            errors["family_name"] = ["Family name is required."];
         }
 
         return errors is not null;

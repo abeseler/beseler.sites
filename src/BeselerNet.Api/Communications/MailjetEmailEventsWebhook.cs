@@ -41,7 +41,7 @@ internal sealed class MailjetEmailEventService(IServiceProvider services, IAppSt
     {
         await _appStartup.WaitUntilStartupCompletedAsync(cancellationToken);
 
-        _logger.LogInformation("Mailjet email event service started");
+        _logger.LogInformation("{ServiceName} started", nameof(MailjetEmailEventService));
 
         while (await RequestChannel.Reader.WaitToReadAsync(cancellationToken))
         {
@@ -51,7 +51,7 @@ internal sealed class MailjetEmailEventService(IServiceProvider services, IAppSt
             }
         }
 
-        _logger.LogInformation("Mailjet email event service stopped");
+        _logger.LogInformation("{ServiceName} stopped", nameof(MailjetEmailEventService));
     }
 
     private async Task ProcessRequest(MailjetEmailEventRequest request, CancellationToken cancellationToken)

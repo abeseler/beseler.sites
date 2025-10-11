@@ -33,9 +33,10 @@ internal sealed class Communication : IChangeTracking
         ExternalId = externalId;
         IsChanged = true;
     }
-    public void Sent(DateTimeOffset sentAt)
+    public void Sent(DateTimeOffset sentAt, string? externalId = null)
     {
         SentAt = sentAt;
+        ExternalId = externalId ?? ExternalId;
         IsChanged = true;
     }
     public void Delivered(DateTimeOffset deliveredAt)

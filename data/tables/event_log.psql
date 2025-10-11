@@ -5,13 +5,10 @@
 */
 CREATE TABLE event_log (
     event_id UUID NOT NULL,
-    aggregate_type TEXT NOT NULL,
-    aggregate_id TEXT NOT NULL,
-    version BIGINT NOT NULL,
-    payload JSONB NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
-    CONSTRAINT pk_event_log PRIMARY KEY (event_id),
-    CONSTRAINT uq_event_log_aggregate_id_version UNIQUE (aggregate_type, aggregate_id, version)
+    event_type TEXT NOT NULL,
+    event_data JSONB NOT NULL,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    CONSTRAINT pk_event_log PRIMARY KEY (event_id)
 );
 
 /* Migration
@@ -19,4 +16,4 @@ CREATE TABLE event_log (
     "title": "01:createIndex"
 }
 */
-CREATE INDEX idx_event_log_created_at ON event_log (created_at);
+CREATE INDEX idx_event_log_created_at ON event_log (occurred_at);
