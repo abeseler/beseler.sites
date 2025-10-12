@@ -7,8 +7,24 @@ POST {{host}}/v1/webhooks/azure-events
 Content-Type: application/json
 
 {
-  "test": "example",
-  "id": 42
+	"id": "09ed45aa-f731-4182-b855-dce0cce187f6",
+	"source": "/subscriptions/172c48e9-0346-4b10-80eb-20f25f0fe603/resourcegroups/rg-beseler-default/providers/microsoft.communication/communicationservices/cs-beseler",
+	"specversion": "1.0",
+	"type": "Microsoft.Communication.EmailDeliveryReportReceived",
+	"subject": "sender/DoNotReply@beseler.net/message/1ddacea2-cfc7-47e4-80ec-5b6858089425",
+	"time": "2025-10-11T23:07:55.7657649Z",
+	"data": {
+		"sender": "DoNotReply@beseler.net",
+		"recipient": "adam.beseler@gmail.com",
+		"internetMessageId": "<202510112305.1ddacea2cfc747e480ec5b6858089425-OBZG6ZD4IFBVGRKNIFEUYLLQOJXWILRZMYZDCMJTGNSS2ZRQMI4C2NDDGQ3C2OBZGQ4C2OBVMU3WKNZVHEYDAOBTPRZW25DQ@microsoft.com>",
+		"messageId": "1ddacea2-cfc7-47e4-80ec-5b6858089425",
+		"status": "Delivered",
+		"deliveryStatusDetails": {
+			"statusMessage": "",
+			"recipientMailServerHostName": "gmail-smtp-in.l.google.com"
+		},
+		"deliveryAttemptTimestamp": "2025-10-11T23:05:48.211+00:00"
+	}
 }
 
 ###

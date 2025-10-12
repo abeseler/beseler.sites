@@ -14,6 +14,13 @@ internal sealed class CommunicationDataSource(NpgsqlDataSource dataSource)
             "SELECT * FROM communication WHERE communication_id = @id", new { id });
     }
 
+    public async Task<Communication?> WithExternalId(string externalId, CancellationToken cancellationToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<Communication>(
+            "SELECT * FROM communication WHERE external_id = @externalId", new { externalId });
+    }
+
     public async Task SaveChanges(Communication communication, CancellationToken cancellationToken)
     {
         if (communication.IsChanged is false)

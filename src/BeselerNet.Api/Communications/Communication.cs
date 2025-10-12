@@ -33,25 +33,40 @@ internal sealed class Communication : IChangeTracking
         ExternalId = externalId;
         IsChanged = true;
     }
-    public void Sent(DateTimeOffset sentAt, string? externalId = null)
+    public void Sent(DateTimeOffset sentAt)
     {
+        if (SentAt.HasValue && SentAt <= sentAt)
+        {
+            return;
+        }
         SentAt = sentAt;
-        ExternalId = externalId ?? ExternalId;
         IsChanged = true;
     }
     public void Delivered(DateTimeOffset deliveredAt)
     {
+        if (DeliveredAt.HasValue && DeliveredAt <= deliveredAt)
+        {
+            return;
+        }
+        SentAt ??= deliveredAt;
         DeliveredAt = deliveredAt;
         IsChanged = true;
     }
     public void Opened(DateTimeOffset openedAt)
     {
+        if (OpenedAt.HasValue && OpenedAt <= openedAt)
+        {
+            return;
+        }
+        SentAt ??= openedAt;
+        DeliveredAt ??= openedAt;
         OpenedAt = openedAt;
         IsChanged = true;
     }
     public void Failed(DateTimeOffset failedAt, string error)
     {
         Error = Error is null ? error : $"{Error}; {error}";
+        SentAt ??= failedAt;
         FailedAt = failedAt;
         IsChanged = true;
     }

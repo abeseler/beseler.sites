@@ -32,7 +32,7 @@ builder.AddProject<BeselerDev_Web>("beseler-dev-web")
     .WaitFor(cache)
     .WithExplicitStart();
 
-var azureCommunicationService = builder.AddParameter("AzureCommunicaionService", secret: true);
+var azureCommunicationService = builder.AddParameter("AzureCommunicationService", secret: true);
 var beselerNetApi = builder.AddProject<BeselerNet_Api>("beseler-net-api")
     .WithEnvironment("Azure__CommunicationConnectionString", azureCommunicationService)
     .WithReference(cache)

@@ -33,7 +33,8 @@ internal sealed class AzureEmailClient(IOptions<AzureOptions> options, ILogger<A
         var emailMessage = new EmailMessage(template.SenderEmail, new EmailRecipients([new EmailAddress(email, recipientName)]), content);
 
         var operation = await client.SendAsync(WaitUntil.Started, emailMessage, ct);
-        communication.Sent(DateTimeOffset.UtcNow, operation.Id);
+        communication.SetExternalId(operation.Id);
+        communication.Sent(DateTimeOffset.UtcNow);
 
         _logger.LogInformation("Email {CommunicationName} sent to {Email}", template.CommunicationName, email);
     }

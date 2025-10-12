@@ -26,3 +26,10 @@ CREATE TABLE communication (
 }
 */
 CREATE INDEX idx_communication_account_id ON communication (account_id, created_at DESC);
+
+/* Migration
+{
+    "title": "02:createIndex"
+}
+*/
+CREATE INDEX idx_communication_external_id ON communication (external_id);
