@@ -3,6 +3,7 @@ using Azure.Messaging.EventGrid.SystemEvents;
 using BeselerNet.Shared.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace BeselerNet.Api.Communications.Emails;
 
@@ -51,6 +52,9 @@ internal sealed class AzureEmailEventsWebhook
             return TypedResults.Unauthorized();
         }
 
+        var json = JsonSerializer.Serialize(cloudEvent, JsonSerializerOptions.Web);
+        logger.LogInformation("{CloudEventJson}", json);
+
         var task = cloudEvent.Type switch
         {
             "Microsoft.Communication.EmailDeliveryReportReceived" => HandleEmailDeliveryReportReceived(cloudEvent, dataSource, logger, ct),
@@ -80,10 +84,12 @@ internal sealed class AzureEmailEventsWebhook
 
         if (eventData.Status == AcsEmailDeliveryReportStatus.Delivered)
         {
+            logger.LogInformation("Communication with ID {CommuncationId} delivered.", communication.CommunicationId);
             communication.Delivered(eventData.DeliveryAttemptTimestamp ?? DateTimeOffset.UtcNow);
         }
         else
         {
+            logger.LogInformation("Communication with ID {CommunicationId} failed. {Message}", communication.CommunicationId, eventData.DeliveryStatusDetails.StatusMessage);
             communication.Failed(eventData.DeliveryAttemptTimestamp ?? DateTimeOffset.UtcNow, $"{eventData.Status}. {eventData.DeliveryStatusDetails.StatusMessage}".TrimEnd());
         }
 

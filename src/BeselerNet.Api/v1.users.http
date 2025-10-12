@@ -1,7 +1,7 @@
 @host={{$projectUrl}}
-@email=adam.beseler@gmail.com
+@email=testing@beseler.net
 @password=password
-@emailConfirmToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL2xvY2FsaG9zdCIsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0IiwiZXhwIjoxNzYwMjIyMzU3LCJpYXQiOjE3NjAyMjE3NTcsInN1YiI6MSwianRpIjoiMDE5OWQ1NjQtN2Y1YS03ZTUxLWJlM2MtZWQxZTdhZDIwMmU3IiwiZW1haWwiOiJ0ZXN0MUBleGFtcGxlLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYmYiOjE3NjAyMjE3NTd9.0sYvh_QwC-A0Sjbvmfdj-nc745FuOErJPPnChSC56mQ
+@emailConfirmToken=1
 
 ### Register account
 
