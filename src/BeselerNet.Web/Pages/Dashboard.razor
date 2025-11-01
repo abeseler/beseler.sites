@@ -3,7 +3,9 @@
 <h3>Dashboard</h3>
 
 <p>This is the dashboard page</p>
+<p>@ctx.Id</p>
 
 @code {
-
+	[CascadingParameter(Name = "SiteContext")]
+	SiteContext ctx { get; set; } = default!;
 }

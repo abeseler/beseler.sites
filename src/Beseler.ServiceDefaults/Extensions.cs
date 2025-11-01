@@ -1,12 +1,12 @@
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -23,6 +23,7 @@ public static class Extensions
     private const string HealthEndpoint = "/_health";
     private const string AliveEndpoint = "/_alive";
     private const string ReadyEndpoint = "/_ready";
+    private const string HealthCheckCachePolicy = "HealthCheck";
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder, Action<ServiceDefaultsOptions>? options = null) where TBuilder : IHostApplicationBuilder
     {
@@ -43,13 +44,15 @@ public static class Extensions
             builder.Services.AddHostedService<DefaultStartupService>();
         }
 
+        builder.Services.AddSingleton<IAppStartup, ServiceStartup>();
+
         return builder;
     }
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
         app.MapHealthChecks(HealthEndpoint, new() { ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse })
-            .CacheOutput("HealthCheck")
+            .CacheOutput(HealthCheckCachePolicy)
             .WithRequestTimeout(TimeSpan.FromSeconds(10))
             .DisableHttpMetrics();
 
@@ -58,9 +61,6 @@ public static class Extensions
 
         app.MapHealthChecks(ReadyEndpoint, new() { Predicate = r => r.Tags.Contains("ready") })
             .DisableHttpMetrics();
-
-        app.MapGet("/coffee", () => TypedResults.Text("I'm a teapot!", statusCode: StatusCodes.Status418ImATeapot))
-            .ExcludeFromDescription();
 
         return app;
     }
@@ -186,13 +186,10 @@ public static class Extensions
     {
         builder.Services.AddOutputCache(
             configureOptions: static caching =>
-                caching.AddPolicy("HealthCheck",
+                caching.AddPolicy(HealthCheckCachePolicy,
                 build: static policy => policy.Expire(TimeSpan.FromSeconds(10))));
 
-        var appStartup = new ServiceStartup();
-        builder.Services.AddSingleton<IAppStartup>(appStartup);
-        builder.Services.AddHealthChecks().AddCheck("ready", appStartup, tags: ["ready"]);
-
+        builder.Services.AddHealthChecks().AddCheck<ServiceStartup.HealthCheck>("ready", tags: ["ready"]);
         builder.Services.AddHealthChecks().AddCheck("self", () => HealthCheckResult.Healthy(), tags: ["live"]);
 
         return builder;

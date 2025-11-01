@@ -1,0 +1,19 @@
+﻿@page "/workflow"
+@layout BasicLayout
+@rendermode InteractiveServer
+
+<h2>Workflow</h2>
+
+<CascadingValue Value="context" Name="Context">
+	<StepOne />
+	<StepTwo />
+	<StepThree />
+</CascadingValue>
+
+<StepOne ctx="context" />
+<StepTwo ctx="context" />
+<StepThree ctx="context" />
+
+@code {
+	WorkflowContext context = new();
+}

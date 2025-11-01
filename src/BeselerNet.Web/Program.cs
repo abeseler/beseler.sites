@@ -1,5 +1,6 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Web.Components;
+using BeselerNet.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ builder.Services.AddRequestTimeouts();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSingleton<FeatureManager>();
 
 builder.Services.AddHttpClient("beseler-net-api", client =>
     {

@@ -1,0 +1,33 @@
+﻿@implements IDisposable
+
+@if (context.CurrentStep != WorkflowStep.Three)
+{
+	return;
+}
+
+<h3>StepThree</h3>
+
+<button @onclick="CompleteStep">Complete Step Three</button>
+
+@code {
+	[CascadingParameter(Name = "Context")]
+	WorkflowContext context { get; set; } = default!;
+
+	[Parameter]
+	public WorkflowContext ctx { get; set; } = default!;
+
+	protected override void OnInitialized()
+	{
+		context.OnChanged += StateHasChanged;
+	}
+
+	private void CompleteStep()
+	{
+		context.AdvanceStep();
+	}
+
+	public void Dispose()
+	{
+		context.OnChanged -= StateHasChanged;
+	}
+}

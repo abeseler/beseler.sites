@@ -12,21 +12,25 @@ public interface IStartupTask
 
 public interface IAppStartup
 {
+    bool IsCompleted { get; }
     void StartupCompleted();
     Task WaitUntilStartupCompletedAsync(CancellationToken cancellationToken);
 }
 
-internal sealed class ServiceStartup : IAppStartup, IHealthCheck
+internal sealed class ServiceStartup : IAppStartup
 {
     private readonly TaskCompletionSource _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-    public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
-        => Task.FromResult(_tcs.Task.IsCompleted
-            ? HealthCheckResult.Healthy()
-            : HealthCheckResult.Unhealthy("The startup task is still running."));
-
+    public bool IsCompleted => _tcs.Task.IsCompleted;    
     public void StartupCompleted() => _tcs.TrySetResult();
-    public Task WaitUntilStartupCompletedAsync(CancellationToken cancellationToken) => _tcs.Task.WaitAsync(cancellationToken);
+    public Task WaitUntilStartupCompletedAsync(CancellationToken cancellationToken) => _tcs.Task;
+
+    public sealed class HealthCheck(IAppStartup startup) : IHealthCheck
+    {
+        public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+            => Task.FromResult(startup.IsCompleted
+                ? HealthCheckResult.Healthy()
+                : HealthCheckResult.Unhealthy("The startup task is still running."));
+    }
 }
 
 internal sealed class DefaultStartupService(IAppStartup appStartup, IServiceScopeFactory scopeFactory, ILogger<DefaultStartupService> logger) : BackgroundService
@@ -35,6 +39,13 @@ internal sealed class DefaultStartupService(IAppStartup appStartup, IServiceScop
     {
         using var scope = scopeFactory.CreateScope();
         var startupTasks = scope.ServiceProvider.GetServices<IStartupTask>().ToArray();
+
+        if (startupTasks.Length == 0)
+        {
+            logger.LogInformation("No startup tasks to execute.");
+            appStartup.StartupCompleted();
+            return;
+        }
 
         logger.LogInformation("Executing {Count} startup tasks...", startupTasks.Length);
 
