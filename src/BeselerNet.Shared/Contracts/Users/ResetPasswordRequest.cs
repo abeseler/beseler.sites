@@ -1,20 +1,18 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using BeselerNet.Shared.Core;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BeselerNet.Shared.Contracts.Users;
 
 public sealed record ResetPasswordRequest
 {
     public string? Password { get; init; }
-    public bool HasValidationErrors([NotNullWhen(true)] out Dictionary<string, string[]>? errors)
+    public bool IsInvalid([NotNullWhen(true)] out Dictionary<string, string[]>? validationErrors)
     {
-        errors = null;
+        var errors = new ErrorCollector();
+        
+        if (string.IsNullOrWhiteSpace(Password)) errors.Add("password", "Password is required.");
 
-        if (string.IsNullOrWhiteSpace(Password))
-        {
-            errors ??= [];
-            errors["Password"] = ["Password is required."];
-        }
-
-        return errors is not null;
+        validationErrors = errors.Collection;
+        return errors.Count > 0;
     }
 }

@@ -9,11 +9,7 @@
 
 <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 
-<p>@ctx.Id</p>
-
 @code {
-    [CascadingParameter]
-    SiteContext ctx { get; init; } = default!;
     int currentCount = 0;
 
     void IncrementCount()

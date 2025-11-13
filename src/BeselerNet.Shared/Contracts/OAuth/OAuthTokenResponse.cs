@@ -7,7 +7,7 @@ public sealed record class OAuthTokenResponse
     [JsonPropertyName("token_type")]
     public string TokenType { get; init; } = "Bearer";
     [JsonPropertyName("expires_in")]
-    public long ExpiresIn { get; init; }
+    public int ExpiresIn { get; init; }
     [JsonPropertyName("refresh_token")]
     public string? RefreshToken { get; init; }
 }

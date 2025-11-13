@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using BeselerNet.Shared.Core;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BeselerNet.Shared.Contracts.OAuth;
 
@@ -17,46 +18,26 @@ public sealed record OAuthTokenRequest
     [JsonPropertyName("refresh_token")]
     public string? RefreshToken { get; init; }
 
-    public bool HasValidationErrors([NotNullWhen(true)] out Dictionary<string, string[]>? errors)
+    public bool IsInvalid([NotNullWhen(true)] out Dictionary<string, string[]>? validationErrors)
     {
-        errors = null;
+        var errors = new ErrorCollector();
+
+        validationErrors = null;
         if (GrantType == OAuthGrantType.password)
         {
-            if (string.IsNullOrWhiteSpace(Username))
-            {
-                errors ??= [];
-                errors["username"] = ["Username is required."];
-            }
-            if (string.IsNullOrWhiteSpace(Password))
-            {
-                errors ??= [];
-                errors["password"] = ["Password is required."];
-            }
-            if (string.IsNullOrWhiteSpace(ClientId))
-            {
-                errors ??= [];
-                errors["client_id"] = ["Client ID is required."];
-            }
+            if (string.IsNullOrWhiteSpace(Username)) errors.Add("username", "Username is required.");
+            if (string.IsNullOrWhiteSpace(Password)) errors.Add("password", "Password is required.");
+            if (string.IsNullOrWhiteSpace(ClientId)) errors.Add("client_id", "Client ID is required.");
         }
         else if (GrantType == OAuthGrantType.client_credentials)
         {
-            if (string.IsNullOrWhiteSpace(ClientId))
-            {
-                errors ??= [];
-                errors["client_id"] = ["Client ID is required."];
-            }
-            if (string.IsNullOrWhiteSpace(ClientSecret))
-            {
-                errors ??= [];
-                errors["client_secret"] = ["Client secret is required."];
-            }
+            if (string.IsNullOrWhiteSpace(ClientId)) errors.Add("client_id", "Client ID is required.");
+            if (string.IsNullOrWhiteSpace(ClientSecret)) errors.Add("client_secret", "Client secret is required.");
         }
-        else if (GrantType is not OAuthGrantType.refresh_token)
-        {
-            errors ??= [];
-            errors["grant_type"] = ["Invalid grant type."];
-        }
-        return errors is not null;
+        else if (GrantType is not OAuthGrantType.refresh_token) errors.Add("grant_type", "Invalid grant type.");
+
+        validationErrors = errors.Collection;
+        return errors.Count > 0;
     }
 }
 

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using BeselerNet.Shared.Core;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace BeselerNet.Shared.Contracts.Users;
@@ -9,26 +10,15 @@ public sealed record ForgotPasswordRequest
     [JsonIgnore]
     public string? TraceId { get; init; } = Activity.Current?.Id ?? Activity.Current?.ParentId;
 
-    public bool HasValidationErrors([NotNullWhen(true)] out Dictionary<string, string[]>? errors)
+    public bool IsInvalid([NotNullWhen(true)] out Dictionary<string, string[]>? validationErrors)
     {
-        errors = null;
+        var errors = new ErrorCollector();
 
-        if (string.IsNullOrWhiteSpace(Email))
-        {
-            errors ??= [];
-            errors["email"] = ["Email is required."];
-        }
-        else if (Email is not { Length: < 320 })
-        {
-            errors ??= [];
-            errors["email"] = ["Email is too long. It must be less than 320 characters."];
-        }
-        else if (!Extensions.BasicEmailRegex().IsMatch(Email))
-        {
-            errors ??= [];
-            errors["email"] = ["Email is invalid."];
-        }
+        if (string.IsNullOrWhiteSpace(Email)) errors.Add("email", "Email is required.");
+        if (Email is { Length: >= 320 }) errors.Add("email", "Email is too long. It must be less than 320 characters.");
+        if (Email is { } && !Extensions.BasicEmailRegex().IsMatch(Email)) errors.Add("email", "Email is invalid.");
 
-        return errors is not null;
+        validationErrors = errors.Collection;
+        return errors.Count > 0;
     }
 }

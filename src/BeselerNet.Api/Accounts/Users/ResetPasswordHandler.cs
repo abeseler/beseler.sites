@@ -27,7 +27,7 @@ internal sealed class ResetPasswordHandler
             return TypedResults.Problem(problem);
         }
 
-        if (request.HasValidationErrors(out var errors))
+        if (request.IsInvalid(out var errors))
         {
             return TypedResults.ValidationProblem(errors);
         }

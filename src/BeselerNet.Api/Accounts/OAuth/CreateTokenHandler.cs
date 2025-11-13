@@ -25,7 +25,7 @@ internal sealed class CreateTokenHandler
 
     public static async Task<IResult> Handle([AsParameters] Parameters parameters)
     {
-        if (parameters.Request.HasValidationErrors(out var errors))
+        if (parameters.Request.IsInvalid(out var errors))
         {
             return TypedResults.ValidationProblem(errors);
         }

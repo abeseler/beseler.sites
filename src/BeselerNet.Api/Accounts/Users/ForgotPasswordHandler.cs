@@ -15,7 +15,7 @@ internal sealed class ForgotPasswordHandler
 {
     public static IResult Handle(ForgotPasswordRequest request)
     {
-        if (request.HasValidationErrors(out var errors))
+        if (request.IsInvalid(out var errors))
         {
             return TypedResults.ValidationProblem(errors);
         }

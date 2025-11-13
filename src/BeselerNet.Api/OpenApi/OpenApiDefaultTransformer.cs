@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 namespace BeselerNet.Api.OpenApi;
 
@@ -32,8 +32,8 @@ internal sealed class OpenApiDefaultTransformer : IOpenApiDocumentTransformer
 
         if (!string.IsNullOrWhiteSpace(options.ServerUrl))
         {
-            document.Servers.Clear();
-            document.Servers.Add(new OpenApiServer { Url = options.ServerUrl });
+            document.Servers?.Clear();
+            document.Servers?.Add(new OpenApiServer { Url = options.ServerUrl });
         }
 
         return Task.CompletedTask;

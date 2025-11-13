@@ -8,7 +8,7 @@ internal static class RegisterUserHandler
 {
     public static async Task<IResult> Handle(RegisterUserRequest request, AccountDataSource accounts, PermissionDataSource permissionDataSource, IPasswordHasher<Account> passwordHasher, CancellationToken cancellationToken)
     {
-        if (request.HasValidationErrors(out var errors))
+        if (request.IsInvalid(out var errors))
         {
             return TypedResults.ValidationProblem(errors);
         }

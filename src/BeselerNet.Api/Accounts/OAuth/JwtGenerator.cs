@@ -13,7 +13,7 @@ internal sealed class JwtGenerator
     private readonly TokenValidationParameters _validationParameters;
     private readonly JsonWebTokenHandler _handler;
     private readonly JwtOptions _options;
-    private readonly long _expiresIn;
+    private readonly int _expiresIn;
 
     public JwtGenerator(TimeProvider timeProvider, IOptions<JwtOptions> options)
     {
@@ -111,7 +111,7 @@ internal sealed class JwtGenerator
         return new()
         {
             AccessToken = token,
-            ExpiresIn = (long)lifetime.TotalSeconds
+            ExpiresIn = (int)lifetime.TotalSeconds
         };
     }
 
@@ -133,7 +133,7 @@ internal sealed class JwtGenerator
 internal readonly struct TokenResult
 {
     public string AccessToken { get; init; }
-    public long ExpiresIn { get; init; }
+    public int ExpiresIn { get; init; }
     public string? RefreshToken { get; init; }
     public Guid? RefreshTokenId { get; init; }
     public DateTimeOffset? RefreshTokenExpires { get; init; }

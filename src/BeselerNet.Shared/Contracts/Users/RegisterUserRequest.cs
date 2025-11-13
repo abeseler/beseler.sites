@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using BeselerNet.Shared.Core;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BeselerNet.Shared.Contracts.Users;
 
@@ -11,46 +12,21 @@ public sealed partial record RegisterUserRequest
     [JsonPropertyName("family_name")]
     public string FamilyName { get; init; } = "";
 
-    public bool HasValidationErrors([NotNullWhen(true)] out Dictionary<string, string[]>? errors)
+    public bool IsInvalid([NotNullWhen(true)] out Dictionary<string, string[]>? validationErrors)
     {
-        errors = null;
+        var errors = new ErrorCollector();
 
-        if (string.IsNullOrWhiteSpace(Email))
-        {
-            errors ??= [];
-            errors["email"] = ["Email is required."];
-        }
-        else if (Email is not { Length: < 320 })
-        {
-            errors ??= [];
-            errors["email"] = ["Email is too long. It must be less than 320 characters."];
-        }
-        else if (!Extensions.BasicEmailRegex().IsMatch(Email))
-        {
-            errors ??= [];
-            errors["email"] = ["Email is invalid."];
-        }
-        if (string.IsNullOrWhiteSpace(Password))
-        {
-            errors ??= [];
-            errors["password"] = ["Password is required."];
-        }
-        else if (Password is not { Length: > 7 })
-        {
-            errors ??= [];
-            errors["password"] = ["Password is too short. It must be at least 8 characters."];
-        }
-        if (string.IsNullOrWhiteSpace(GivenName))
-        {
-            errors ??= [];
-            errors["given_name"] = ["Given name is required."];
-        }
-        if (string.IsNullOrWhiteSpace(FamilyName))
-        {
-            errors ??= [];
-            errors["family_name"] = ["Family name is required."];
-        }
+        if (string.IsNullOrWhiteSpace(Email)) errors.Add("email", "Email is required.");
+        else if (Email.Length >= 320) errors.Add("email", "Email is too long. It must be less than 320 characters.");
+        else if (!Extensions.BasicEmailRegex().IsMatch(Email)) errors.Add("email", "Email is invalid.");
 
-        return errors is not null;
+        if (string.IsNullOrWhiteSpace(Password)) errors.Add("password", "Password is required.");
+        else if (Password.Length <= 7) errors.Add("password", "Password is too short. It must be at least 8 characters.");
+
+        if (string.IsNullOrWhiteSpace(GivenName)) errors.Add("given_name", "Given name is required.");
+        if (string.IsNullOrWhiteSpace(FamilyName)) errors.Add("family_name", "Family name is required.");
+
+        validationErrors = errors.Collection;
+        return errors.Count > 0;
     }
 }
