@@ -1,4 +1,5 @@
-﻿using BeselerNet.Api.Communications.Emails;
+﻿using Beseler.ServiceDefaults;
+using BeselerNet.Api.Communications.Emails;
 using BeselerNet.Shared.Contracts;
 using static Microsoft.AspNetCore.Http.StatusCodes;
 using static System.Net.Mime.MediaTypeNames;
@@ -25,7 +26,7 @@ internal static class WebhookEndpoints
             .Produces<GenericMessageResponse>(Status200OK)
             .Produces(Status401Unauthorized);
 
-        v1.MapMethods("/azure-events", ["OPTIONS"], AzureEmailEventsWebhook.ValidationHandshake)
+        v1.MapOptions("/azure-events", AzureEmailEventsWebhook.ValidationHandshake)
             .WithName("ValidateAzureEventsWebhook")
             .WithDescription("Validation handshake for Azure email events webhook.")
             .Produces(Status200OK);
