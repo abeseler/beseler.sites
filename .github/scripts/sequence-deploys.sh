@@ -5,6 +5,7 @@ set -euo pipefail
 # Each line is: <component> <x.y.z>
 #
 # Requires: docker (logged in), gh (GH_TOKEN that can dispatch beseler-private).
+# Does not use `gh run watch` — fine-grained PATs cannot read Checks annotations.
 
 REPO="${DEPLOY_REPO:-abeseler/beseler-private}"
 WORKFLOW="${DEPLOY_WORKFLOW:-deploy.yml}"
@@ -24,6 +25,15 @@ do
     TAGS["$name"]="$tag"
 done < "$RELEASES_FILE"
 
+echo "Release order:"
+for name in "${ORDER[@]}"
+do
+    if [[ -n "${TAGS[$name]:-}" ]]
+    then
+        echo "  $name ${TAGS[$name]}"
+    fi
+done
+
 wait_for_image() {
     local image="$1"
     echo "Waiting for $image"
@@ -32,13 +42,47 @@ wait_for_image() {
     do
         if docker buildx imagetools inspect "$image" >/dev/null 2>&1
         then
-            echo "Found $image"
+            echo "  ready"
             return 0
         fi
-        echo "Not on Hub yet ($i/60), retrying in 10s"
+        if (( i == 1 || i % 6 == 0 ))
+        then
+            echo "  not on Hub yet (${i}/60)"
+        fi
         sleep 10
     done
     echo "Timed out waiting for $image"
+    return 1
+}
+
+wait_for_run() {
+    local run_id="$1"
+    local title="$2"
+    echo "Waiting for $title (run $run_id)"
+    local i status conclusion
+    for i in $(seq 1 90)
+    do
+        status=$(gh run view "$run_id" --repo "$REPO" --json status --jq .status)
+        if [[ "$status" == "completed" ]]
+        then
+            conclusion=$(gh run view "$run_id" --repo "$REPO" --json conclusion --jq .conclusion)
+            if [[ "$conclusion" == "success" ]]
+            then
+                echo "  $title succeeded"
+                return 0
+            fi
+            echo "  $title failed ($conclusion)"
+            echo "  https://github.com/${REPO}/actions/runs/${run_id}"
+            return 1
+        fi
+        if (( i == 1 || i % 6 == 0 ))
+        then
+            echo "  $status (${i}/90)"
+        fi
+        sleep 5
+    done
+    echo "Timed out waiting for $title"
+    echo "  https://github.com/${REPO}/actions/runs/${run_id}"
     return 1
 }
 
@@ -48,6 +92,8 @@ deploy_one() {
     local image="abeseler/${name}:${tag}"
     local title="Deploy ${name}:${tag}"
 
+    echo
+    echo "==> $title"
     wait_for_image "$image"
 
     echo "Dispatching $title"
@@ -76,8 +122,7 @@ deploy_one() {
         exit 1
     fi
 
-    echo "Watching $title (run $run_id)"
-    gh run watch "$run_id" --repo "$REPO" --exit-status
+    wait_for_run "$run_id" "$title"
 }
 
 for name in "${ORDER[@]}"
@@ -88,3 +133,6 @@ do
         deploy_one "$name" "$tag"
     fi
 done
+
+echo
+echo "All sequenced deploys finished."
