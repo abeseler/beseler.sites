@@ -61,20 +61,6 @@ tag_component() {
     local desired="$component-v$project_version"
     echo "[$component] Project VERSION: $project_version"
 
-    if git rev-parse -q --verify "refs/tags/$desired" >/dev/null
-    then
-        local tagged_commit head_commit
-        tagged_commit=$(git rev-list -n 1 "$desired")
-        head_commit=$(git rev-parse HEAD)
-        if [ "$tagged_commit" = "$head_commit" ]
-        then
-            echo "[$component] Commit is already tagged: $desired"
-            return 0
-        fi
-        echo "[$component] Tag $desired already exists on a different commit"
-        exit 1
-    fi
-
     local tag="$component-v0.0.0"
     if git describe --abbrev=0 --tags --match "$component-v*" >/dev/null 2>&1
     then
@@ -101,6 +87,12 @@ tag_component() {
     if [ "$lowest" = "$project_version" ]
     then
         echo "[$component] Project version $project_version is behind latest tag $tag"
+        exit 1
+    fi
+
+    if git rev-parse -q --verify "refs/tags/$desired" >/dev/null
+    then
+        echo "[$component] Tag $desired already exists; cannot reuse it for a new release"
         exit 1
     fi
 
