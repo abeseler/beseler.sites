@@ -1,8 +1,4 @@
-/* Migration
-{
-    "title": "00:createTable"
-}
-*/
+/* Migration { "title": "00:createTable" } */
 CREATE TABLE communication (
     communication_id UUID NOT NULL,
     provider TEXT NOT NULL,
@@ -20,16 +16,8 @@ CREATE TABLE communication (
     CONSTRAINT chk_communication_type CHECK (type IN ('Email'))
 );
 
-/* Migration
-{
-    "title": "01:createIndex"
-}
-*/
+/* Migration { "title": "01:createIndex" } */
 CREATE INDEX idx_communication_account_id ON communication (account_id, created_at DESC);
 
-/* Migration
-{
-    "title": "02:createIndex"
-}
-*/
+/* Migration { "title": "02:createIndex" } */
 CREATE INDEX idx_communication_external_id ON communication (external_id);

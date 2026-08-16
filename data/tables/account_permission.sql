@@ -1,8 +1,4 @@
-/* Migration
-{
-    "title": "00:createTable"
-}
-*/
+/* Migration { "title": "00:createTable" } */
 CREATE TABLE account_permission (
     account_id INT NOT NULL,
     permission_id INT NOT NULL,

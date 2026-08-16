@@ -1,8 +1,4 @@
-/* Migration
-{
-    "title": "00:createTable"
-}
-*/
+/* Migration { "title": "00:createTable" } */
 CREATE TABLE event_log (
     event_id UUID NOT NULL,
     event_type TEXT NOT NULL,
@@ -11,9 +7,5 @@ CREATE TABLE event_log (
     CONSTRAINT pk_event_log PRIMARY KEY (event_id)
 );
 
-/* Migration
-{
-    "title": "01:createIndex"
-}
-*/
+/* Migration { "title": "01:createIndex" } */
 CREATE INDEX idx_event_log_created_at ON event_log (occurred_at);

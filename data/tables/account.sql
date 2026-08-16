@@ -1,8 +1,13 @@
-/* Migration
-{
-    "title": "00:createTable"
-}
-*/
+/* Migration { "title": "00:createSequence" } */
+CREATE SEQUENCE account_id_seq
+    AS INT
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    NO CYCLE;
+
+/* Migration { "title": "00:createTable" } */
 CREATE TABLE account (
     account_id INT NOT NULL DEFAULT (nextval('account_id_seq')),
     version BIGINT NOT NULL DEFAULT (0),

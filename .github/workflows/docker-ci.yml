@@ -1,0 +1,104 @@
+# Runs when tag-version.yml creates a component tag — not on every push to main.
+# Dispatching will build the selected tag from the current ref and push
+# to Docker Hub (x.y.z + latest).
+
+name: Docker CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Component tag, e.g. beseler-net-api-v1.0.0'
+        required: true
+        type: string
+  push:
+    tags:
+      - 'beseler-net-api-v*'
+      - 'beseler-net-web-v*'
+      - 'beseler-dev-web-v*'
+      - 'beseler-net-dbdeploy-v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Docker image and push to Hub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Parse tag
+        id: parse
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]
+          then
+              TAG="${{ inputs.tag }}"
+          else
+              TAG="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ ! "$TAG" =~ ^([a-z0-9-]+)-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]
+          then
+              echo "Tag must look like beseler-net-api-v1.0.0, got: $TAG"
+              exit 1
+          fi
+
+          COMPONENT="${BASH_REMATCH[1]}"
+          VERSION="${BASH_REMATCH[2]}"
+
+          case "$COMPONENT" in
+            beseler-net-api)
+              echo "dockerfile=src/beseler-net-api.Dockerfile" >> "$GITHUB_OUTPUT"
+              echo "context=./src" >> "$GITHUB_OUTPUT"
+              ;;
+            beseler-net-web)
+              echo "dockerfile=src/beseler-net-web.Dockerfile" >> "$GITHUB_OUTPUT"
+              echo "context=./src" >> "$GITHUB_OUTPUT"
+              ;;
+            beseler-dev-web)
+              echo "dockerfile=src/beseler-dev-web.Dockerfile" >> "$GITHUB_OUTPUT"
+              echo "context=./src" >> "$GITHUB_OUTPUT"
+              ;;
+            beseler-net-dbdeploy)
+              echo "dockerfile=src/beseler-net-dbdeploy.Dockerfile" >> "$GITHUB_OUTPUT"
+              echo "context=./data" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unknown component: $COMPONENT"
+              exit 1
+              ;;
+          esac
+
+          echo "component=$COMPONENT" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Parsed $COMPONENT $VERSION"
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: abeseler/${{ steps.parse.outputs.component }}
+          tags: |
+            type=raw,value=${{ steps.parse.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ steps.parse.outputs.context }}
+          file: ${{ steps.parse.outputs.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # Deploys are not dispatched here. tag-version.yml sequences
+      # db → api → web → dev-web after these images land on Hub.

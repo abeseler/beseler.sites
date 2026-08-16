@@ -1,0 +1,121 @@
+# Push to main → build + validate → tag if a version bumped.
+# Images are built on those tags (docker-ci.yml). Deploys are sequenced here:
+# db → api → web → dev-web, after each image appears on Hub.
+# Requires secrets.VERSION_TAGGING_TOKEN (a PAT) so the tag push can
+# trigger Docker CI. GITHUB_TOKEN will not start another workflow.
+# Requires secrets.DEPLOY_DISPATCH_TOKEN to call beseler-private's Deploy workflow.
+# Dispatching with apply=false only prints versions.
+
+name: Tag version
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Create and push tags (otherwise only print versions)'
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+      - ".editorconfig"
+      - ".gitattributes"
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    name: Build, validate, and tag
+    runs-on: ubuntu-latest
+    outputs:
+      tagged: ${{ steps.release.outputs.tagged }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.VERSION_TAGGING_TOKEN }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.x'
+
+      # Stand-in for `dotnet test` until a test project exists. Swap this step for tests then.
+      - name: Build
+        run: dotnet build src/Beseler.slnx -c Release
+
+      - name: Validate migrations
+        run: docker run --rm -v "$GITHUB_WORKSPACE/data:/app/Migrations" abeseler/ratchet:6.0.1 validate
+
+      - name: Show versions
+        if: github.event_name == 'workflow_dispatch' && !inputs.apply
+        shell: bash
+        run: |
+          echo "beseler-net-api      $(sed -n 's/.*<Version>\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)<\/Version>.*/\1/p' src/BeselerNet.Api/BeselerNet.Api.csproj | head -n 1)"
+          echo "beseler-net-web      $(sed -n 's/.*<Version>\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)<\/Version>.*/\1/p' src/BeselerNet.Web/BeselerNet.Web.csproj | head -n 1)"
+          echo "beseler-dev-web      $(sed -n 's/.*<Version>\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\)<\/Version>.*/\1/p' src/BeselerDev.Web/BeselerDev.Web.csproj | head -n 1)"
+          echo "beseler-net-dbdeploy $(grep -oE '^[0-9]+\.[0-9]+\.[0-9]+$' data/VERSION | head -n 1)"
+          echo
+          echo "Existing component tags:"
+          git tag -l 'beseler-*-v*' || true
+
+      - name: git
+        if: github.event_name != 'workflow_dispatch' || inputs.apply
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+      - name: Get version, update and tag
+        id: release
+        if: github.event_name != 'workflow_dispatch' || inputs.apply
+        env:
+          TAGGED_RELEASES_FILE: ${{ github.workspace }}/tagged-releases.txt
+        run: |
+          : > "$TAGGED_RELEASES_FILE"
+          "$GITHUB_WORKSPACE/version.sh"
+          if [[ -s "$TAGGED_RELEASES_FILE" ]]
+          then
+              echo "tagged=true" >> "$GITHUB_OUTPUT"
+              echo "Tagged releases:"
+              cat "$TAGGED_RELEASES_FILE"
+          else
+              echo "tagged=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+      - name: Upload tagged releases
+        if: steps.release.outputs.tagged == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tagged-releases
+          path: tagged-releases.txt
+
+  sequence-deploys:
+    name: Deploy in order
+    needs: tag
+    if: needs.tag.outputs.tagged == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Download tagged releases
+        uses: actions/download-artifact@v4
+        with:
+          name: tagged-releases
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Wait for images and deploy
+        env:
+          GH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
+        run: bash .github/scripts/sequence-deploys.sh tagged-releases.txt

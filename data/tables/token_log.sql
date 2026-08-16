@@ -1,8 +1,4 @@
-/* Migration
-{
-    "title": "00:createTable"
-}
-*/
+/* Migration { "title": "00:createTable" } */
 CREATE TABLE token_log (
     jti UUID NOT NULL,
     account_id INT NOT NULL,
@@ -13,10 +9,6 @@ CREATE TABLE token_log (
     CONSTRAINT pk_token_log PRIMARY KEY (jti)
 );
 
-/* Migration
-{
-    "title": "01:createIndexes"
-}
-*/
+/* Migration { "title": "01:createIndexes" } */
 CREATE INDEX idx_token_log_account_id_created_at ON token_log (account_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_token_log_replaced_by ON token_log (replaced_by) WHERE replaced_by IS NOT NULL;

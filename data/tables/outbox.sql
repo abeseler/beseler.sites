@@ -1,8 +1,4 @@
-/* Migration
-{
-    "title": "00:createTable"
-}
-*/
+/* Migration { "title": "00:createTable" } */
 CREATE TABLE outbox (
     message_id UUID NOT NULL,
     message_type TEXT NOT NULL,
@@ -12,9 +8,5 @@ CREATE TABLE outbox (
     CONSTRAINT pk_outbox PRIMARY KEY (message_id)
 );
 
-/* Migration
-{
-    "title": "01:createIndex"
-}
-*/
+/* Migration { "title": "01:createIndex" } */
 CREATE INDEX idx_outbox_lookup ON outbox (invisible_until) WHERE receives_remaining > 0;

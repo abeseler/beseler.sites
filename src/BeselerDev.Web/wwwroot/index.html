@@ -1,332 +1,701 @@
-﻿<!DOCTYPE html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Adam Beseler Resume - Software Engineer">
+    <meta name="description" content="Adam Beseler is a self-taught software engineer in Montgomery, Texas. Senior Software Engineer at Wine.com, building .NET services and full-stack systems.">
     <meta name="author" content="Adam Beseler">
-    <title>Beseler Resume</title>
+    <meta name="theme-color" content="#0e1112">
+    <title>Adam Beseler — Software Engineer</title>
+    <link rel="canonical" href="https://beseler.dev/">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="apple-touch-icon" href="/favicon.png">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://beseler.dev/">
+    <meta property="og:title" content="Adam Beseler — Software Engineer">
+    <meta property="og:description" content="Self-taught software engineer. Senior Software Engineer at Wine.com. .NET, cloud, and full-stack systems.">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:site" content="@AdamBeseler">
+    <meta name="twitter:title" content="Adam Beseler — Software Engineer">
+    <meta name="twitter:description" content="Self-taught software engineer. Senior Software Engineer at Wine.com. .NET, cloud, and full-stack systems.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Adam Beseler",
+        "url": "https://beseler.dev",
+        "jobTitle": "Senior Software Engineer",
+        "worksFor": { "@type": "Organization", "name": "Wine.com" },
+        "address": { "@type": "PostalAddress", "addressLocality": "Montgomery", "addressRegion": "TX", "addressCountry": "US" },
+        "sameAs": [
+            "https://github.com/abeseler",
+            "https://www.linkedin.com/in/adam-beseler-2620671b6",
+            "https://x.com/AdamBeseler"
+        ]
+    }
+    </script>
+
     <style>
         :root {
-            --color-primary: #121212;
-            --color-light: #181a1b;
-            --color-foreground: #e0e0e0;
-            --color-accent: #00bcd4;
-            --color-highlight: #39ff14;
-            --color-orange: #ff9800;
+            --bg: #0e1112;
+            --surface: #161a1c;
+            --surface-2: #1c2224;
+            --text: #d8d6d0;
+            --muted: #8b9398;
+            --accent: #2ec4d6;
+            --accent-dim: rgba(46, 196, 214, 0.14);
+            --warn: #ff9f1c;
+            --line: #2a3336;
+            --shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+            --sidebar: 240px;
+            --content-max: 46rem;
+            --radius: 10px;
         }
 
-        body {
-            font-family: 'Consolas', 'Menlo', 'Monaco', 'Liberation Mono', 'Courier New', monospace;
-            margin: 0;
-            padding: 0;
-            background-color: var(--color-primary);
-            color: var(--color-foreground);
-        }
+        *, *::before, *::after { box-sizing: border-box; }
 
         html {
             scroll-behavior: smooth;
+            scroll-padding-top: 1.5rem;
         }
 
-        section {
-            padding: 0;
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "IBM Plex Mono", ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+            font-size: 16px;
+            line-height: 1.65;
+            background:
+                radial-gradient(1200px 600px at 80% -10%, rgba(46, 196, 214, 0.06), transparent 55%),
+                var(--bg);
+            color: var(--text);
         }
+
+        a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+        a:hover { color: var(--warn); }
+
+        :focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 3px;
+        }
+
+        .skip {
+            position: absolute;
+            left: 1rem;
+            top: -3rem;
+            z-index: 100;
+            padding: 0.5rem 0.75rem;
+            background: var(--surface);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
+
+        .skip:focus { top: 1rem; }
 
         .sidebar {
-            width: 180px;
             position: fixed;
-            top: 0;
-            left: 0;
-            height: 100%;
-            background-color: var(--color-light);
-            padding: 30px;
+            inset: 0 auto 0 0;
+            width: var(--sidebar);
+            padding: 2rem 1.5rem;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            border-right: 2px solid var(--color-accent);
+            gap: 2rem;
+            background: var(--surface);
+            border-right: 1px solid var(--line);
         }
 
-            .sidebar ul {
-                list-style-type: none;
-                padding: 0;
-            }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            color: inherit;
+            text-decoration: none;
+        }
 
-                .sidebar ul li {
-                    position: relative;
-                    overflow: visible;
-                    margin: 18px 0;
-                }
+        .brand img {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent);
+        }
 
-                    .sidebar ul li a {
-                        text-decoration: none;
-                        color: var(--color-accent);
-                        font-weight: bold;
-                        font-size: 1.15em;
-                        transition: color 0.18s cubic-bezier(.4,0,.2,1), transform 0.18s cubic-bezier(.4,0,.2,1);
-                        will-change: transform;
-                        display: inline-block;
-                        transform-origin: left center;
-                    }
+        .brand-text { display: flex; flex-direction: column; line-height: 1.25; }
+        .brand-name { color: var(--accent); font-weight: 600; font-size: 0.95rem; }
+        .brand-role { color: var(--muted); font-size: 0.75rem; }
 
-                        .sidebar ul li a:hover {
-                            color: #ff9800;
-                            transform: scale(1.35);
-                            background: rgba(30,30,30,0.95);
-                            z-index: 2;
-                        }
+        .sidebar nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
 
-                        .sidebar ul li a.active {
-                            color: #ff9800;
-                        }
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.4rem 0.25rem;
+            color: var(--muted);
+            font-weight: 600;
+            font-size: 0.82rem;
+            letter-spacing: 0.08em;
+            text-decoration: none;
+            text-transform: uppercase;
+        }
+
+        .sidebar nav a::before {
+            content: "";
+            width: 0.55rem;
+            height: 1px;
+            background: currentColor;
+            transition: width 0.18s ease, background-color 0.18s ease;
+        }
+
+        .sidebar nav a:hover,
+        .sidebar nav a[aria-current="true"] {
+            color: var(--warn);
+        }
+
+        .sidebar nav a[aria-current="true"]::before {
+            width: 1.35rem;
+            background: var(--warn);
+        }
+
+        .social {
+            margin-top: auto;
+            display: flex;
+            gap: 0.65rem;
+        }
+
+        .social a {
+            display: grid;
+            place-items: center;
+            width: 2.25rem;
+            height: 2.25rem;
+            color: var(--accent);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--surface-2);
+            text-decoration: none;
+        }
+
+        .social a:hover {
+            color: var(--warn);
+            border-color: var(--warn);
+        }
+
+        .social svg { width: 1.05rem; height: 1.05rem; fill: currentColor; }
 
         .content {
-            margin-left: 240px;
-            padding-left: 80px;
-            padding-right: 80px;
+            margin-left: var(--sidebar);
+            padding: 4.5rem 2.5rem 5rem;
         }
 
-            .content section {
-                min-height: 100vh;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: stretch;
-                overflow: visible;
-            }
+        .content-inner { max-width: var(--content-max); }
 
-            .content article {
-                margin-bottom: 20px;
-                min-height: 40vh;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                background: rgba(18,18,18,0.92);
-                border-radius: 8px;
-                padding: 24px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-            }
+        section { padding: 2.75rem 0; }
+        section + section { border-top: 1px solid var(--line); }
 
-        h1, h2, h3, h4 {
-            color: var(--color-accent);
-            font-weight: bold;
-            margin-bottom: 0.5em;
+        .kicker {
+            margin: 0 0 0.75rem;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .kicker .ok { color: var(--accent); }
+
+        h1, h2, h3 {
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--accent);
         }
 
         h1 {
-            font-size: 2.5em;
+            margin: 0 0 0.6rem;
+            font-size: clamp(2rem, 5vw, 3rem);
+            letter-spacing: 0.02em;
         }
 
-        h2 {
-            font-size: 2em;
-        }
-
-        h3 {
-            font-size: 1.3em;
-        }
-
-        h4 {
-            font-size: 1.1em;
-        }
-
-        p, li {
-            font-size: 1em;
-        }
-
-        hr {
-            border: none;
-            border-top: 1px solid var(--color-accent);
-            margin: 40px 0;
-        }
-
-        ul, li {
-            color: var(--color-foreground);
-        }
-
-            ul li {
-                margin-bottom: 0.6em;
-            }
-
-        h1::before, h2::before, h3::before {
-            content: "$ ";
-            color: var(--color-accent);
-        }
-
-        @keyframes blink {
-            0%, 50% {
-                opacity: 1;
-            }
-
-            51%, 100% {
-                opacity: 0;
-            }
-        }
+        h1 .dim { color: var(--text); }
 
         h1::after {
             content: "_";
-            color: var(--color-accent);
-            animation: blink 1s infinite;
-            margin-left: 4px;
+            margin-left: 0.15em;
+            color: var(--accent);
+            animation: blink 1.05s step-end infinite;
         }
 
-        ::-webkit-scrollbar {
-            width: 8px;
-            background: var(--color-primary);
+        @keyframes blink {
+            50% { opacity: 0; }
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: var(--color-dark);
-            border-radius: 4px;
+        h2 {
+            margin: 0 0 1.5rem;
+            font-size: 1.15rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
         }
 
-        .exp-header {
+        h2::before {
+            content: "$ ";
+            color: var(--accent);
+        }
+
+        h3 {
+            margin: 0;
+            font-size: 1.05rem;
+            color: var(--text);
+        }
+
+        .lede {
+            margin: 0 0 1.25rem;
+            font-size: 1.02rem;
+            max-width: 42rem;
+        }
+
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 1rem;
+            margin: 0 0 1.5rem;
+            color: var(--muted);
+            font-size: 0.88rem;
+        }
+
+        .meta span { display: inline-flex; align-items: center; gap: 0.4rem; }
+        .meta span::before { content: "›"; color: var(--accent); }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.55rem 0.85rem;
+            border-radius: 8px;
+            border: 1px solid var(--accent);
+            background: var(--accent-dim);
+            color: var(--accent);
+            font: inherit;
+            font-size: 0.86rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            color: var(--bg);
+            background: var(--warn);
+            border-color: var(--warn);
+        }
+
+        .btn.ghost {
+            background: transparent;
+            border-color: var(--line);
+            color: var(--text);
+        }
+
+        .btn.ghost:hover {
+            color: var(--warn);
+            background: transparent;
+            border-color: var(--warn);
+        }
+
+        .job, .project {
+            padding: 1.15rem 1.2rem 1.05rem;
+            margin-bottom: 1rem;
+            background: rgba(18, 22, 24, 0.72);
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--accent);
+            border-radius: var(--radius);
+        }
+
+        .job-head, .project-head {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            gap: 1rem;
+            margin-bottom: 0.7rem;
         }
 
-        .exp-title {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
+        .company {
+            margin: 0.2rem 0 0;
+            color: var(--accent);
+            font-size: 0.92rem;
+            font-weight: 500;
         }
 
-            .exp-title h3 {
-                margin-bottom: 0.2em;
-            }
-
-            .exp-title h4 {
-                margin-top: 0;
-            }
-
-        .exp-dates {
-            color: #ff9800;
+        .dates {
+            color: var(--warn);
             font-style: italic;
-            font-size: 1em;
+            font-size: 0.86rem;
+            white-space: nowrap;
             text-align: right;
-            min-width: 120px;
-            margin-top: 0;
         }
 
-        .sec-content {
-            padding: 40px 0;
+        .job ul, .project ul {
+            margin: 0;
+            padding-left: 1.15rem;
+        }
+
+        .job li, .project li, .lede {
+            color: var(--text);
+        }
+
+        .job li + li, .project li + li { margin-top: 0.4rem; }
+
+        .project p {
+            margin: 0;
+            color: var(--text);
+        }
+
+        .project-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.9rem;
+            margin-top: 0.85rem;
+            font-size: 0.86rem;
+        }
+
+        .skill-group { margin-bottom: 1.25rem; }
+        .skill-group:last-child { margin-bottom: 0; }
+
+        .skill-group h3 {
+            margin-bottom: 0.65rem;
+            color: var(--accent);
+            font-size: 0.82rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .chips li {
+            padding: 0.28rem 0.62rem;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--surface-2);
+            color: var(--text);
+            font-size: 0.84rem;
+        }
+
+        footer {
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 820px) {
+            html { scroll-padding-top: 5.25rem; }
+
+            .sidebar {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+                width: 100%;
+                height: auto;
+                inset: auto;
+                flex-direction: row;
+                align-items: center;
+                gap: 1rem;
+                padding: 0.75rem 1rem;
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+            }
+
+            .brand-role { display: none; }
+
+            .sidebar nav { flex: 1; overflow-x: auto; }
+
+            .sidebar nav ul {
+                flex-direction: row;
+                gap: 0.15rem;
+            }
+
+            .sidebar nav a {
+                padding: 0.35rem 0.45rem;
+                letter-spacing: 0.04em;
+                font-size: 0.72rem;
+            }
+
+            .sidebar nav a::before { display: none; }
+
+            .social { margin-top: 0; }
+            .social a { width: 2rem; height: 2rem; }
+
+            .content {
+                margin-left: 0;
+                padding: 1.75rem 1.1rem 3rem;
+            }
+
+            .job-head, .project-head {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .dates { text-align: left; white-space: normal; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            h1::after { animation: none; }
+            .sidebar nav a::before { transition: none; }
+        }
+
+        @media print {
+            :root { --bg: #fff; --text: #111; --muted: #333; --accent: #000; --warn: #000; --line: #ccc; }
+
+            body { background: #fff; color: #111; font-size: 11pt; }
+            .skip, .sidebar, .actions, .social, h1::after { display: none !important; }
+            .content { margin: 0; padding: 0; }
+            .job, .project { break-inside: avoid; box-shadow: none; background: none; }
+            a { color: inherit; text-decoration: none; }
+            a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.85em; color: #333; }
         }
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <ul>
-            <li><a href="#about">ABOUT</a></li>
-            <li><a href="#experience">EXPERIENCE</a></li>
-            <li><a href="#skills">SKILLS</a></li>
-        </ul>
-    </div>
-    <main class="content">
-        <section id="about">
-            <div class="sec-content">
-                <h1>ADAM <span style="color: var(--color-accent);">BESELER</span></h1>
-                <p>Self-taught software engineer with a passion for designing, developing, and deploying scalable applications. I leverage problem-solving skills and an understanding of full-stack development to build innovate projects and well as continuously learning and adapting to new technologies.</p>
-            </div>
-        </section>
-        <hr />
-        <section id="experience">
-            <div class="sec-content">
-                <h2>EXPERIENCE</h2>
-                <article>
-                    <header class="exp-header">
-                        <div class="exp-title">
+    <a class="skip" href="#about">Skip to content</a>
+
+    <aside class="sidebar">
+        <a class="brand" href="#about">
+            <img src="/avatar.jpg" width="48" height="48" alt="">
+            <span class="brand-text">
+                <span class="brand-name">beseler.dev</span>
+                <span class="brand-role">Software Engineer</span>
+            </span>
+        </a>
+        <nav aria-label="Page sections">
+            <ul>
+                <li><a href="#about">About</a></li>
+                <li><a href="#experience">Experience</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#skills">Skills</a></li>
+            </ul>
+        </nav>
+        <div class="social">
+            <a href="https://github.com/abeseler" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.52 2.87 8.35 6.84 9.71.5.1.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.36 1.12 2.94.86.09-.67.35-1.12.63-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.75 1.05A9.3 9.3 0 0 1 12 6.84c.85 0 1.7.12 2.5.34 1.9-1.32 2.74-1.05 2.74-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.8-4.58 5.06.36.32.68.95.68 1.92 0 1.38-.01 2.49-.01 2.83 0 .27.18.6.69.49A10.04 10.04 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z"/></svg>
+            </a>
+            <a href="https://www.linkedin.com/in/adam-beseler-2620671b6" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.59 0 4.26 2.36 4.26 5.44v6.3ZM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12ZM7.12 20.45H3.56V9h3.56v11.45ZM22.23 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.46c.98 0 1.77-.77 1.77-1.73V1.73C24 .77 23.21 0 22.23 0Z"/></svg>
+            </a>
+            <a href="https://x.com/AdamBeseler" target="_blank" rel="noopener noreferrer" aria-label="X">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.24 2H21l-6.51 7.44L22 22h-6.17l-4.82-6.3L5.7 22H3l6.97-7.96L2 2h6.32l4.36 5.77L18.24 2Zm-1.08 18.07h1.68L6.92 3.83H5.12l12.04 16.24Z"/></svg>
+            </a>
+        </div>
+    </aside>
+
+    <main class="content" id="main">
+        <div class="content-inner">
+            <section id="about" aria-labelledby="name">
+                <p class="kicker"><span class="ok">beseler.dev</span> ~/resume</p>
+                <h1 id="name"><span class="dim">ADAM</span> BESELER</h1>
+                <p class="meta">
+                    <span>Senior Software Engineer</span>
+                    <span>Wine.com</span>
+                    <span>Montgomery, TX</span>
+                </p>
+                <p class="lede">Self-taught software engineer focused on designing, building, and shipping scalable applications. I work across the stack, mostly in .NET, and I still think like someone who has to keep systems running after they go live.</p>
+                <p class="lede">I came up through restaurant operations and warehouse software support before moving into engineering. That path left me with a bias toward practical systems, clear ownership, and learning whatever the next problem requires.</p>
+                <div class="actions">
+                    <a class="btn" href="https://www.linkedin.com/in/adam-beseler-2620671b6" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+                    <a class="btn ghost" href="https://github.com/abeseler" target="_blank" rel="noopener noreferrer">GitHub</a>
+                </div>
+            </section>
+
+            <section id="experience" aria-labelledby="experience-title">
+                <h2 id="experience-title">Experience</h2>
+
+                <article class="job">
+                    <header class="job-head">
+                        <div>
                             <h3>Senior Software Engineer</h3>
-                            <h4>Wine.com</h4>
+                            <p class="company">Wine.com</p>
                         </div>
-                        <div class="exp-dates">May 2021 - Present</div>
+                        <p class="dates"><time datetime="2021-05">May 2021</time> — Present</p>
                     </header>
                     <ul>
-                        <li>Maintain backend services and applications: fixing legacy bugs, adding features to existing services and building new ones when required to solve changing business requirements.</li>
+                        <li>Build and maintain backend services and applications: fix issues in existing systems, add features, and stand up new services when the business needs something that isn't there yet.</li>
                     </ul>
                 </article>
-                <article>
-                    <header class="exp-header">
-                        <div class="exp-title">
-                            <h3>Support Analyst & WMS Administrator</h3>
-                            <h4>Körber Supply Chain Solutions</h4>
+
+                <article class="job">
+                    <header class="job-head">
+                        <div>
+                            <h3>Support Analyst &amp; WMS Administrator</h3>
+                            <p class="company">Körber Supply Chain Solutions</p>
                         </div>
-                        <div class="exp-dates">June 2019 - May 2021</div>
+                        <p class="dates"><time datetime="2019-06">June 2019</time> — <time datetime="2021-05">May 2021</time></p>
                     </header>
                     <ul>
                         <li>Provided technical support for the Warehouse Advantage application suite.</li>
-                        <li>Worked with companies to maintain their software, performing version upgrades and troubleshooting issues in their customized implementations.</li>
-                        <li>Designed, built and rolled out new process workflows to meet operational requirements and standards.</li>
+                        <li>Worked with companies to keep their software current — version upgrades, troubleshooting, and support for customized implementations.</li>
+                        <li>Designed, built, and rolled out process workflows to meet operational requirements.</li>
                     </ul>
                 </article>
-                <article>
-                    <header class="exp-header">
-                        <div class="exp-title">
+
+                <article class="job">
+                    <header class="job-head">
+                        <div>
                             <h3>Operations Technology Person, Level 3</h3>
-                            <h4>Santoro Org, McDonald's Franchise</h4>
+                            <p class="company">Santoro Org, McDonald's Franchise</p>
                         </div>
-                        <div class="exp-dates">September 2011 - June 2019</div>
+                        <p class="dates"><time datetime="2011-09">September 2011</time> — <time datetime="2019-06">June 2019</time></p>
                     </header>
                     <ul>
-                        <li>Communicate, repair and replace, and manage the technology for the organization.</li>
-                        <li>Act as a single point of contact when pushing new initiatives, and provide staff with training and support, both during and after completion.</li>
+                        <li>Owned technology for the organization: communicate, repair, replace, and manage systems.</li>
+                        <li>Acted as the point of contact for new initiatives and trained staff during and after rollout.</li>
                     </ul>
                 </article>
-                <article>
-                    <header class="exp-header">
-                        <div class="exp-title">
+
+                <article class="job">
+                    <header class="job-head">
+                        <div>
                             <h3>General Manager</h3>
-                            <h4>McDonald's</h4>
+                            <p class="company">McDonald's</p>
                         </div>
-                        <div class="exp-dates">September 2000 - June 2019</div>
+                        <p class="dates"><time datetime="2000-09">September 2000</time> — <time datetime="2019-06">June 2019</time></p>
                     </header>
                     <ul>
-                        <li>Manage all aspects of restaurant operations.</li>
-                        <li>Hire and retain quality employees. Provide training and development opportunities to enhance their skills.</li>
-                        <li>Identify opportunities to increase profitability or ease of service and provide solutions to achieve them.</li>
+                        <li>Managed all aspects of restaurant operations.</li>
+                        <li>Hired and retained people, then trained and developed them.</li>
+                        <li>Found ways to improve profitability or ease of service and put those changes in place.</li>
                     </ul>
                 </article>
-            </div>
-        </section>
-        <hr />
-        <section id="skills">
-            <div class="sec-content">
-                <h2>SKILLS</h2>
-                <h3>Languages</h3>
-                <ul>
-                    <li>C#</li>
-                    <li>SQL</li>
-                    <li>HTML</li>
-                    <li>CSS</li>
-                    <li>Javascript</li>
-                </ul>
-                <h3>Technologies</h3>
-                <ul>
-                    <li>.NET</li>
-                    <li>Docker</li>
-                    <li>Kubernetes</li>
-                    <li>Microsoft SqlServer</li>
-                    <li>PostgreSQL</li>
-                    <li>Redis</li>
-                </ul>
-                <h3>Cloud Providers</h3>
-                <ul>
-                    <li>AWS</li>
-                    <li>Azure</li>
-                </ul>
-            </div>
-        </section>
+            </section>
+
+            <section id="projects" aria-labelledby="projects-title">
+                <h2 id="projects-title">Projects</h2>
+
+                <article class="project">
+                    <header class="project-head">
+                        <div>
+                            <h3>BeselerNet</h3>
+                            <p class="company">Personal .NET platform</p>
+                        </div>
+                    </header>
+                    <p>An Aspire-hosted API and Blazor app I use to explore production-shaped problems: accounts, JWT/OAuth, email verification, PostgreSQL, Redis, a transactional outbox, and containerized deploy.</p>
+                    <div class="project-links">
+                        <a href="https://github.com/abeseler/beseler.sites" target="_blank" rel="noopener noreferrer">Source</a>
+                    </div>
+                </article>
+
+                <article class="project">
+                    <header class="project-head">
+                        <div>
+                            <h3>Ratchet</h3>
+                            <p class="company">Database migrations</p>
+                        </div>
+                    </header>
+                    <p>A small C# migration tool for PostgreSQL and SQL Server. I use it to apply schema changes for the apps in this repo.</p>
+                    <div class="project-links">
+                        <a href="https://github.com/abeseler/ratchet" target="_blank" rel="noopener noreferrer">github.com/abeseler/ratchet</a>
+                    </div>
+                </article>
+            </section>
+
+            <section id="skills" aria-labelledby="skills-title">
+                <h2 id="skills-title">Skills</h2>
+
+                <div class="skill-group">
+                    <h3>Languages</h3>
+                    <ul class="chips">
+                        <li>C#</li>
+                        <li>SQL</li>
+                        <li>HTML</li>
+                        <li>CSS</li>
+                        <li>JavaScript</li>
+                    </ul>
+                </div>
+
+                <div class="skill-group">
+                    <h3>Technologies</h3>
+                    <ul class="chips">
+                        <li>.NET</li>
+                        <li>Aspire</li>
+                        <li>Blazor</li>
+                        <li>Docker</li>
+                        <li>Kubernetes</li>
+                        <li>SQL Server</li>
+                        <li>PostgreSQL</li>
+                        <li>Redis</li>
+                    </ul>
+                </div>
+
+                <div class="skill-group">
+                    <h3>Cloud</h3>
+                    <ul class="chips">
+                        <li>AWS</li>
+                        <li>Azure</li>
+                    </ul>
+                </div>
+            </section>
+
+            <footer>
+                <p>Adam Beseler · Montgomery, TX · <a href="https://beseler.dev">beseler.dev</a></p>
+            </footer>
+        </div>
     </main>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const sections = document.querySelectorAll('section');
-            const navLinks = document.querySelectorAll('.sidebar ul li a');
-            function activateNav() {
-                let index = sections.length;
-                while (--index && window.scrollY + 120 < sections[index].offsetTop) { }
-                navLinks.forEach(link => link.classList.remove('active'));
-                if (navLinks[index]) navLinks[index].classList.add('active');
+        document.addEventListener("DOMContentLoaded", function () {
+            const sections = Array.from(document.querySelectorAll("main section[id]"));
+            const links = Array.from(document.querySelectorAll('.sidebar nav a[href^="#"]'));
+
+            function setCurrent(id) {
+                links.forEach(function (link) {
+                    const active = link.getAttribute("href") === "#" + id;
+                    if (active) link.setAttribute("aria-current", "true");
+                    else link.removeAttribute("aria-current");
+                });
             }
-            activateNav();
-            window.addEventListener('scroll', activateNav);
+
+            if ("IntersectionObserver" in window) {
+                const observed = new Map();
+                const observer = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        observed.set(entry.target.id, entry.isIntersecting ? entry.intersectionRatio : 0);
+                    });
+                    let bestId = sections[0] && sections[0].id;
+                    let best = 0;
+                    observed.forEach(function (ratio, id) {
+                        if (ratio > best) {
+                            best = ratio;
+                            bestId = id;
+                        }
+                    });
+                    if (bestId) setCurrent(bestId);
+                }, { rootMargin: "-20% 0px -55% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] });
+
+                sections.forEach(function (section) { observer.observe(section); });
+            }
+
+            if (location.hash) setCurrent(location.hash.slice(1));
+            else if (sections[0]) setCurrent(sections[0].id);
         });
     </script>
 </body>
+</html>

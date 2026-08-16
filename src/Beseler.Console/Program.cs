@@ -4,6 +4,11 @@ var keyBytes = Encryptor.GenerateKey();
 var keyBase64 = Convert.ToBase64String(keyBytes);
 Console.WriteLine($"Key: {keyBase64}\n");
 
+var keyBytesFromBase64 = Convert.FromBase64String(keyBase64);
+var match = keyBytes.SequenceEqual(keyBytesFromBase64);
+
+Console.WriteLine($"Key Match: {match}\n");
+
 var plainText = "Hello World!";
 var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
 

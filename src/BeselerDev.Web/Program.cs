@@ -22,6 +22,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseRequestLogging();
+app.UseStaticFiles();
 
 app.MapDefaultEndpoints();
 app.MapFallbackToFile("index.html");

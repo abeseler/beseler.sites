@@ -3,31 +3,21 @@ using Projects;
 var builder = DistributedApplication.CreateBuilder(args);
 
 var cache = builder.AddRedis("Cache")
-    .WithLifetime(ContainerLifetime.Persistent)
     .WithRedisInsight();
 
 var postgres = builder.AddPostgres("postgres")
-    .WithLifetime(ContainerLifetime.Persistent)
     .WithPgWeb();
 
-var database = postgres.AddDatabase("Database", "bnet")
+var database = postgres.AddDatabase("Database", "app")
     .WithParentRelationship(postgres);
 
-var dbMigrator = builder.AddContainer("dbdeploy", "abeseler/dbdeploy", "3.1.10")
+var dbMigrator = builder.AddContainer("ratchet", "abeseler/ratchet", "6.0.1")
     .WithOtlpExporter()
-    .WithEnvironment("Deploy__Command", "update")
-    .WithEnvironment("Deploy__StartingFile", "migrations.json")
-    .WithEnvironment("Deploy__DatabaseProvider", "postgres")
-    .WithEnvironment("Deploy__Contexts", "local")
-    .WithEnvironment("Deploy__ConnectionString", database)
-    .WithEnvironment("Deploy__ConnectionAttempts", "10")
-    .WithEnvironment("Deploy__ConnectionRetryDelaySeconds", "1")
+    .WithEnvironment("Ratchet__Command", "update")
+    .WithEnvironment("Ratchet__ConnectionString", database)
     .WithBindMount("../../data", "/app/Migrations")
     .WithParentRelationship(postgres)
     .WaitFor(database);
-
-builder.AddProject<Beseler_Deploy>("beseler-deploy")
-    .WithExplicitStart();
 
 builder.AddProject<BeselerDev_Web>("beseler-dev-web")
     .WithReference(cache)
