@@ -2,6 +2,10 @@
   <Folder Name="/Solution Items/">
     <File Path="../README.md" />
     <File Path=".editorconfig" />
+    <File Path="beseler-dev-web.Dockerfile" />
+    <File Path="beseler-net-api.Dockerfile" />
+    <File Path="beseler-net-dbdeploy.Dockerfile" />
+    <File Path="beseler-net-web.Dockerfile" />
   </Folder>
   <Project Path="Beseler.AppHost/Beseler.AppHost.csproj" />
   <Project Path="Beseler.Console/Beseler.Console.csproj" />

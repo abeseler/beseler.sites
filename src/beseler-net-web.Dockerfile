@@ -5,6 +5,7 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 COPY Beseler.ServiceDefaults Beseler.ServiceDefaults/
+COPY BeselerNet.Shared BeselerNet.Shared/
 COPY BeselerNet.Web BeselerNet.Web/
 
 RUN dotnet publish "BeselerNet.Web/BeselerNet.Web.csproj" -c Release -o /app/build
