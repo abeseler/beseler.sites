@@ -77,7 +77,7 @@ jobs:
           TAGGED_RELEASES_FILE: ${{ github.workspace }}/tagged-releases.txt
         run: |
           : > "$TAGGED_RELEASES_FILE"
-          "$GITHUB_WORKSPACE/version.sh"
+          bash "$GITHUB_WORKSPACE/version.sh"
           if [[ -s "$TAGGED_RELEASES_FILE" ]]
           then
               echo "tagged=true" >> "$GITHUB_OUTPUT"
