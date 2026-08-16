@@ -1,0 +1,68 @@
+@attribute [Route(Routes.ConfirmEmail)]
+@layout BasicLayout
+@rendermode InteractiveServer
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@SiteConstants.SiteName: Confirm email</PageTitle>
+
+<section class="auth-shell">
+    <div class="auth-card">
+        <a class="auth-brand" href="/">
+            <span class="auth-brand-mark">beseler</span>
+            <span class="auth-brand-name">Beseler <span>.NET</span></span>
+        </a>
+
+        @if (state == PageState.Working)
+        {
+            <p class="auth-lede">Confirming your email…</p>
+        }
+        else if (state == PageState.Ok)
+        {
+            <p class="auth-lede">Your email is confirmed. You can use the rest of the site.</p>
+            <a class="auth-submit" href="@Routes.Dashboard" style="display:block;text-align:center;text-decoration:none;">Continue</a>
+        }
+        else
+        {
+            @if (error is not null)
+            {
+                <p class="auth-alert" role="alert">@error</p>
+            }
+            <p class="auth-footer">
+                Need a new link? <a href="@Routes.VerifyEmail">Resend confirmation</a>
+                · <a href="@Routes.Login">Sign in</a>
+            </p>
+        }
+    </div>
+</section>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Token { get; set; }
+
+    private PageState state = PageState.Working;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Token))
+        {
+            state = PageState.Failed;
+            error = "This page needs the link from your email.";
+            return;
+        }
+
+        var result = await Auth.ConfirmEmailAsync(Token);
+        if (result.Succeeded)
+        {
+            await Auth.MarkEmailVerified();
+            state = PageState.Ok;
+            return;
+        }
+
+        state = PageState.Failed;
+        error = result.Error;
+    }
+
+    private enum PageState { Working, Ok, Failed }
+}

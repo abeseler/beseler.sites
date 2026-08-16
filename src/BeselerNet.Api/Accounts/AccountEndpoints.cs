@@ -15,6 +15,14 @@ internal static class AccountEndpoints
         var v1 = builder.MapGroup("/v1/accounts")
             .WithTags("Accounts");
 
+        v1.MapGet("/me", GetCurrentAccountHandler.Handle)
+            .WithName("GetCurrentAccount")
+            .WithDescription("Get the signed-in account profile, including effective roles and permissions.")
+            .Produces<AccountProfileResponse>(Status200OK, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .RequireAuthorization();
+
         v1.MapPost("/register-user", RegisterUserHandler.Handle)
             .WithName("RegisterUser")
             .WithDescription("Register a new user account.")

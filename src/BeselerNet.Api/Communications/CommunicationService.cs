@@ -42,14 +42,24 @@ internal sealed class CommunicationService(CommunicationDataSource dataSource, I
 
     private async Task<Communication> SendEmail(int accountId, EmailTemplate template, string recipientEmail, string recipientName, CancellationToken ct)
     {
+        var deliveryEmail = recipientEmail;
+        if (!string.IsNullOrWhiteSpace(_options.OverrideRecipientEmail)
+            && !string.Equals(recipientEmail, _options.OverrideRecipientEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation(
+                "Redirecting {CommunicationName} for {IntendedEmail} to {OverrideEmail}",
+                template.CommunicationName, recipientEmail, _options.OverrideRecipientEmail);
+            deliveryEmail = _options.OverrideRecipientEmail;
+        }
+
         var communication = Communication.Create(_emailClient.ProviderName, CommunicationType.Email, template.CommunicationName, accountId);
         try
         {
-            await _emailClient.Send(communication, template, recipientEmail, recipientName, ct);
+            await _emailClient.Send(communication, template, deliveryEmail, recipientName, ct);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send {CommunicationName} email to {Email}", template.CommunicationName, recipientEmail);
+            _logger.LogError(ex, "Failed to send {CommunicationName} email to {Email}", template.CommunicationName, deliveryEmail);
             communication.Failed(DateTimeOffset.UtcNow, ex.Message);
         }
         finally

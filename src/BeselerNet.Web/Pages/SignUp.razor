@@ -1,10 +1,114 @@
-﻿@using BeselerNet.Web.Services
 @attribute [Route(Routes.SignUp)]
+@layout BasicLayout
 @rendermode InteractiveServer
-@inject LocalStorageAccessor localStorage
+@inject AuthService Auth
+@inject NavigationManager Nav
+@inject IHostEnvironment Env
 
-<h3>SignUp</h3>
+<PageTitle>@SiteConstants.SiteName: Create account</PageTitle>
+
+<section class="auth-shell">
+    <div class="auth-card">
+        <a class="auth-brand" href="/">
+            <span class="auth-brand-mark">beseler</span>
+            <span class="auth-brand-name">Beseler <span>.NET</span></span>
+        </a>
+        <p class="auth-lede">Create an account. You will be signed in after it is created.</p>
+
+        @if (error is not null)
+        {
+            <p class="auth-alert" role="alert">@error</p>
+        }
+
+        <EditForm Model="model" OnValidSubmit="Submit" FormName="signup">
+            <DataAnnotationsValidator />
+
+            <div class="auth-field">
+                <label for="given">Given name</label>
+                <InputText id="given" @bind-Value="model.GivenName" autocomplete="given-name" />
+                <ValidationMessage For="() => model.GivenName" />
+                <FieldError Keys="@fieldErrors" Name="given_name" />
+            </div>
+            <div class="auth-field">
+                <label for="family">Family name</label>
+                <InputText id="family" @bind-Value="model.FamilyName" autocomplete="family-name" />
+                <ValidationMessage For="() => model.FamilyName" />
+                <FieldError Keys="@fieldErrors" Name="family_name" />
+            </div>
+            <div class="auth-field">
+                <label for="email">Email</label>
+                <InputText id="email" @bind-Value="model.Email" autocomplete="username" />
+                <ValidationMessage For="() => model.Email" />
+                <FieldError Keys="@fieldErrors" Name="email" />
+            </div>
+            <div class="auth-field">
+                <label for="password">Password</label>
+                <InputText id="password" type="password" @bind-Value="model.Password" autocomplete="new-password" />
+                <ValidationMessage For="() => model.Password" />
+                <FieldError Keys="@fieldErrors" Name="password" />
+            </div>
+
+            <button type="submit" class="auth-submit" disabled="@busy">
+                @(busy ? "Creating…" : "Create account")
+            </button>
+        </EditForm>
+
+        <p class="auth-footer">
+            Already have an account? <a href="@Routes.Login">Sign in</a>
+        </p>
+    </div>
+</section>
 
 @code {
+    private readonly SignUpModel model = new();
+    private bool busy;
+    private string? error;
+    private IDictionary<string, string[]>? fieldErrors;
 
+    protected override void OnInitialized()
+    {
+        if (Env.IsDevelopment())
+            model.Email = SiteConstants.DevelopmentEmail;
+    }
+
+    private async Task Submit()
+    {
+        busy = true;
+        error = null;
+        fieldErrors = null;
+
+        var result = await Auth.RegisterAsync(new()
+        {
+            Email = model.Email,
+            Password = model.Password,
+            GivenName = model.GivenName,
+            FamilyName = model.FamilyName
+        });
+
+        busy = false;
+
+        if (result.Succeeded)
+        {
+            Nav.NavigateTo(await Auth.IsEmailVerified() ? Routes.Dashboard : Routes.VerifyEmail);
+            return;
+        }
+
+        error = result.Error;
+        fieldErrors = result.FieldErrors;
+    }
+
+    private sealed class SignUpModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string GivenName { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string FamilyName { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.MinLength(8)]
+        public string Password { get; set; } = "";
+    }
 }

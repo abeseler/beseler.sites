@@ -30,6 +30,7 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
     public DateTimeOffset? LastLogon { get; private set; }
     public int FailedLoginAttempts { get; private set; }
     public IReadOnlyList<AccountPermission> Permissions => (_permissions ?? []).AsReadOnly();
+    public IReadOnlyList<AccountPermission> RolePermissions => (_rolePermissions ?? []).AsReadOnly();
     public IReadOnlyList<AccountRole> Roles => (_roles ?? []).AsReadOnly();
     public string Name => this switch
     {
@@ -180,7 +181,7 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
         {
             claims.Add(new(JwtRegisteredClaimNames.EmailVerified, "true", ClaimValueTypes.Boolean));
         }
-        foreach (var group in (_permissions ?? []).Concat(_rolePermissions ?? []).GroupBy(p => $"{p.Resource}:{p.Action}"))
+        foreach (var group in Permissions.Concat(RolePermissions).GroupBy(p => $"{p.Resource}:{p.Action}"))
         {
             var scopes = string.Join(' ', group.Select(p => p.Scope).Distinct());
             claims.Add(new Claim(group.Key, scopes));

@@ -1,0 +1,69 @@
+@attribute [Route(Routes.VerifyEmail)]
+@layout BasicLayout
+@rendermode InteractiveServer
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>@SiteConstants.SiteName: Verify email</PageTitle>
+
+<section class="auth-shell">
+    <div class="auth-card">
+        <a class="auth-brand" href="/">
+            <span class="auth-brand-mark">beseler</span>
+            <span class="auth-brand-name">Beseler <span>.NET</span></span>
+        </a>
+        <p class="auth-lede">Check your email and open the confirmation link. The link expires in about 10 minutes.</p>
+
+        @if (error is not null)
+        {
+            <p class="auth-alert" role="alert">@error</p>
+        }
+        else if (sent)
+        {
+            <p class="auth-lede">A new message is on the way.</p>
+        }
+
+        <button type="button" class="auth-submit" disabled="@busy" @onclick="Resend">
+            @(busy ? "Sending…" : "Resend confirmation email")
+        </button>
+
+        <p class="auth-footer">
+            <a href="@Routes.Login">Back to sign in</a>
+        </p>
+    </div>
+</section>
+
+@code {
+    private bool busy;
+    private bool sent;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Auth.HasSession())
+        {
+            Nav.NavigateTo(Routes.Login);
+            return;
+        }
+
+        if (await Auth.IsEmailVerified())
+            Nav.NavigateTo(Routes.Dashboard);
+    }
+
+    private async Task Resend()
+    {
+        busy = true;
+        error = null;
+        sent = false;
+        var result = await Auth.ResendVerificationAsync();
+        busy = false;
+
+        if (result.Succeeded)
+        {
+            sent = true;
+            return;
+        }
+
+        error = result.Error;
+    }
+}

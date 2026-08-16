@@ -1,0 +1,23 @@
+@if (Messages.Length > 0)
+{
+    @foreach (var message in Messages)
+    {
+        <span class="field-error">@message</span>
+    }
+}
+
+@code {
+    [Parameter] public IDictionary<string, string[]>? Keys { get; set; }
+    [Parameter] public string Name { get; set; } = "";
+
+    private string[] Messages
+    {
+        get
+        {
+            if (Keys is null) return [];
+            if (Keys.TryGetValue(Name, out var exact)) return exact;
+            var match = Keys.FirstOrDefault(kv => kv.Key.Equals(Name, StringComparison.OrdinalIgnoreCase));
+            return match.Value ?? [];
+        }
+    }
+}

@@ -7,4 +7,5 @@ internal sealed record CommunicationOptions
     public string? SenderName { get; init; }
     public string? ConfirmEmailUrl { get; init; }
     public string? ResetPasswordUrl { get; init; }
+    public string? OverrideRecipientEmail { get; init; }
 }

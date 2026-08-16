@@ -27,6 +27,11 @@ Content-Type: application/json
   "password": "{{password}}"
 }
 
+### Current account profile
+
+GET {{host}}/v1/accounts/me
+Authorization: Bearer {{login.response.body.$.access_token}}
+
 ### Resend email confirmation
 
 POST {{host}}/v1/accounts/resend-email-confirmation
@@ -43,7 +48,7 @@ POST {{host}}/v1/accounts/forgot-password
 Content-Type: application/json
 
 {
-  "email": "test@example.com"
+  "email": "{{email}}"
 }
 
 ### Reset password

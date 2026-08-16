@@ -1,5 +1,5 @@
 @host={{$projectUrl}}
-@email=test@example.com
+@email=testing@beseler.net
 @password=password
 
 ### Get token

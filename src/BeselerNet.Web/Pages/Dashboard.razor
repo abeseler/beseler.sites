@@ -1,9 +1,22 @@
-﻿@page "/dashboard"
+@page "/dashboard"
+@rendermode InteractiveServer
+@inject AuthService Auth
+@inject NavigationManager Nav
 
 <h3>Dashboard</h3>
 
 <p>This is the dashboard page</p>
 
 @code {
+    protected override async Task OnInitializedAsync()
+    {
+        if (!await Auth.HasSession())
+        {
+            Nav.NavigateTo(Routes.Login);
+            return;
+        }
 
+        if (!await Auth.IsEmailVerified())
+            Nav.NavigateTo(Routes.VerifyEmail);
+    }
 }

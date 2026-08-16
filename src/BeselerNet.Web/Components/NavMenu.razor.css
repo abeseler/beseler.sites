@@ -78,6 +78,42 @@
     color: white;
 }
 
+.nav-user {
+    margin-top: auto;
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nav-user-name {
+    color: #8b9398;
+    font-size: 0.8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nav-signout {
+    appearance: none;
+    width: 100%;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid #2a3336;
+    border-radius: 6px;
+    background: transparent;
+    color: #d8d6d0;
+    font: inherit;
+    font-size: 0.85rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.nav-signout:hover {
+    border-color: #2ec4d6;
+    color: #2ec4d6;
+}
+
 .nav-scrollable {
     display: none;
 }
@@ -92,10 +128,8 @@
     }
 
     .nav-scrollable {
-        /* Never collapse the sidebar for wide screens */
-        display: block;
-
-        /* Allow sidebar to scroll for tall menus */
+        display: flex;
+        flex-direction: column;
         height: calc(100vh - 3.5rem);
         overflow-y: auto;
     }

@@ -13,6 +13,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddScoped<LocalStorageAccessor>();
+builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<FeatureManager>();
 
 builder.Services.AddHttpClient("beseler-net-api", client =>
