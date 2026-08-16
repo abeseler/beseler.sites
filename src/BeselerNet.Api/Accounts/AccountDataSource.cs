@@ -35,13 +35,28 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
             FROM account_permission ap
             INNER JOIN permission p ON ap.permission_id = p.permission_id
             WHERE ap.account_id = @id;
+
+            SELECT ar.account_id, p.permission_id, p.resource, p.action, ar.scope, ar.granted_at, ar.granted_by_account_id
+            FROM account_role ar
+            INNER JOIN role_permission rp ON rp.role_id = ar.role_id
+            INNER JOIN permission p ON p.permission_id = rp.permission_id
+            WHERE ar.account_id = @id;
+
+            SELECT ar.account_id, ar.role_id, r.name, ar.scope, ar.granted_at, ar.granted_by_account_id
+            FROM account_role ar
+            INNER JOIN role r ON r.role_id = ar.role_id
+            WHERE ar.account_id = @id;
             """, new { id });
 
         var account = await results.ReadSingleOrDefaultAsync<Account>();
         if (account is not null)
         {
             var permissions = await results.ReadAsync<AccountPermission>();
+            var rolePermissions = await results.ReadAsync<AccountPermission>();
+            var roles = await results.ReadAsync<AccountRole>();
             PermissionsRef(account) = permissions.ToList();
+            RolePermissionsRef(account) = rolePermissions.ToList();
+            RolesRef(account) = roles.ToList();
         }
         return account;
     }
@@ -65,13 +80,30 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
             INNER JOIN account a ON ap.account_id = a.account_id
             INNER JOIN permission p ON ap.permission_id = p.permission_id
             WHERE a.username = @username;
+
+            SELECT ar.account_id, p.permission_id, p.resource, p.action, ar.scope, ar.granted_at, ar.granted_by_account_id
+            FROM account_role ar
+            INNER JOIN account a ON ar.account_id = a.account_id
+            INNER JOIN role_permission rp ON rp.role_id = ar.role_id
+            INNER JOIN permission p ON p.permission_id = rp.permission_id
+            WHERE a.username = @username;
+
+            SELECT ar.account_id, ar.role_id, r.name, ar.scope, ar.granted_at, ar.granted_by_account_id
+            FROM account_role ar
+            INNER JOIN account a ON ar.account_id = a.account_id
+            INNER JOIN role r ON r.role_id = ar.role_id
+            WHERE a.username = @username;
             """, new { username });
 
         var account = await results.ReadSingleOrDefaultAsync<Account>();
         if (account is not null)
         {
             var permissions = await results.ReadAsync<AccountPermission>();
+            var rolePermissions = await results.ReadAsync<AccountPermission>();
+            var roles = await results.ReadAsync<AccountRole>();
             PermissionsRef(account) = permissions.ToList();
+            RolePermissionsRef(account) = rolePermissions.ToList();
+            RolesRef(account) = roles.ToList();
         }
         return account;
     }
@@ -158,17 +190,12 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 account.FailedLoginAttempts
             }, transaction);
 
+            await SyncPermissions(account, connection, transaction);
+            await SyncRoles(account, connection, transaction);
+
             var notifyMessageQueued = false;
             foreach (var domainEvent in account.UncommittedEvents)
             {
-                if (domainEvent is AccountPermissionGranted granted)
-                {
-                    await Upsert(granted);
-                }
-                else if (domainEvent is AccountPermissionRevoked revoked)
-                {
-                    await Delete(revoked);
-                }
                 var domainEventMessage = DomainEventMessage.Wrap(domainEvent).ToOutboxMessage();
                 await _outbox.Enqueue(domainEventMessage, connection, transaction, cancellationToken);
                 notifyMessageQueued = true;
@@ -193,52 +220,66 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
         }
     }
 
-    private async Task Upsert(AccountPermissionGranted granted)
+    private static async Task SyncPermissions(Account account, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
-        using var connection = await _dataSource.OpenConnectionAsync();
-        _ = await connection.ExecuteAsync("""
-            INSERT INTO account_permission (
-                account_id,
-                permission_id,
-                scope,
-                granted_at,
-                granted_by_account_id)
-            VALUES (
-                @AccountId,
-                @PermissionId,
-                @Scope,
-                @GrantedAt,
-                @GrantedByAccountId)
-            ON CONFLICT (account_id, permission_id) DO UPDATE
-            SET scope = @Scope,
-                granted_at = @GrantedAt,
-                granted_by_account_id = @GrantedByAccountId
-            """, new
+        await connection.ExecuteAsync(
+            "DELETE FROM account_permission WHERE account_id = @AccountId",
+            new { account.AccountId },
+            transaction);
+
+        foreach (var permission in account.Permissions)
         {
-            granted.AccountId,
-            granted.PermissionId,
-            granted.Scope,
-            granted.GrantedAt,
-            granted.GrantedByAccountId
-        });
+            await connection.ExecuteAsync("""
+                INSERT INTO account_permission (
+                    account_id,
+                    permission_id,
+                    scope,
+                    granted_at,
+                    granted_by_account_id)
+                VALUES (
+                    @AccountId,
+                    @PermissionId,
+                    @Scope,
+                    @GrantedAt,
+                    @GrantedByAccountId)
+                """, permission, transaction);
+        }
     }
 
-    private async Task Delete(AccountPermissionRevoked revoked)
+    private static async Task SyncRoles(Account account, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
-        using var connection = await _dataSource.OpenConnectionAsync();
-        _ = await connection.ExecuteAsync("""
-            DELETE FROM account_permission
-            WHERE account_id = @AccountId
-            AND permission_id = @PermissionId
-            """, new
+        await connection.ExecuteAsync(
+            "DELETE FROM account_role WHERE account_id = @AccountId",
+            new { account.AccountId },
+            transaction);
+
+        foreach (var role in account.Roles)
         {
-            revoked.AccountId,
-            revoked.PermissionId
-        });
+            await connection.ExecuteAsync("""
+                INSERT INTO account_role (
+                    account_id,
+                    role_id,
+                    scope,
+                    granted_at,
+                    granted_by_account_id)
+                VALUES (
+                    @AccountId,
+                    @RoleId,
+                    @Scope,
+                    @GrantedAt,
+                    @GrantedByAccountId)
+                """, role, transaction);
+        }
     }
 
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_permissions")]
     private static extern ref List<AccountPermission> PermissionsRef(Account @this);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_rolePermissions")]
+    private static extern ref List<AccountPermission> RolePermissionsRef(Account @this);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_roles")]
+    private static extern ref List<AccountRole> RolesRef(Account @this);
 
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "AcceptChanges")]
     private static extern void FinalizeChanges(Account @this);

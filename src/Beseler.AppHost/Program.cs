@@ -19,10 +19,7 @@ var dbMigrator = builder.AddContainer("ratchet", "abeseler/ratchet", "6.0.1")
     .WithParentRelationship(postgres)
     .WaitFor(database);
 
-builder.AddProject<BeselerDev_Web>("beseler-dev-web")
-    .WithReference(cache)
-    .WaitFor(cache)
-    .WithExplicitStart();
+builder.AddProject<BeselerDev_Web>("beseler-dev-web");
 
 var azureCommunicationService = builder.AddParameter("AzureCommunicationService", secret: true);
 var beselerNetApi = builder.AddProject<BeselerNet_Api>("beseler-net-api")

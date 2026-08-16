@@ -38,12 +38,12 @@ internal sealed class OutboxDataSource(NpgsqlDataSource dataSource)
                 SELECT message_id
                 FROM outbox
                 WHERE receives_remaining > 0
-                AND invisible_until <= NOW() AT TIME ZONE 'utc'
+                AND invisible_until <= NOW()
                 LIMIT @dequeueMessageLimit
                 FOR UPDATE SKIP LOCKED
             )
             UPDATE outbox o
-            SET invisible_until = NOW() AT TIME ZONE 'utc' + interval '60 seconds',
+            SET invisible_until = NOW() + interval '60 seconds',
                 receives_remaining = receives_remaining - 1
             FROM messages m
             WHERE m.message_id = o.message_id

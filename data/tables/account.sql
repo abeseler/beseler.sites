@@ -7,7 +7,7 @@ CREATE SEQUENCE account_id_seq
     NO MAXVALUE
     NO CYCLE;
 
-/* Migration { "title": "00:createTable" } */
+/* Migration { "title": "01:createTable" } */
 CREATE TABLE account (
     account_id INT NOT NULL DEFAULT (nextval('account_id_seq')),
     version BIGINT NOT NULL DEFAULT (0),
@@ -19,7 +19,7 @@ CREATE TABLE account (
     secret_hashed_at TIMESTAMPTZ NOT NULL,
     given_name TEXT NULL,
     family_name TEXT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     disabled_at TIMESTAMPTZ NULL,
     locked_at TIMESTAMPTZ NULL,
     last_logon TIMESTAMPTZ NULL,

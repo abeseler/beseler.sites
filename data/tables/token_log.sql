@@ -3,7 +3,7 @@ CREATE TABLE token_log (
     jti UUID NOT NULL,
     account_id INT NOT NULL,
     replaced_by UUID NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ NULL,
     revoked_at TIMESTAMPTZ NULL,
     CONSTRAINT pk_token_log PRIMARY KEY (jti)

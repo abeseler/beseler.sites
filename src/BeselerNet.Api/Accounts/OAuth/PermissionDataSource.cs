@@ -11,6 +11,12 @@ internal sealed record Permission
     public required string Action { get; init; }
 }
 
+internal sealed record Role
+{
+    public int RoleId { get; init; }
+    public required string Name { get; init; }
+}
+
 internal sealed class PermissionCollecton : Dictionary<string, Permission>
 {
     public Permission? Get(string resource, string action)

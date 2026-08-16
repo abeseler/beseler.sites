@@ -11,6 +11,8 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
     public static string ResourceName { get; } = "account";
     private Account() { }
     private readonly List<AccountPermission> _permissions = [];
+    private readonly List<AccountPermission> _rolePermissions = [];
+    private readonly List<AccountRole> _roles = [];
     private readonly List<DomainEvent> _events = [];
     public int AccountId { get; private init; }
     public long Version { get; private set; }
@@ -28,6 +30,7 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
     public DateTimeOffset? LastLogon { get; private set; }
     public int FailedLoginAttempts { get; private set; }
     public IReadOnlyList<AccountPermission> Permissions => (_permissions ?? []).AsReadOnly();
+    public IReadOnlyList<AccountRole> Roles => (_roles ?? []).AsReadOnly();
     public string Name => this switch
     {
         { GivenName: not null, FamilyName: not null } => $"{GivenName} {FamilyName}",
@@ -125,6 +128,47 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
             Append(new AccountPermissionRevoked(AccountId, permission.PermissionId, permission.Resource, permission.Action, existing.Scope, revokedBy, DateTimeOffset.UtcNow));
         }
     }
+    public void AssignRole(Role role, string scope, int grantedBy)
+    {
+        var existing = _roles.FirstOrDefault(r => r.RoleId == role.RoleId);
+        if (existing is null)
+        {
+            _roles.Add(new AccountRole
+            {
+                AccountId = AccountId,
+                RoleId = role.RoleId,
+                Name = role.Name,
+                Scope = scope,
+                GrantedAt = DateTimeOffset.UtcNow,
+                GrantedByAccountId = grantedBy
+            });
+            Append(new AccountRoleAssigned(AccountId, role.RoleId, role.Name, scope, grantedBy, DateTimeOffset.UtcNow));
+        }
+        else if (existing.Scope != scope)
+        {
+            _ = _roles.Remove(existing);
+            _roles.Add(new AccountRole
+            {
+                AccountId = AccountId,
+                RoleId = role.RoleId,
+                Name = role.Name,
+                Scope = scope,
+                GrantedAt = DateTimeOffset.UtcNow,
+                GrantedByAccountId = grantedBy
+            });
+            Append(new AccountRoleRevoked(AccountId, existing.RoleId, existing.Name, existing.Scope, grantedBy, DateTimeOffset.UtcNow));
+            Append(new AccountRoleAssigned(AccountId, role.RoleId, role.Name, scope, grantedBy, DateTimeOffset.UtcNow));
+        }
+    }
+    public void RevokeRole(Role role, int revokedBy)
+    {
+        var existing = _roles.FirstOrDefault(r => r.RoleId == role.RoleId);
+        if (existing is not null)
+        {
+            _ = _roles.Remove(existing);
+            Append(new AccountRoleRevoked(AccountId, existing.RoleId, existing.Name, existing.Scope, revokedBy, DateTimeOffset.UtcNow));
+        }
+    }
     public ClaimsPrincipal ToClaimsPrincipal()
     {
         var claims = new List<Claim>
@@ -136,9 +180,10 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
         {
             claims.Add(new(JwtRegisteredClaimNames.EmailVerified, "true", ClaimValueTypes.Boolean));
         }
-        foreach (var claim in Permissions.Select(p => p.ToClaim()))
+        foreach (var group in (_permissions ?? []).Concat(_rolePermissions ?? []).GroupBy(p => $"{p.Resource}:{p.Action}"))
         {
-            claims.Add(claim);
+            var scopes = string.Join(' ', group.Select(p => p.Scope).Distinct());
+            claims.Add(new Claim(group.Key, scopes));
         }
         var identity = new ClaimsIdentity(claims);
         return new ClaimsPrincipal(identity);

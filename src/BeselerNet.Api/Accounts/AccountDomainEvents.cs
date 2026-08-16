@@ -12,6 +12,8 @@ namespace BeselerNet.Api.Core
     [JsonDerivedType(typeof(AccountLoginFailed), "account-login-failed")]
     [JsonDerivedType(typeof(AccountPermissionGranted), "account-permission-granted")]
     [JsonDerivedType(typeof(AccountPermissionRevoked), "account-permission-revoked")]
+    [JsonDerivedType(typeof(AccountRoleAssigned), "account-role-assigned")]
+    [JsonDerivedType(typeof(AccountRoleRevoked), "account-role-revoked")]
     internal abstract partial record DomainEvent;
 }
 
@@ -24,4 +26,6 @@ namespace BeselerNet.Api.Accounts
     internal sealed record AccountLoginFailed(int AccountId, int Attempt, bool Locked) : DomainEvent;
     internal sealed record AccountPermissionGranted(int AccountId, int PermissionId, string Resource, string Action, string Scope, int GrantedByAccountId, DateTimeOffset GrantedAt) : DomainEvent;
     internal sealed record AccountPermissionRevoked(int AccountId, int PermissionId, string Resource, string Action, string Scope, int RevokedByAccountId, DateTimeOffset RevokedAt) : DomainEvent;
+    internal sealed record AccountRoleAssigned(int AccountId, int RoleId, string RoleName, string Scope, int GrantedByAccountId, DateTimeOffset GrantedAt) : DomainEvent;
+    internal sealed record AccountRoleRevoked(int AccountId, int RoleId, string RoleName, string Scope, int RevokedByAccountId, DateTimeOffset RevokedAt) : DomainEvent;
 }

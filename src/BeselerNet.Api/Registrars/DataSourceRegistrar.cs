@@ -20,6 +20,7 @@ internal static class DataSourceRegistrar
             .AddSingleton<OutboxDataSource>()
             .AddSingleton<EventLogDataSource>()
             .AddSingleton<PermissionDataSource>()
+            .AddSingleton<RoleDataSource>()
             .AddScoped<TokenLogDataSource>();
 
         DefaultTypeMap.MatchNamesWithUnderscores = true;

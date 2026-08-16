@@ -3,7 +3,7 @@ CREATE TABLE outbox (
     message_id UUID NOT NULL,
     message_type TEXT NOT NULL,
     message_data JSON NOT NULL,
-    invisible_until TIMESTAMP NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    invisible_until TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     receives_remaining INT NOT NULL DEFAULT (10),
     CONSTRAINT pk_outbox PRIMARY KEY (message_id)
 );

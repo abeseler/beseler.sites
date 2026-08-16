@@ -6,7 +6,7 @@ namespace BeselerNet.Api.Accounts.Users;
 
 internal static class RegisterUserHandler
 {
-    public static async Task<IResult> Handle(RegisterUserRequest request, AccountDataSource accounts, PermissionDataSource permissionDataSource, IPasswordHasher<Account> passwordHasher, CancellationToken cancellationToken)
+    public static async Task<IResult> Handle(RegisterUserRequest request, AccountDataSource accounts, RoleDataSource roles, IPasswordHasher<Account> passwordHasher, CancellationToken cancellationToken)
     {
         if (request.IsInvalid(out var errors))
         {
@@ -21,25 +21,19 @@ internal static class RegisterUserHandler
             return TypedResults.ValidationProblem(errors);
         }
 
+        var member = await roles.WithName("member", cancellationToken);
+        if (member is null)
+        {
+            return TypedResults.Problem("Default role is not configured.", statusCode: StatusCodes.Status500InternalServerError);
+        }
+
         var accountId = await accounts.NextId(cancellationToken);
-        var permissions = await permissionDataSource.GetCollection(cancellationToken);
         var secretHash = passwordHasher.HashPassword(default!, request.Password!);
         account = Account.CreateUser(accountId, request.Email, secretHash, request.Email, request.GivenName, request.FamilyName);
-
-        foreach (var permission in DefaultPermissions(permissions).Where(x => x is not null))
-        {
-            account.Grant(permission!, "owned", account.AccountId);
-        }
+        account.AssignRole(member, "owned", account.AccountId);
 
         await accounts.SaveChanges(account, cancellationToken);
 
         return TypedResults.Created($"/v1/accounts/users/{accountId}");
-    }
-
-    private static IEnumerable<Permission?> DefaultPermissions(PermissionCollecton permissions)
-    {
-        yield return permissions.Get(Account.ResourceName, "read");
-        yield return permissions.Get(Account.ResourceName, "update");
-        yield return permissions.Get(Account.ResourceName, "delete");
     }
 }

@@ -13,3 +13,13 @@ internal sealed record AccountPermission
     public int GrantedByAccountId { get; init; }
     public Claim ToClaim() => new($"{Resource}:{Action}", Scope);
 }
+
+internal sealed record AccountRole
+{
+    public int AccountId { get; init; }
+    public int RoleId { get; init; }
+    public required string Name { get; init; }
+    public required string Scope { get; init; }
+    public DateTimeOffset GrantedAt { get; init; }
+    public int GrantedByAccountId { get; init; }
+}

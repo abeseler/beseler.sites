@@ -6,7 +6,7 @@ CREATE TABLE communication (
     name TEXT NOT NULL,
     external_id TEXT NULL,
     account_id INT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() AT TIME ZONE 'utc'),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     sent_at TIMESTAMPTZ NULL,
     delivered_at TIMESTAMPTZ NULL,
     opened_at TIMESTAMPTZ NULL,
