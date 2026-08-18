@@ -50,10 +50,19 @@
             </div>
             <div class="auth-field">
                 <label for="password">Password</label>
-                <InputText id="password" type="password" @bind-Value="model.Password" autocomplete="new-password" />
+                <InputText id="password" type="@passwordType" @bind-Value="model.Password" autocomplete="new-password" />
                 <ValidationMessage For="() => model.Password" />
                 <FieldError Keys="@fieldErrors" Name="password" />
             </div>
+            <div class="auth-field">
+                <label for="confirm">Confirm password</label>
+                <InputText id="confirm" type="@passwordType" @bind-Value="model.Confirm" autocomplete="new-password" />
+                <ValidationMessage For="() => model.Confirm" />
+            </div>
+            <label class="auth-check">
+                <InputCheckbox id="show-password" @bind-Value="showPassword" />
+                <span>Show password</span>
+            </label>
             <label class="auth-check">
                 <InputCheckbox id="persist" @bind-Value="model.ThisDevice" />
                 <span>
@@ -82,7 +91,9 @@
     private readonly SignUpModel model = new();
     private bool busy;
     private bool signupOpen;
+    private bool showPassword;
     private string? error;
+    private string passwordType => showPassword ? "text" : "password";
     private IDictionary<string, string[]>? fieldErrors;
 
     protected override async Task OnInitializedAsync()
@@ -95,6 +106,12 @@
 
     private async Task Submit()
     {
+        if (model.Password != model.Confirm)
+        {
+            error = "The two passwords do not match.";
+            return;
+        }
+
         busy = true;
         error = null;
         fieldErrors = null;
@@ -132,6 +149,9 @@
 
         [Required, MinLength(AuthLimits.PasswordMinLength)]
         public string Password { get; set; } = "";
+
+        [Required]
+        public string Confirm { get; set; } = "";
 
         public bool ThisDevice { get; set; }
     }
