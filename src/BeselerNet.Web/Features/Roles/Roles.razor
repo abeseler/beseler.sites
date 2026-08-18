@@ -14,6 +14,10 @@
     {
         <p class="auth-alert" role="alert">@error</p>
     }
+    @if (notice is not null)
+    {
+        <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
+    }
 
     @if (CanManage)
     {
@@ -141,6 +145,7 @@
     private int? pendingDeleteId;
     private string editName = "";
     private string? error;
+    private string? notice;
 
     private bool CanManage => Session.HasPermission(Resources.Role, Actions.Update);
 
@@ -184,6 +189,7 @@
         editName = "";
         selected.Clear();
         error = null;
+        notice = null;
     }
 
     private void StartEdit(RoleResponse role)
@@ -196,6 +202,7 @@
         foreach (var permission in role.Permissions)
             selected.Add(permission.PermissionId);
         error = null;
+        notice = null;
     }
 
     private void CancelEdit()
@@ -217,7 +224,9 @@
 
         busy = true;
         error = null;
-        var result = await RolesApi.CreateAsync(editName.Trim(), [.. selected]);
+        notice = null;
+        var name = editName.Trim();
+        var result = await RolesApi.CreateAsync(name, [.. selected]);
         busy = false;
 
         if (!result.Succeeded)
@@ -228,12 +237,14 @@
 
         CancelEdit();
         await Reload();
+        notice = $"Created {name}.";
     }
 
     private async Task SaveEdit(RoleResponse role)
     {
         busy = true;
         error = null;
+        notice = null;
 
         if (!role.Protected)
         {
@@ -271,12 +282,15 @@
         busy = false;
         CancelEdit();
         await Reload();
+        notice = "Role saved.";
     }
 
     private async Task Delete(RoleResponse role)
     {
         busy = true;
         error = null;
+        notice = null;
+        var name = role.Name;
         var result = await RolesApi.DeleteAsync(role.RoleId);
         busy = false;
 
@@ -288,5 +302,6 @@
 
         CancelEdit();
         await Reload();
+        notice = $"Deleted {name}.";
     }
 }

@@ -1,6 +1,7 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Web.Components;
 using BeselerNet.Web.Features.Account;
+using BeselerNet.Web.Features.Accounts;
 using BeselerNet.Web.Features.Roles;
 using BeselerNet.Web.Shared;
 
@@ -23,6 +24,7 @@ builder.Services.AddScoped<TokenRefresher>();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AccountSession>();
 builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<AccountsService>();
 builder.Services.AddScoped<RoleService>();
 
 builder.Services.AddHttpClient(ApiClient.ClientName, client =>

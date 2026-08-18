@@ -23,6 +23,72 @@ internal static class AccountEndpoints
             .ProducesProblem(Status403Forbidden, Application.Json)
             .RequireAuthorization();
 
+        v1.MapGet("/", AccountHandlers.List)
+            .WithName("ListAccounts")
+            .WithDescription("List user accounts. Requires account:read at a scope that applies without a specific account (typically global).")
+            .Produces<IReadOnlyList<AccountResponse>>(Status200OK, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .RequireAuthorization();
+
+        v1.MapGet("/{accountId:int}", AccountHandlers.Get)
+            .WithName("GetAccount")
+            .WithDescription("Get an account. The owner can read their own; global can read any.")
+            .Produces<AccountResponse>(Status200OK, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .ProducesProblem(Status404NotFound, Application.Json)
+            .RequireAuthorization();
+
+        v1.MapPut("/{accountId:int}", AccountHandlers.Update)
+            .WithName("UpdateAccount")
+            .WithDescription("Update given and family name. The owner can update their own; global can update any.")
+            .Accepts<UpdateAccountRequest>(Application.Json)
+            .Produces<AccountResponse>(Status200OK, Application.Json)
+            .ProducesValidationProblem(Status400BadRequest, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .ProducesProblem(Status404NotFound, Application.Json)
+            .RequireAuthorization();
+
+        v1.MapPost("/{accountId:int}/disable", AccountHandlers.Disable)
+            .WithName("DisableAccount")
+            .WithDescription("Disable an account. Requires account:update at global. Cannot target yourself.")
+            .Produces<AccountResponse>(Status200OK, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .ProducesProblem(Status404NotFound, Application.Json)
+            .RequireAuthorization();
+
+        v1.MapPost("/{accountId:int}/enable", AccountHandlers.Enable)
+            .WithName("EnableAccount")
+            .WithDescription("Re-enable an account. Requires account:update at global. Cannot target yourself.")
+            .Produces<AccountResponse>(Status200OK, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .ProducesProblem(Status404NotFound, Application.Json)
+            .RequireAuthorization();
+
+        v1.MapPost("/{accountId:int}/unlock", AccountHandlers.Unlock)
+            .WithName("UnlockAccount")
+            .WithDescription("Clear lockout. Requires account:update at global. Cannot target yourself.")
+            .Produces<AccountResponse>(Status200OK, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .ProducesProblem(Status404NotFound, Application.Json)
+            .RequireAuthorization();
+
+        v1.MapPut("/{accountId:int}/roles", AccountHandlers.SetRoles)
+            .WithName("SetAccountRoles")
+            .WithDescription("Replace the account's roles. Requires account:update at global. Cannot target yourself or remove the last admin.")
+            .Accepts<SetAccountRolesRequest>(Application.Json)
+            .Produces<AccountResponse>(Status200OK, Application.Json)
+            .ProducesValidationProblem(Status400BadRequest, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .ProducesProblem(Status404NotFound, Application.Json)
+            .RequireAuthorization();
+
         v1.MapPost("/register-user", RegisterUserHandler.Handle)
             .WithName("RegisterUser")
             .WithDescription("Register a new user account.")

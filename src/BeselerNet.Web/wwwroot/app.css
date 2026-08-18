@@ -140,6 +140,25 @@ h1:focus { outline: none; }
     font-size: 0.85rem;
 }
 
+.notice-ok {
+    display: block;
+    width: 100%;
+    margin: 0 0 1rem;
+    padding: 0.7rem 0.85rem;
+    background: var(--accent-dim);
+    border: 1px solid rgba(46, 196, 214, 0.35);
+    border-radius: 8px;
+    color: var(--accent);
+    font: inherit;
+    font-size: 0.85rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.notice-ok:hover {
+    filter: brightness(1.08);
+}
+
 .auth-check {
     display: flex;
     align-items: flex-start;
@@ -439,6 +458,41 @@ a.tile:hover {
     margin: 0.65rem 0 0;
     color: var(--muted);
     font-size: 0.85rem;
+}
+
+.account-static {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+
+.role-assign {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+}
+
+.role-assign .auth-check {
+    margin: 0;
+}
+
+.auth-select {
+    min-width: 8rem;
+    padding: 0.45rem 0.6rem;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.85rem;
+}
+
+.auth-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
 .validation-message { color: var(--danger); font-size: 0.78rem; }

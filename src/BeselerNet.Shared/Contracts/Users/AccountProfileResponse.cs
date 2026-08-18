@@ -21,6 +21,8 @@ public sealed record AccountProfileResponse
 
 public sealed record AccountRoleResponse
 {
+    [JsonPropertyName("role_id")]
+    public int RoleId { get; init; }
     public required string Name { get; init; }
     public required string Scope { get; init; }
 }

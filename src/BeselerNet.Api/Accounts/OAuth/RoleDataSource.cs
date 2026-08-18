@@ -24,6 +24,20 @@ internal sealed class RoleDataSource(NpgsqlDataSource dataSource, HybridCache ca
         return roles.TryGetValue(name, out var role) ? role : null;
     }
 
+    public async Task<bool> IsAssignedToAnyoneElse(string name, int exceptAccountId, CancellationToken cancellationToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        return await connection.ExecuteScalarAsync<bool>(
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM account_role ar
+                INNER JOIN role r ON r.role_id = ar.role_id
+                WHERE r.name = @name AND ar.account_id <> @exceptAccountId
+            )
+            """, new { name, exceptAccountId });
+    }
+
     public async Task<bool> IsAssignedToAnyone(string name, CancellationToken cancellationToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);

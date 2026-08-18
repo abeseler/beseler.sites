@@ -39,6 +39,7 @@ internal static class GetCurrentAccountHandler
         var roles = account.Roles
             .Select(role => new AccountRoleResponse
             {
+                RoleId = role.RoleId,
                 Name = role.Name,
                 Scope = role.Scope
             })

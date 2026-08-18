@@ -15,6 +15,20 @@
             <span class="tile-copy">Periods, recurring templates, and income / expense / savings. Not built yet.</span>
         </a>
 
+        <a class="tile" href="@Routes.Account">
+            <span class="tile-kicker">You</span>
+            <span class="tile-title">Account</span>
+            <span class="tile-copy">Your name and the email you sign in with.</span>
+        </a>
+
+        <Can Resource="@Resources.Account" Action="@Actions.Read" Scope="@Scopes.Global">
+            <a class="tile" href="@Routes.Accounts">
+                <span class="tile-kicker">Access</span>
+                <span class="tile-title">Users</span>
+                <span class="tile-copy">See everyone, edit names, assign roles, disable or unlock.</span>
+            </a>
+        </Can>
+
         <Can Resource="@Resources.Role" Action="@Actions.Read">
             <a class="tile" href="@Routes.Roles">
                 <span class="tile-kicker">Access</span>

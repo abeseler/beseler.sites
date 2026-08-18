@@ -1,0 +1,8 @@
+<button type="button" class="notice-ok" @onclick="Dismiss">@ChildContent</button>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnDismiss { get; set; }
+
+    private Task Dismiss() => OnDismiss.InvokeAsync();
+}

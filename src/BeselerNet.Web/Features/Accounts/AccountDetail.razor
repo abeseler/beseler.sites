@@ -1,0 +1,334 @@
+@attribute [Route(Routes.AccountDetailTemplate)]
+@inject AccountsService AccountsApi
+@inject RoleService RolesApi
+@inject AccountSession Session
+
+<PageTitle>@SiteConstants.SiteName: User</PageTitle>
+
+<RequirePermission Resource="@Resources.Account" Action="@Actions.Read" Scope="@Scopes.Global">
+<div class="app-main">
+    <p class="kicker"><a href="@Routes.Accounts">Users</a></p>
+    <h1 class="page-title">@(account?.Name ?? "User")</h1>
+    <p class="page-lede">@lede</p>
+
+    @if (error is not null)
+    {
+        <p class="auth-alert" role="alert">@error</p>
+    }
+    @if (notice is not null)
+    {
+        <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
+    }
+
+    @if (loading)
+    {
+        <p class="page-lede">Loading…</p>
+    }
+    else if (account is not null)
+    {
+        <section class="role-card">
+            <div class="role-card-head">
+                <span class="role-name">@account.Name</span>
+                <span class="role-badges">
+                    @if (isSelf)
+                    {
+                        <span class="badge">You</span>
+                    }
+                    @if (account.Disabled)
+                    {
+                        <span class="badge">Disabled</span>
+                    }
+                    @if (account.Locked)
+                    {
+                        <span class="badge">Locked</span>
+                    }
+                    @if (!account.EmailVerified)
+                    {
+                        <span class="badge">Unverified</span>
+                    }
+                </span>
+            </div>
+            <p class="muted-empty">@account.Email</p>
+            <p class="muted-empty">@rolesLabel</p>
+            <p class="muted-empty">Created @When(account.CreatedAt) · Last sign-in @When(account.LastLogon)</p>
+
+            @if (CanUpdate)
+            {
+                <div class="auth-field">
+                    <label for="given">Given name</label>
+                    <input id="given" @bind="givenName" maxlength="64" disabled="@busy" />
+                </div>
+                <div class="auth-field">
+                    <label for="family">Family name</label>
+                    <input id="family" @bind="familyName" maxlength="64" disabled="@busy" />
+                </div>
+                <div class="role-actions">
+                    <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="Save">
+                        @(busy ? "Saving…" : "Save name")
+                    </button>
+                </div>
+            }
+
+            @if (CanAdminister && !isSelf)
+            {
+                <div class="role-actions">
+                    @if (account.Disabled)
+                    {
+                        <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="Enable">Enable</button>
+                    }
+                    else if (confirmDisable)
+                    {
+                        <button type="button" class="btn btn-danger btn-small" disabled="@busy" @onclick="Disable">Confirm disable</button>
+                        <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="() => confirmDisable = false">Keep</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-danger btn-small" disabled="@busy" @onclick="() => confirmDisable = true">Disable</button>
+                    }
+
+                    @if (account.Locked)
+                    {
+                        <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="Unlock">Unlock</button>
+                    }
+                </div>
+            }
+            else if (CanAdminister && isSelf)
+            {
+                <p class="muted-empty">You cannot disable, unlock, or change roles on your own account.</p>
+            }
+        </section>
+
+        @if (CanAdminister)
+        {
+            <section class="role-card">
+                <span class="tile-kicker">Roles</span>
+                @if (isSelf)
+                {
+                    <p class="muted-empty">@rolesLabel</p>
+                }
+                else if (edits.Count == 0)
+                {
+                    <p class="muted-empty">No roles in the catalog.</p>
+                }
+                else
+                {
+                    <div class="perm-groups">
+                        @foreach (var edit in edits)
+                        {
+                            <div class="role-assign">
+                                <label class="auth-check">
+                                    <input type="checkbox"
+                                           checked="@edit.Selected"
+                                           disabled="@busy"
+                                           @onchange="e => Toggle(edit, IsChecked(e.Value))" />
+                                    <span>@edit.Name</span>
+                                </label>
+                                @if (edit.Selected)
+                                {
+                                    <select class="auth-select" @bind="edit.Scope" disabled="@busy">
+                                        <option value="@Scopes.Owned">owned</option>
+                                        <option value="@Scopes.Global">global</option>
+                                        <option value="@Scopes.Shared">shared</option>
+                                        <option value="@Scopes.Self">self</option>
+                                    </select>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="role-actions">
+                        <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="SaveRoles">
+                            @(busy ? "Saving…" : "Save roles")
+                        </button>
+                    </div>
+                }
+            </section>
+        }
+    }
+</div>
+</RequirePermission>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private int loadedId;
+    private AccountResponse? account;
+    private IReadOnlyList<RoleResponse> catalog = [];
+    private List<RoleEdit> edits = [];
+    private string givenName = "";
+    private string familyName = "";
+    private bool loading = true;
+    private bool busy;
+    private bool confirmDisable;
+    private string? error;
+    private string? notice;
+
+    private bool isSelf => account is not null && account.AccountId == Session.Profile?.AccountId;
+    private bool CanUpdate => Session.HasPermission(Resources.Account, Actions.Update);
+    private bool CanAdminister => Session.HasPermission(Resources.Account, Actions.Update, Scopes.Global);
+    private string lede => account is null ? "User details." : "Profile, status, and roles.";
+    private string rolesLabel =>
+        account?.Roles is { Count: > 0 } roles
+            ? string.Join(" · ", roles.Select(role => $"{role.Name} ({role.Scope})"))
+            : "No roles";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedId == Id && account is not null)
+            return;
+
+        loadedId = Id;
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        loading = true;
+        error = null;
+        notice = null;
+        confirmDisable = false;
+        var result = await AccountsApi.GetAsync(Id);
+        if (!result.Succeeded || result.Value is null)
+        {
+            account = null;
+            edits = [];
+            error = result.Error ?? "Could not load that account.";
+            loading = false;
+            return;
+        }
+
+        Apply(result.Value);
+
+        if (CanAdminister && Session.HasPermission(Resources.Role, Actions.Read))
+        {
+            var listed = await RolesApi.ListAsync();
+            if (listed.Succeeded)
+                catalog = listed.Value ?? [];
+            else
+                error = listed.Error ?? "Could not load roles.";
+        }
+
+        BindEdits();
+        loading = false;
+    }
+
+    private void Apply(AccountResponse value)
+    {
+        account = value;
+        givenName = value.GivenName ?? "";
+        familyName = value.FamilyName ?? "";
+        BindEdits();
+    }
+
+    private void BindEdits()
+    {
+        if (account is null || catalog.Count == 0)
+        {
+            edits = [];
+            return;
+        }
+
+        var current = account.Roles.ToDictionary(role => role.RoleId, role => role.Scope);
+        edits = catalog.Select(role => new RoleEdit
+        {
+            RoleId = role.RoleId,
+            Name = role.Name,
+            Selected = current.ContainsKey(role.RoleId),
+            Scope = current.TryGetValue(role.RoleId, out var scope) ? scope : DefaultScope(role.Name)
+        }).ToList();
+    }
+
+    private static void Toggle(RoleEdit edit, bool on)
+    {
+        edit.Selected = on;
+        if (on && string.IsNullOrWhiteSpace(edit.Scope))
+            edit.Scope = DefaultScope(edit.Name);
+    }
+
+    private static string DefaultScope(string name) =>
+        string.Equals(name, BeselerNet.Shared.Roles.Admin, StringComparison.OrdinalIgnoreCase) ? Scopes.Global : Scopes.Owned;
+
+    private static bool IsChecked(object? value) =>
+        value is true || (value is string text && bool.TryParse(text, out var parsed) && parsed);
+
+    private async Task Save()
+    {
+        if (account is null)
+            return;
+
+        busy = true;
+        error = null;
+        notice = null;
+        var result = await AccountsApi.UpdateAsync(account.AccountId, givenName, familyName);
+        busy = false;
+        if (!result.Succeeded || result.Value is null)
+        {
+            error = result.Error ?? "Could not save.";
+            return;
+        }
+
+        Apply(result.Value);
+        notice = "Name saved.";
+        if (isSelf)
+            await Session.RefreshProfileAsync();
+    }
+
+    private async Task SaveRoles()
+    {
+        if (account is null)
+            return;
+
+        busy = true;
+        error = null;
+        notice = null;
+        var roles = edits
+            .Where(edit => edit.Selected)
+            .Select(edit => new AccountRoleAssignment { RoleId = edit.RoleId, Scope = edit.Scope })
+            .ToArray();
+        var result = await AccountsApi.SetRolesAsync(account.AccountId, roles);
+        busy = false;
+        if (!result.Succeeded || result.Value is null)
+        {
+            error = result.Error ?? "Could not save roles.";
+            return;
+        }
+
+        Apply(result.Value);
+        notice = "Roles saved.";
+    }
+
+    private Task Disable() => RunAdmin(AccountsApi.DisableAsync, "Account disabled.");
+    private Task Enable() => RunAdmin(AccountsApi.EnableAsync, "Account enabled.");
+    private Task Unlock() => RunAdmin(AccountsApi.UnlockAsync, "Lockout cleared.");
+
+    private async Task RunAdmin(Func<int, CancellationToken, Task<ApiResult<AccountResponse>>> action, string done)
+    {
+        if (account is null)
+            return;
+
+        busy = true;
+        error = null;
+        notice = null;
+        confirmDisable = false;
+        var result = await action(account.AccountId, default);
+        busy = false;
+        if (!result.Succeeded || result.Value is null)
+        {
+            error = result.Error ?? "Could not update that account.";
+            return;
+        }
+
+        Apply(result.Value);
+        notice = done;
+    }
+
+    private static string When(DateTimeOffset? value) =>
+        value is { } time ? time.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "never";
+
+    private sealed class RoleEdit
+    {
+        public int RoleId { get; init; }
+        public string Name { get; init; } = "";
+        public bool Selected { get; set; }
+        public string Scope { get; set; } = Scopes.Owned;
+    }
+}

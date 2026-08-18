@@ -90,6 +90,40 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
         FailedLoginAttempts = 0;
         Append(new AccountPasswordChanged(AccountId, hash));
     }
+    public void ChangeName(string givenName, string familyName)
+    {
+        if (GivenName == givenName && FamilyName == familyName)
+            return;
+
+        GivenName = givenName;
+        FamilyName = familyName;
+        Append(new AccountNameChanged(AccountId, givenName, familyName));
+    }
+    public void Disable()
+    {
+        if (DisabledAt.HasValue)
+            return;
+
+        DisabledAt = DateTimeOffset.UtcNow;
+        Append(new AccountDisabled(AccountId));
+    }
+    public void Enable()
+    {
+        if (DisabledAt is null)
+            return;
+
+        DisabledAt = null;
+        Append(new AccountEnabled(AccountId));
+    }
+    public void Unlock()
+    {
+        if (LockedAt is null && FailedLoginAttempts == 0)
+            return;
+
+        LockedAt = null;
+        FailedLoginAttempts = 0;
+        Append(new AccountUnlocked(AccountId));
+    }
     public void Grant(Permission permission, string scope, int grantedBy)
     {
         var existing = _permissions.FirstOrDefault(p => p.PermissionId == permission.PermissionId);

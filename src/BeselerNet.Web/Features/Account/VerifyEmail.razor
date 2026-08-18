@@ -20,7 +20,7 @@
             }
             else if (sent)
             {
-                <p class="auth-lede">A new message is on the way to @address.</p>
+                <NoticeOk OnDismiss="() => sent = false">A new message is on the way to @address.</NoticeOk>
             }
 
             <button type="button" class="auth-submit" disabled="@busy" @onclick="Resend">

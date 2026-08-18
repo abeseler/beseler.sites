@@ -1,0 +1,82 @@
+@attribute [Route(Routes.Accounts)]
+@inject AccountsService AccountsApi
+@inject AccountSession Session
+
+<PageTitle>@SiteConstants.SiteName: Users</PageTitle>
+
+<RequirePermission Resource="@Resources.Account" Action="@Actions.Read" Scope="@Scopes.Global">
+<div class="app-main app-main-wide">
+    <p class="kicker">Access</p>
+    <h1 class="page-title">Users</h1>
+    <p class="page-lede">Everyone with an account. Open one to edit names, roles, or status.</p>
+
+    @if (error is not null)
+    {
+        <p class="auth-alert" role="alert">@error</p>
+    }
+
+    @if (loading)
+    {
+        <p class="page-lede">Loading users…</p>
+    }
+    else if (accounts.Count == 0)
+    {
+        <p class="muted-empty">No users yet.</p>
+    }
+    else
+    {
+        <div class="role-list">
+            @foreach (var account in accounts)
+            {
+                <a class="tile" href="@Routes.AccountDetail(account.AccountId)">
+                    <span class="tile-kicker">@Status(account)</span>
+                    <span class="tile-title">@account.Name</span>
+                    <span class="tile-copy">@Meta(account)</span>
+                </a>
+            }
+        </div>
+    }
+</div>
+</RequirePermission>
+
+@code {
+    private IReadOnlyList<AccountResponse> accounts = [];
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await AccountsApi.ListAsync();
+        loading = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not load users.";
+            return;
+        }
+
+        accounts = result.Value ?? [];
+    }
+
+    private string Status(AccountResponse account)
+    {
+        var bits = new List<string>();
+        if (account.AccountId == Session.Profile?.AccountId)
+            bits.Add("You");
+        if (account.Disabled)
+            bits.Add("Disabled");
+        if (account.Locked)
+            bits.Add("Locked");
+        if (!account.EmailVerified)
+            bits.Add("Unverified");
+        return bits.Count > 0 ? string.Join(" · ", bits) : "Active";
+    }
+
+    private static string Meta(AccountResponse account)
+    {
+        var bits = new List<string>();
+        if (account.Email is { } email)
+            bits.Add(email);
+        bits.AddRange(account.Roles.Select(role => role.Name));
+        return bits.Count > 0 ? string.Join(" · ", bits) : "User";
+    }
+}

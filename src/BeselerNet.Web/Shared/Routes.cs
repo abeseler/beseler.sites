@@ -14,4 +14,9 @@ internal static class Routes
     public const string Dashboard = "/dashboard";
     public const string Budget = "/budget";
     public const string Roles = "/roles";
+    public const string Account = "/account";
+    public const string Accounts = "/accounts";
+    public const string AccountDetailTemplate = "/accounts/{Id:int}";
+
+    public static string AccountDetail(int accountId) => $"/accounts/{accountId}";
 }

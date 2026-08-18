@@ -17,6 +17,28 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
         return await connection.ExecuteScalarAsync<int>("SELECT nextval('account_id_seq')");
     }
 
+    public async Task<IReadOnlyList<Account>> ListUsers(CancellationToken cancellationToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        var results = await connection.QueryMultipleAsync(
+            """
+            SELECT * FROM account WHERE type = 'User' ORDER BY created_at;
+
+            SELECT ar.account_id, ar.role_id, r.name, ar.scope, ar.granted_at, ar.granted_by_account_id
+            FROM account_role ar
+            INNER JOIN role r ON r.role_id = ar.role_id
+            INNER JOIN account a ON a.account_id = ar.account_id
+            WHERE a.type = 'User';
+            """);
+
+        var accounts = (await results.ReadAsync<Account>()).ToList();
+        var roles = (await results.ReadAsync<AccountRole>()).ToLookup(role => role.AccountId);
+        foreach (var account in accounts)
+            RolesRef(account) = roles[account.AccountId].ToList();
+
+        return accounts;
+    }
+
     public async Task<Account?> WithId(int id, CancellationToken cancellationToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);

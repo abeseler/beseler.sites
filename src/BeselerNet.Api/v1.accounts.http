@@ -1,0 +1,64 @@
+@host={{$projectUrl}}
+@email=testing@beseler.net
+@password=password
+
+### Login
+
+# @name login
+POST {{host}}/v1/accounts/oauth/tokens
+Content-Type: application/json
+
+{
+  "grant_type": "password",
+  "username": "{{email}}",
+  "password": "{{password}}"
+}
+
+### List users
+
+GET {{host}}/v1/accounts
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Get user
+
+GET {{host}}/v1/accounts/1
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Update name
+
+PUT {{host}}/v1/accounts/1
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "given_name": "Adam",
+  "family_name": "Beseler"
+}
+
+### Disable
+
+POST {{host}}/v1/accounts/2/disable
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Enable
+
+POST {{host}}/v1/accounts/2/enable
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Unlock
+
+POST {{host}}/v1/accounts/2/unlock
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Set roles
+
+PUT {{host}}/v1/accounts/2/roles
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "roles": [
+    { "role_id": 1, "scope": "owned" },
+    { "role_id": 2, "scope": "global" }
+  ]
+}

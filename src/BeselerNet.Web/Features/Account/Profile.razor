@@ -1,0 +1,100 @@
+@attribute [Route(Routes.Account)]
+@inject AccountsService AccountsApi
+@inject AccountSession Session
+
+<PageTitle>@SiteConstants.SiteName: Account</PageTitle>
+
+<RequirePermission Resource="@Resources.Account" Action="@Actions.Read">
+<div class="app-main">
+    <p class="kicker">Account</p>
+    <h1 class="page-title">Your account</h1>
+    <p class="page-lede">Name and the email you sign in with.</p>
+
+    @if (error is not null)
+    {
+        <p class="auth-alert" role="alert">@error</p>
+    }
+    @if (saved)
+    {
+        <NoticeOk OnDismiss="() => saved = false">Name saved.</NoticeOk>
+    }
+
+    <section class="role-card">
+        <div class="auth-field">
+            <label>Email</label>
+            <p class="account-static">@(Session.Profile?.Email ?? "—")</p>
+        </div>
+        <div class="auth-field">
+            <label>Roles</label>
+            <p class="account-static">@rolesLabel</p>
+        </div>
+
+        @if (CanUpdate)
+        {
+            <div class="auth-field">
+                <label for="given">Given name</label>
+                <input id="given" @bind="givenName" maxlength="64" disabled="@busy" />
+            </div>
+            <div class="auth-field">
+                <label for="family">Family name</label>
+                <input id="family" @bind="familyName" maxlength="64" disabled="@busy" />
+            </div>
+            <div class="role-actions">
+                <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="Save">
+                    @(busy ? "Saving…" : "Save")
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="auth-field">
+                <label>Name</label>
+                <p class="account-static">@(Session.Name ?? "—")</p>
+            </div>
+        }
+    </section>
+</div>
+</RequirePermission>
+
+@code {
+    private string givenName = "";
+    private string familyName = "";
+    private bool busy;
+    private bool saved;
+    private string? error;
+
+    private bool CanUpdate => Session.HasPermission(Resources.Account, Actions.Update);
+    private string rolesLabel =>
+        Session.Profile?.Roles is { Count: > 0 } roles
+            ? string.Join(" · ", roles.Select(role => role.Name))
+            : "None";
+
+    protected override void OnInitialized()
+    {
+        givenName = Session.Profile?.GivenName ?? "";
+        familyName = Session.Profile?.FamilyName ?? "";
+    }
+
+    private async Task Save()
+    {
+        if (Session.Profile is null)
+            return;
+
+        busy = true;
+        saved = false;
+        error = null;
+        var result = await AccountsApi.UpdateAsync(Session.Profile.AccountId, givenName, familyName);
+        busy = false;
+
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not save.";
+            return;
+        }
+
+        await Session.RefreshProfileAsync();
+        givenName = Session.Profile?.GivenName ?? givenName;
+        familyName = Session.Profile?.FamilyName ?? familyName;
+        saved = true;
+    }
+}
