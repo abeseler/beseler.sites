@@ -187,7 +187,8 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 disabled_at,
                 locked_at,
                 last_logon,
-                failed_login_attempts)
+                failed_login_attempts,
+                invited_at)
             VALUES (
                 @AccountId,
                 @Version,
@@ -203,7 +204,8 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 @DisabledAt,
                 @LockedAt,
                 @LastLogon,
-                @FailedLoginAttempts)
+                @FailedLoginAttempts,
+                @InvitedAt)
             ON CONFLICT (account_id) DO UPDATE
             SET version = @Version,
                 username = @Username,
@@ -216,7 +218,8 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 disabled_at = @DisabledAt,
                 locked_at = @LockedAt,
                 last_logon = @LastLogon,
-                failed_login_attempts = @FailedLoginAttempts
+                failed_login_attempts = @FailedLoginAttempts,
+                invited_at = @InvitedAt
             """, new
             {
                 account.AccountId,
@@ -233,7 +236,8 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 account.DisabledAt,
                 account.LockedAt,
                 account.LastLogon,
-                account.FailedLoginAttempts
+                account.FailedLoginAttempts,
+                account.InvitedAt
             }, transaction);
 
             await SyncPermissions(account, connection, transaction);

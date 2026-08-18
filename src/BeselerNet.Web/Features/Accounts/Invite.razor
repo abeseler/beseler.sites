@@ -1,0 +1,146 @@
+@attribute [Route(Routes.Invite)]
+@inject AccountsService AccountsApi
+@inject RoleService RolesApi
+@inject AccountSession Session
+
+<PageTitle>@SiteConstants.SiteName: Invite</PageTitle>
+
+<RequirePermission Resource="@Resources.Account" Action="@Actions.Update" Scope="@Scopes.Global">
+<div class="app-main">
+    <p class="kicker"><a href="@Routes.Accounts">Users</a></p>
+    <h1 class="page-title">Invite</h1>
+    <p class="page-lede">Create an account and email them a link to set a password. The link lasts @AuthLimits.InviteExpiryText.</p>
+
+    @if (error is not null)
+    {
+        <p class="auth-alert" role="alert">@error</p>
+    }
+    @if (notice is not null)
+    {
+        <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
+    }
+
+    <section class="role-card">
+        <div class="auth-field">
+            <label for="email">Email</label>
+            <input id="email" type="email" @bind="email" disabled="@busy" />
+        </div>
+        <div class="auth-field">
+            <label for="given">Given name</label>
+            <input id="given" @bind="givenName" maxlength="64" disabled="@busy" />
+        </div>
+        <div class="auth-field">
+            <label for="family">Family name</label>
+            <input id="family" @bind="familyName" maxlength="64" disabled="@busy" />
+        </div>
+
+        @if (edits.Count > 0)
+        {
+            <span class="tile-kicker">Roles</span>
+            <div class="perm-groups">
+                @foreach (var edit in edits)
+                {
+                    <div class="role-assign">
+                        <label class="auth-check">
+                            <input type="checkbox" checked="@edit.Selected" disabled="@busy"
+                                   @onchange="e => Toggle(edit, IsChecked(e.Value))" />
+                            <span>@edit.Name</span>
+                        </label>
+                        @if (edit.Selected)
+                        {
+                            <select class="auth-select" @bind="edit.Scope" disabled="@busy">
+                                <option value="@Scopes.Owned">owned</option>
+                                <option value="@Scopes.Global">global</option>
+                                <option value="@Scopes.Shared">shared</option>
+                                <option value="@Scopes.Self">self</option>
+                            </select>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="role-actions">
+            <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="Submit">
+                @(busy ? "Sending…" : "Send invite")
+            </button>
+        </div>
+    </section>
+</div>
+</RequirePermission>
+
+@code {
+    private string email = "";
+    private string givenName = "";
+    private string familyName = "";
+    private List<RoleEdit> edits = [];
+    private bool busy;
+    private string? error;
+    private string? notice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Session.HasPermission(Resources.Role, Actions.Read))
+            return;
+
+        var listed = await RolesApi.ListAsync();
+        if (!listed.Succeeded || listed.Value is null)
+            return;
+
+        edits = listed.Value.Select(role => new RoleEdit
+        {
+            RoleId = role.RoleId,
+            Name = role.Name,
+            Selected = string.Equals(role.Name, BeselerNet.Shared.Roles.Member, StringComparison.OrdinalIgnoreCase),
+            Scope = string.Equals(role.Name, BeselerNet.Shared.Roles.Admin, StringComparison.OrdinalIgnoreCase) ? Scopes.Global : Scopes.Owned
+        }).ToList();
+    }
+
+    private async Task Submit()
+    {
+        busy = true;
+        error = null;
+        notice = null;
+        var result = await AccountsApi.InviteAsync(new InviteUserRequest
+        {
+            Email = email,
+            GivenName = givenName,
+            FamilyName = familyName,
+            Roles = edits.Where(edit => edit.Selected)
+                .Select(edit => new AccountRoleAssignment { RoleId = edit.RoleId, Scope = edit.Scope })
+                .ToArray()
+        });
+        busy = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not send the invite.";
+            return;
+        }
+
+        notice = $"Invite sent to {email}.";
+        email = "";
+        givenName = "";
+        familyName = "";
+        foreach (var edit in edits)
+        {
+            edit.Selected = string.Equals(edit.Name, BeselerNet.Shared.Roles.Member, StringComparison.OrdinalIgnoreCase);
+            edit.Scope = string.Equals(edit.Name, BeselerNet.Shared.Roles.Admin, StringComparison.OrdinalIgnoreCase) ? Scopes.Global : Scopes.Owned;
+        }
+    }
+
+    private static void Toggle(RoleEdit edit, bool on)
+    {
+        edit.Selected = on;
+    }
+
+    private static bool IsChecked(object? value) =>
+        value is true || (value is string text && bool.TryParse(text, out var parsed) && parsed);
+
+    private sealed class RoleEdit
+    {
+        public int RoleId { get; init; }
+        public string Name { get; init; } = "";
+        public bool Selected { get; set; }
+        public string Scope { get; set; } = Scopes.Owned;
+    }
+}

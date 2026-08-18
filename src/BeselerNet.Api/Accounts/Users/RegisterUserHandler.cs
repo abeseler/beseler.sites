@@ -1,4 +1,5 @@
 ﻿using BeselerNet.Api.Accounts.OAuth;
+using BeselerNet.Api.Settings;
 using BeselerNet.Shared;
 using BeselerNet.Shared.Contracts.Users;
 using Microsoft.AspNetCore.Identity;
@@ -7,12 +8,15 @@ namespace BeselerNet.Api.Accounts.Users;
 
 internal static class RegisterUserHandler
 {
-    public static async Task<IResult> Handle(RegisterUserRequest request, AccountDataSource accounts, RoleDataSource roles, IPasswordHasher<Account> passwordHasher, CancellationToken cancellationToken)
+    public static async Task<IResult> Handle(RegisterUserRequest request, AccountDataSource accounts, RoleDataSource roles, SettingDataSource settings, IPasswordHasher<Account> passwordHasher, CancellationToken cancellationToken)
     {
         if (request.IsInvalid(out var errors))
         {
             return TypedResults.ValidationProblem(errors);
         }
+
+        if (!await AppStatus.SignupOpen(roles, settings, cancellationToken))
+            return TypedResults.Problem(AccountProblems.SignupClosed);
 
         var account = await accounts.WithEmail(request.Email, cancellationToken);
         if (account is not null)

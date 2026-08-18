@@ -59,6 +59,16 @@ internal sealed class AccountService(ApiClient api, AccountSession session)
     public Task<ApiResult> RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default) =>
         _api.PostAsync("/v1/accounts/forgot-password", new ForgotPasswordRequest { Email = email }, cancellationToken: cancellationToken);
 
+    public async Task<ApiResult<string>> AcceptInviteAsync(string token, string password, bool persist = false, string? returnUrl = null, CancellationToken cancellationToken = default)
+    {
+        var result = await _api.PostAsync<OAuthTokenResponse>("/v1/accounts/accept-invite", new ResetPasswordRequest { Password = password }, bearer: token, cancellationToken: cancellationToken);
+        if (!result.Succeeded || string.IsNullOrWhiteSpace(result.Value?.AccessToken))
+            return ApiResult<string>.Fail(result.Error ?? "Could not accept the invite.", result.FieldErrors, result.StatusCode);
+
+        var handoff = await _session.EstablishAsync(result.Value, persist, returnUrl, cancellationToken);
+        return ApiResult<string>.Ok(handoff);
+    }
+
     public async Task<ApiResult<string>> ResetPasswordAsync(string token, string password, bool persist = false, string? returnUrl = null, CancellationToken cancellationToken = default)
     {
         var result = await _api.PostAsync<OAuthTokenResponse>("/v1/accounts/reset-password", new ResetPasswordRequest { Password = password }, bearer: token, cancellationToken: cancellationToken);

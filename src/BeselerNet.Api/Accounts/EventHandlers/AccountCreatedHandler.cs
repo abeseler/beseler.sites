@@ -25,7 +25,7 @@ internal sealed class AccountCreatedHandler(JwtGenerator tokenGenerator, Communi
         }
 
         var account = await _accounts.WithId(domainEvent.AccountId, cancellationToken);
-        if (account?.EmailVerifiedAt is not null)
+        if (account is null || account.EmailVerifiedAt is not null || account.IsInvited)
         {
             return;
         }

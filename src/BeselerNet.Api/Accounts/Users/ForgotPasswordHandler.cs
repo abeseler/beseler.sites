@@ -77,9 +77,9 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
             using var scope = _services.CreateAsyncScope();
             var accounts = scope.ServiceProvider.GetRequiredService<AccountDataSource>();
             var account = await accounts.WithEmail(request.Email, cancellationToken);
-            if (account is null or { IsDisabled: true })
+            if (account is null or { IsDisabled: true } || account.IsInvited)
             {
-                _logger.LogWarning("Password reset request for {Email} failed: account {Status}", request.Email, account is null ? "not found" : "disabled");
+                _logger.LogWarning("Password reset request for {Email} failed: account {Status}", request.Email, account is null ? "not found" : account.IsDisabled ? "disabled" : "invited");
                 return;
             }
 

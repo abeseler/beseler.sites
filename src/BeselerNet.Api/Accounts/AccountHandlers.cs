@@ -125,7 +125,7 @@ internal static class AccountHandlers
     private static bool IsSelf(ClaimsPrincipal user, int accountId) =>
         int.TryParse(user.FindFirstValue(JwtRegisteredClaimNames.Sub), out var callerId) && callerId == accountId;
 
-    private static AccountResponse Map(Account account) => new()
+    internal static AccountResponse Map(Account account) => new()
     {
         AccountId = account.AccountId,
         Username = account.Username,
@@ -137,6 +137,7 @@ internal static class AccountHandlers
         Type = account.Type.ToString(),
         Disabled = account.IsDisabled,
         Locked = account.IsLocked,
+        Invited = account.IsInvited,
         LastLogon = account.LastLogon,
         CreatedAt = account.CreatedAt,
         Roles = [.. account.Roles

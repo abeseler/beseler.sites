@@ -29,6 +29,17 @@ internal sealed class CommunicationService(CommunicationDataSource dataSource, I
         return communication;
     }
 
+    public async Task<Result<Communication>> SendInvite(int accountId, string email, string recipientName, string token, CancellationToken cancellationToken)
+    {
+        var template = EmailTemplates.Invite(_options, recipientName, token);
+        var communication = await SendEmail(accountId, template, email, recipientName, cancellationToken);
+        if (communication.FailedAt.HasValue)
+        {
+            _logger.LogInformation("Token not sent: {Token}", token);
+        }
+        return communication;
+    }
+
     public async Task<Result<Communication>> SendPasswordReset(int accountId, string email, string recipientName, string token, CancellationToken cancellationToken)
     {
         var template = EmailTemplates.PasswordReset(_options, recipientName, token);

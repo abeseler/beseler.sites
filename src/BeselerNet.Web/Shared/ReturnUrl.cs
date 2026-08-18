@@ -43,6 +43,7 @@ internal static class ReturnUrl
             || path.Equals(Routes.VerifyEmail, StringComparison.OrdinalIgnoreCase)
             || path.Equals(Routes.ForgotPassword, StringComparison.OrdinalIgnoreCase)
             || path.Equals(Routes.ResetPassword, StringComparison.OrdinalIgnoreCase)
+            || path.Equals(Routes.AcceptInvite, StringComparison.OrdinalIgnoreCase)
             || path.Equals(Routes.EstablishSession, StringComparison.OrdinalIgnoreCase)
             || path.Equals(Routes.SignOut, StringComparison.OrdinalIgnoreCase);
     }

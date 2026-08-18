@@ -6,6 +6,8 @@ namespace BeselerNet.Api.Core
 {
 
     [JsonDerivedType(typeof(AccountCreated), "account-created")]
+    [JsonDerivedType(typeof(AccountInvited), "account-invited")]
+    [JsonDerivedType(typeof(AccountInviteAccepted), "account-invite-accepted")]
     [JsonDerivedType(typeof(AccountEmailVerified), "account-email-verified")]
     [JsonDerivedType(typeof(AccountPasswordChanged), "account-password-changed")]
     [JsonDerivedType(typeof(AccountNameChanged), "account-name-changed")]
@@ -24,6 +26,8 @@ namespace BeselerNet.Api.Core
 namespace BeselerNet.Api.Accounts
 {
     internal sealed record AccountCreated(int AccountId, AccountType Type, string Username, string? Email, string SecretHash, string? GivenName, string? FamilyName) : DomainEvent;
+    internal sealed record AccountInvited(int AccountId, string? Email) : DomainEvent;
+    internal sealed record AccountInviteAccepted(int AccountId) : DomainEvent;
     internal sealed record AccountEmailVerified(int AccountId, string Email) : DomainEvent;
     internal sealed record AccountPasswordChanged(int AccountId, string SecretHash) : DomainEvent;
     internal sealed record AccountNameChanged(int AccountId, string GivenName, string FamilyName) : DomainEvent;

@@ -31,4 +31,10 @@ internal sealed class AccountsService(ApiClient api)
 
     public Task<ApiResult<AccountResponse>> SetRolesAsync(int accountId, IReadOnlyList<AccountRoleAssignment> roles, CancellationToken cancellationToken = default) =>
         _api.PutAsync<AccountResponse>($"/v1/accounts/{accountId}/roles", new SetAccountRolesRequest { Roles = roles }, session: true, cancellationToken);
+
+    public Task<ApiResult<AccountResponse>> InviteAsync(InviteUserRequest request, CancellationToken cancellationToken = default) =>
+        _api.PostAsync<AccountResponse>("/v1/accounts/invite", request, session: true, cancellationToken: cancellationToken);
+
+    public Task<ApiResult> ResendInviteAsync(int accountId, CancellationToken cancellationToken = default) =>
+        _api.PostAsync($"/v1/accounts/{accountId}/resend-invite", session: true, cancellationToken: cancellationToken);
 }

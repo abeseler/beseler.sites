@@ -16,7 +16,10 @@ internal static class Routes
     public const string Roles = "/roles";
     public const string Account = "/account";
     public const string Accounts = "/accounts";
+    public const string Invite = "/accounts/invite";
     public const string AccountDetailTemplate = "/accounts/{Id:int}";
+    public const string Settings = "/settings";
+    public const string AcceptInvite = "/account/accept-invite";
 
     public static string AccountDetail(int accountId) => $"/accounts/{accountId}";
 }

@@ -1,0 +1,98 @@
+@attribute [Route(Routes.AcceptInvite)]
+@layout BasicLayout
+@inject AccountService Accounts
+@inject NavigationManager Nav
+
+<PageTitle>@SiteConstants.SiteName: Accept invite</PageTitle>
+
+<section class="auth-shell">
+    <div class="auth-card">
+        <Brand />
+
+        @if (string.IsNullOrWhiteSpace(Token))
+        {
+            <p class="auth-alert" role="alert">This page needs the link from your invite email.</p>
+            <p class="auth-footer">
+                <a href="@Routes.Login">Sign in</a>
+            </p>
+        }
+        else
+        {
+            <p class="auth-lede">Choose a password to join. You will be signed in after it is saved. The invite link lasts @AuthLimits.InviteExpiryText.</p>
+
+            @if (error is not null)
+            {
+                <p class="auth-alert" role="alert">@error</p>
+            }
+
+            <EditForm Model="model" OnValidSubmit="Submit" FormName="accept-invite">
+                <DataAnnotationsValidator />
+                <div class="auth-field">
+                    <label for="password">Password</label>
+                    <InputText id="password" type="password" @bind-Value="model.Password" autocomplete="new-password" />
+                    <ValidationMessage For="() => model.Password" />
+                </div>
+                <div class="auth-field">
+                    <label for="confirm">Confirm password</label>
+                    <InputText id="confirm" type="password" @bind-Value="model.Confirm" autocomplete="new-password" />
+                    <ValidationMessage For="() => model.Confirm" />
+                </div>
+                <label class="auth-check">
+                    <InputCheckbox id="persist" @bind-Value="model.ThisDevice" />
+                    <span>
+                        This is my device
+                        <span class="auth-check-hint">Stay signed in after you close the browser. Skip this on a shared computer.</span>
+                    </span>
+                </label>
+                <button type="submit" class="auth-submit" disabled="@busy">
+                    @(busy ? "Saving…" : "Set password")
+                </button>
+            </EditForm>
+        }
+    </div>
+</section>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Token { get; set; }
+
+    [SupplyParameterFromQuery(Name = ReturnUrl.Query)]
+    public string? Return { get; set; }
+
+    private readonly AcceptModel model = new();
+    private bool busy;
+    private string? error;
+
+    private async Task Submit()
+    {
+        if (model.Password != model.Confirm)
+        {
+            error = "The two passwords do not match.";
+            return;
+        }
+
+        busy = true;
+        error = null;
+        var result = await Accounts.AcceptInviteAsync(Token!, model.Password, model.ThisDevice, Return);
+        busy = false;
+
+        if (result.Succeeded)
+        {
+            Nav.NavigateTo(result.Value!, forceLoad: true);
+            return;
+        }
+
+        error = result.Error;
+    }
+
+    private sealed class AcceptModel
+    {
+        [Required, MinLength(AuthLimits.PasswordMinLength)]
+        public string Password { get; set; } = "";
+
+        [Required]
+        public string Confirm { get; set; } = "";
+
+        public bool ThisDevice { get; set; }
+    }
+}

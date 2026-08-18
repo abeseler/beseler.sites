@@ -20,6 +20,7 @@ public sealed record AccountResponse
     public required string Type { get; init; }
     public bool Disabled { get; init; }
     public bool Locked { get; init; }
+    public bool Invited { get; init; }
     [JsonPropertyName("last_logon")]
     public DateTimeOffset? LastLogon { get; init; }
     [JsonPropertyName("created_at")]

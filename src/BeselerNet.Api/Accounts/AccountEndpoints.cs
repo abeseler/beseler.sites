@@ -78,6 +78,35 @@ internal static class AccountEndpoints
             .ProducesProblem(Status404NotFound, Application.Json)
             .RequireAuthorization();
 
+        v1.MapPost("/invite", InviteUserHandler.Handle)
+            .WithName("InviteUser")
+            .WithDescription("Create an invited account and email a set-password link. Requires account:update at global.")
+            .Accepts<InviteUserRequest>(Application.Json)
+            .Produces<AccountResponse>(Status201Created, Application.Json)
+            .ProducesValidationProblem(Status400BadRequest, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .RequireAuthorization();
+
+        v1.MapPost("/{accountId:int}/resend-invite", InviteUserHandler.Resend)
+            .WithName("ResendInvite")
+            .WithDescription("Resend the invite email. Requires account:update at global.")
+            .Produces(Status202Accepted)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .ProducesProblem(Status404NotFound, Application.Json)
+            .RequireAuthorization();
+
+        v1.MapPost("/accept-invite", AcceptInviteHandler.Handle)
+            .WithName("AcceptInvite")
+            .WithDescription("Set a password from an invite link and return a session.")
+            .Accepts<ResetPasswordRequest>(Application.Json)
+            .Produces<OAuthTokenResponse>(Status200OK, Application.Json)
+            .ProducesValidationProblem(Status400BadRequest, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .RequireAuthorization();
+
         v1.MapPut("/{accountId:int}/roles", AccountHandlers.SetRoles)
             .WithName("SetAccountRoles")
             .WithDescription("Replace the account's roles. Requires account:update at global. Cannot target yourself or remove the last admin.")

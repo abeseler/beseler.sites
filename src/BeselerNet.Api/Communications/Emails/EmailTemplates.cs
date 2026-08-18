@@ -81,6 +81,35 @@ internal static class EmailTemplates
                 """);
     }
 
+    public static EmailTemplate Invite(CommunicationOptions options, string recipientName, string token)
+    {
+        var url = ActionUrl(options.AcceptInviteUrl, token);
+        return Message(
+            options,
+            name: "Account Invite",
+            subject: $"You're invited to {Branding.ProductName}",
+            heading: "You're invited",
+            plain:
+                $"""
+                Hi {recipientName},
+
+                You've been invited to {Branding.ProductName}. Set your password:
+
+                {url}
+
+                The link expires in {AuthLimits.InviteExpiryText}.
+                """,
+            bodyHtml:
+                $"""
+                <p style="{P}">Hi {Encode(recipientName)},</p>
+                <p style="{P}">You've been invited to {Encode(Branding.ProductName)}. Set a password to join.</p>
+                {Button(url, "Set password")}
+                <p style="{P}{Muted}">If the button does not work, paste this into your browser:</p>
+                <p style="{P}{Muted}word-break:break-all;">{Encode(url)}</p>
+                <p style="{P}{Muted}">The link expires in {AuthLimits.InviteExpiryText}.</p>
+                """);
+    }
+
     public static EmailTemplate PasswordReset(CommunicationOptions options, string recipientName, string token)
     {
         var url = ActionUrl(options.ResetPasswordUrl, token);

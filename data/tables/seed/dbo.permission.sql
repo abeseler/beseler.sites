@@ -6,4 +6,6 @@ INSERT INTO permission (resource, action) VALUES
     ('role', 'read'),
     ('role', 'update'),
     ('permission', 'read'),
-    ('permission', 'update');
+    ('permission', 'update'),
+    ('setting', 'read'),
+    ('setting', 'update');

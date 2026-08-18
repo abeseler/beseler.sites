@@ -3,6 +3,7 @@
 @inject AccountService Accounts
 @inject NavigationManager Nav
 @inject IHostEnvironment Env
+@inject AppService App
 
 <PageTitle>@SiteConstants.SiteName: Sign in</PageTitle>
 
@@ -52,7 +53,10 @@
 
         <p class="auth-footer">
             <a href="@ReturnUrl.WithReturn(Routes.ForgotPassword, Return)">Forgot password?</a>
-            · No account? <a href="@ReturnUrl.WithReturn(Routes.SignUp, Return)">Create one</a>
+            @if (signupOpen)
+            {
+                <text> · No account? <a href="@ReturnUrl.WithReturn(Routes.SignUp, Return)">Create one</a></text>
+            }
         </p>
     </div>
 </section>
@@ -65,12 +69,15 @@
     private readonly LoginModel model = new();
     private bool busy;
     private bool locked;
+    private bool signupOpen;
     private string? error;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         if (Env.IsDevelopment())
             model.Email = SiteConstants.DevelopmentEmail;
+        var status = await App.GetStatusAsync();
+        signupOpen = status.Value?.SignupOpen is true;
     }
 
     private async Task Submit()

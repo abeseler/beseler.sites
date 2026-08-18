@@ -1,6 +1,7 @@
 ﻿using BeselerNet.Api.Accounts;
 using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Communications;
+using BeselerNet.Api.Settings;
 using BeselerNet.Api.Events;
 using BeselerNet.Api.Outbox;
 using Dapper;
@@ -21,6 +22,7 @@ internal static class DataSourceRegistrar
             .AddSingleton<EventLogDataSource>()
             .AddSingleton<PermissionDataSource>()
             .AddSingleton<RoleDataSource>()
+            .AddSingleton<SettingDataSource>()
             .AddScoped<TokenLogDataSource>();
 
         DefaultTypeMap.MatchNamesWithUnderscores = true;

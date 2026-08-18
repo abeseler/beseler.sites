@@ -24,6 +24,7 @@ CREATE TABLE account (
     locked_at TIMESTAMPTZ NULL,
     last_logon TIMESTAMPTZ NULL,
     failed_login_attempts INT NOT NULL DEFAULT (0),
+    invited_at TIMESTAMPTZ NULL,
     CONSTRAINT pk_account PRIMARY KEY (account_id),
     CONSTRAINT uq_account_username UNIQUE (username),
     CONSTRAINT uq_account_email UNIQUE (email),

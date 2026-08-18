@@ -3,6 +3,7 @@
 @inject AccountService Accounts
 @inject NavigationManager Nav
 @inject IHostEnvironment Env
+@inject AppService App
 
 <PageTitle>@SiteConstants.SiteName: Create account</PageTitle>
 
@@ -10,6 +11,15 @@
 <section class="auth-shell">
     <div class="auth-card">
         <Brand />
+        @if (!signupOpen)
+        {
+            <p class="auth-lede">Public signup is closed. Ask an admin for an invite.</p>
+            <p class="auth-footer">
+                <a href="@ReturnUrl.WithReturn(Routes.Login, Return)">Sign in</a>
+            </p>
+        }
+        else
+        {
         <p class="auth-lede">Create an account. You will be signed in after it is created.</p>
 
         @if (error is not null)
@@ -60,6 +70,7 @@
         <p class="auth-footer">
             Already have an account? <a href="@ReturnUrl.WithReturn(Routes.Login, Return)">Sign in</a>
         </p>
+        }
     </div>
 </section>
 </RedirectIfSignedIn>
@@ -70,13 +81,16 @@
 
     private readonly SignUpModel model = new();
     private bool busy;
+    private bool signupOpen;
     private string? error;
     private IDictionary<string, string[]>? fieldErrors;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         if (Env.IsDevelopment())
             model.Email = SiteConstants.DevelopmentEmail;
+        var status = await App.GetStatusAsync();
+        signupOpen = status.Value?.SignupOpen is true;
     }
 
     private async Task Submit()

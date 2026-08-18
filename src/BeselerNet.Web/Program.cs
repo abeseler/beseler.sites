@@ -3,6 +3,7 @@ using BeselerNet.Web.Components;
 using BeselerNet.Web.Features.Account;
 using BeselerNet.Web.Features.Accounts;
 using BeselerNet.Web.Features.Roles;
+using BeselerNet.Web.Features.Settings;
 using BeselerNet.Web.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,7 @@ builder.Services.AddScoped<AccountSession>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<AccountsService>();
 builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<AppService>();
 
 builder.Services.AddHttpClient(ApiClient.ClientName, client =>
     {

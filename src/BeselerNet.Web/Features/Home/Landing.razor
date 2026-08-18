@@ -2,6 +2,7 @@
 @layout BasicLayout
 @inject AccountSession Session
 @inject NavigationManager Nav
+@inject AppService App
 
 <PageTitle>@SiteConstants.SiteName</PageTitle>
 
@@ -23,7 +24,10 @@
         {
             <div class="btn-row">
                 <a class="btn btn-primary" href="@Routes.Login">Sign in</a>
-                <a class="btn btn-ghost" href="@Routes.SignUp">Create account</a>
+                @if (signupOpen)
+                {
+                    <a class="btn btn-ghost" href="@Routes.SignUp">Create account</a>
+                }
             </div>
         }
     </div>
@@ -31,11 +35,14 @@
 
 @code {
     private string displayName = "you";
+    private bool signupOpen;
 
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         displayName = Session.Name ?? Session.Profile?.Email ?? "you";
+        var status = await App.GetStatusAsync();
+        signupOpen = status.Value?.SignupOpen is true;
     }
 
     private void SignOut() => Nav.NavigateTo(Routes.SignOut, forceLoad: true);

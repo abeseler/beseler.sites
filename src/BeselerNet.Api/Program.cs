@@ -7,6 +7,7 @@ using BeselerNet.Api.Core;
 using BeselerNet.Api.OpenApi;
 using BeselerNet.Api.Outbox;
 using BeselerNet.Api.Registrars;
+using BeselerNet.Api.Settings;
 using BeselerNet.Api.Webhooks;
 using Microsoft.AspNetCore.Identity;
 
@@ -58,6 +59,7 @@ app.UseRequestLogging();
 app.MapOpenApi().CacheOutput();
 app.MapDefaultEndpoints();
 app.MapAccountEndpoints();
+app.MapSettingEndpoints();
 app.MapRoleEndpoints();
 app.MapWebhookEndpoints();
 

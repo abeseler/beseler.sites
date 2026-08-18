@@ -4,6 +4,7 @@ public static class AuthLimits
 {
     public static readonly TimeSpan ConfirmEmail = TimeSpan.FromHours(24);
     public static readonly TimeSpan ResetPassword = TimeSpan.FromMinutes(20);
+    public static readonly TimeSpan Invite = TimeSpan.FromDays(7);
     public static readonly TimeSpan Idle = TimeSpan.FromMinutes(20);
     public static readonly TimeSpan PersistCookie = TimeSpan.FromDays(14);
 
@@ -13,4 +14,5 @@ public static class AuthLimits
 
     public static string ConfirmEmailExpiryText => $"{(int)ConfirmEmail.TotalHours} hours";
     public static string ResetPasswordExpiryText => $"{(int)ResetPassword.TotalMinutes} minutes";
+    public static string InviteExpiryText => $"{(int)Invite.TotalDays} days";
 }

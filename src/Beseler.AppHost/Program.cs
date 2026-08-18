@@ -98,6 +98,12 @@ var beselerNetWeb = builder.AddProject<BeselerNet_Web>("beseler-net-web")
         });
         ctx.Urls.Add(new ResourceUrlAnnotation
         {
+            Url = "/settings",
+            DisplayText = "Settings",
+            Endpoint = ctx.GetEndpoint("https")
+        });
+        ctx.Urls.Add(new ResourceUrlAnnotation
+        {
             Url = "/account/confirm-email",
             DisplayText = "Confirm email",
             Endpoint = ctx.GetEndpoint("https")
@@ -106,6 +112,7 @@ var beselerNetWeb = builder.AddProject<BeselerNet_Web>("beseler-net-web")
 
 beselerNetApi
     .WithEnvironment("Communication__ConfirmEmailUrl", ReferenceExpression.Create($"{beselerNetWeb.GetEndpoint("https")}/account/confirm-email"))
-    .WithEnvironment("Communication__ResetPasswordUrl", ReferenceExpression.Create($"{beselerNetWeb.GetEndpoint("https")}/account/reset-password"));
+    .WithEnvironment("Communication__ResetPasswordUrl", ReferenceExpression.Create($"{beselerNetWeb.GetEndpoint("https")}/account/reset-password"))
+    .WithEnvironment("Communication__AcceptInviteUrl", ReferenceExpression.Create($"{beselerNetWeb.GetEndpoint("https")}/account/accept-invite"));
 
 builder.Build().Run();

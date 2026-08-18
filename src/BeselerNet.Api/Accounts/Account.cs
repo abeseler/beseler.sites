@@ -30,6 +30,7 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
     public DateTimeOffset? LockedAt { get; private set; }
     public DateTimeOffset? LastLogon { get; private set; }
     public int FailedLoginAttempts { get; private set; }
+    public DateTimeOffset? InvitedAt { get; private set; }
     public IReadOnlyList<AccountPermission> Permissions => (_permissions ?? []).AsReadOnly();
     public IReadOnlyList<AccountPermission> RolePermissions => (_rolePermissions ?? []).AsReadOnly();
     public IReadOnlyList<AccountRole> Roles => (_roles ?? []).AsReadOnly();
@@ -42,6 +43,7 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
     };
     public bool IsDisabled => DisabledAt.HasValue;
     public bool IsLocked => LockedAt.HasValue;
+    public bool IsInvited => InvitedAt.HasValue;
     public IReadOnlyCollection<DomainEvent> UncommittedEvents => _events ?? [];
     public bool IsChanged { get; private set; }
     public static Account CreateUser(int accountId, string username, string secretHash, string email, string givenName, string familyName)
@@ -61,6 +63,21 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
         };
         account.Append(new AccountCreated(accountId, AccountType.User, username, email, secretHash, givenName, familyName));
         return account;
+    }
+    public void MarkInvited()
+    {
+        InvitedAt = DateTimeOffset.UtcNow;
+        Append(new AccountInvited(AccountId, Email));
+    }
+    public void AcceptInvite(string secretHash)
+    {
+        ChangePassword(secretHash);
+        if (Email is not null && EmailVerifiedAt is null)
+            VerifyEmail(Email);
+        if (InvitedAt is null)
+            return;
+        InvitedAt = null;
+        Append(new AccountInviteAccepted(AccountId));
     }
     public void Login()
     {

@@ -47,6 +47,27 @@ internal static class AccountProblems
         Status = StatusCodes.Status400BadRequest
     };
 
+    public static ProblemDetails SignupClosed { get; } = new()
+    {
+        Title = "Signup Closed",
+        Detail = "Public signup is turned off. Ask an admin for an invite.",
+        Status = StatusCodes.Status403Forbidden
+    };
+
+    public static ProblemDetails EmailTaken { get; } = new()
+    {
+        Title = "Email Taken",
+        Detail = "An account with that email already exists.",
+        Status = StatusCodes.Status400BadRequest
+    };
+
+    public static ProblemDetails NotInvited { get; } = new()
+    {
+        Title = "Not Invited",
+        Detail = "That account does not have a pending invite.",
+        Status = StatusCodes.Status400BadRequest
+    };
+
     public static ProblemDetails UnknownRoles { get; } = new()
     {
         Title = "Unknown Roles",

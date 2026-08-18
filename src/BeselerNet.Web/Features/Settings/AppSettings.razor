@@ -1,0 +1,84 @@
+@attribute [Route(Routes.Settings)]
+@inject AppService App
+
+<PageTitle>@SiteConstants.SiteName: Settings</PageTitle>
+
+<RequirePermission Resource="@Resources.Setting" Action="@Actions.Read">
+<div class="app-main">
+    <p class="kicker">App</p>
+    <h1 class="page-title">Settings</h1>
+    <p class="page-lede">App-wide switches. Anyone with the setting permission can change them.</p>
+
+    @if (error is not null)
+    {
+        <p class="auth-alert" role="alert">@error</p>
+    }
+    @if (notice is not null)
+    {
+        <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
+    }
+
+    @if (loading)
+    {
+        <p class="page-lede">Loading…</p>
+    }
+    else
+    {
+        <section class="role-card">
+            <span class="tile-kicker">Access</span>
+            <label class="auth-check">
+                <input type="checkbox" checked="@publicSignup" disabled="@(!CanUpdate || busy)" @onchange="ToggleSignup" />
+                <span>
+                    Public signup
+                    <span class="auth-check-hint">When off, only an invite creates an account. The first user can always register so the site can bootstrap.</span>
+                </span>
+            </label>
+        </section>
+    }
+</div>
+</RequirePermission>
+
+@code {
+    [Inject] private AccountSession Session { get; set; } = default!;
+
+    private bool loading = true;
+    private bool busy;
+    private bool publicSignup;
+    private string? error;
+    private string? notice;
+
+    private bool CanUpdate => Session.HasPermission(Resources.Setting, Actions.Update);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await App.ListAsync();
+        loading = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not load settings.";
+            return;
+        }
+
+        var row = result.Value?.FirstOrDefault(setting =>
+            string.Equals(setting.Key, BeselerNet.Shared.Settings.PublicSignup, StringComparison.OrdinalIgnoreCase));
+        publicSignup = row is not null && bool.TryParse(row.Value, out var on) && on;
+    }
+
+    private async Task ToggleSignup(ChangeEventArgs args)
+    {
+        var on = args.Value is true || (args.Value is string text && bool.TryParse(text, out var parsed) && parsed);
+        busy = true;
+        error = null;
+        notice = null;
+        var result = await App.UpdateAsync(BeselerNet.Shared.Settings.PublicSignup, on ? "true" : "false");
+        busy = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not save.";
+            return;
+        }
+
+        publicSignup = on;
+        notice = on ? "Public signup is on." : "Public signup is off.";
+    }
+}

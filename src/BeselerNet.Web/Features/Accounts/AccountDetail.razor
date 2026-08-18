@@ -42,7 +42,11 @@
                     {
                         <span class="badge">Locked</span>
                     }
-                    @if (!account.EmailVerified)
+                    @if (account.Invited)
+                    {
+                        <span class="badge">Invited</span>
+                    }
+                    else if (!account.EmailVerified)
                     {
                         <span class="badge">Unverified</span>
                     }
@@ -89,6 +93,13 @@
                     @if (account.Locked)
                     {
                         <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="Unlock">Unlock</button>
+                    }
+
+                    @if (account.Invited)
+                    {
+                        <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="ResendInvite">
+                            @(busy ? "Sending…" : "Resend invite")
+                        </button>
                     }
                 </div>
             }
@@ -294,6 +305,25 @@
 
         Apply(result.Value);
         notice = "Roles saved.";
+    }
+
+    private async Task ResendInvite()
+    {
+        if (account is null)
+            return;
+
+        busy = true;
+        error = null;
+        notice = null;
+        var result = await AccountsApi.ResendInviteAsync(account.AccountId);
+        busy = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not resend the invite.";
+            return;
+        }
+
+        notice = "Invite sent.";
     }
 
     private Task Disable() => RunAdmin(AccountsApi.DisableAsync, "Account disabled.");
