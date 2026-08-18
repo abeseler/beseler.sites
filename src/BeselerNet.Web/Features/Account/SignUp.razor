@@ -1,7 +1,6 @@
 @attribute [Route(Routes.SignUp)]
 @layout BasicLayout
 @inject AccountService Accounts
-@inject AccountSession Session
 @inject NavigationManager Nav
 @inject IHostEnvironment Env
 
@@ -44,6 +43,13 @@
                 <ValidationMessage For="() => model.Password" />
                 <FieldError Keys="@fieldErrors" Name="password" />
             </div>
+            <label class="auth-check">
+                <InputCheckbox id="persist" @bind-Value="model.ThisDevice" />
+                <span>
+                    This is my device
+                    <span class="auth-check-hint">Stay signed in after you close the browser. Skip this on a shared computer.</span>
+                </span>
+            </label>
 
             <button type="submit" class="auth-submit" disabled="@busy">
                 @(busy ? "Creating…" : "Create account")
@@ -51,12 +57,15 @@
         </EditForm>
 
         <p class="auth-footer">
-            Already have an account? <a href="@Routes.Login">Sign in</a>
+            Already have an account? <a href="@ReturnUrl.WithReturn(Routes.Login, Return)">Sign in</a>
         </p>
     </div>
 </section>
 
 @code {
+    [SupplyParameterFromQuery(Name = ReturnUrl.Query)]
+    public string? Return { get; set; }
+
     private readonly SignUpModel model = new();
     private bool busy;
     private string? error;
@@ -80,13 +89,13 @@
             Password = model.Password,
             GivenName = model.GivenName,
             FamilyName = model.FamilyName
-        });
+        }, model.ThisDevice, Return);
 
         busy = false;
 
         if (result.Succeeded)
         {
-            Nav.NavigateTo(Session.EmailVerified ? Routes.Dashboard : Routes.VerifyEmail);
+            Nav.NavigateTo(result.Value!, forceLoad: true);
             return;
         }
 
@@ -107,5 +116,7 @@
 
         [Required, MinLength(8)]
         public string Password { get; set; } = "";
+
+        public bool ThisDevice { get; set; }
     }
 }

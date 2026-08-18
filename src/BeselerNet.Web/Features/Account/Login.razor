@@ -1,7 +1,6 @@
 @attribute [Route(Routes.Login)]
 @layout BasicLayout
 @inject AccountService Accounts
-@inject AccountSession Session
 @inject NavigationManager Nav
 @inject IHostEnvironment Env
 
@@ -30,6 +29,13 @@
                 <InputText id="password" type="password" @bind-Value="model.Password" autocomplete="current-password" />
                 <ValidationMessage For="() => model.Password" />
             </div>
+            <label class="auth-check">
+                <InputCheckbox id="persist" @bind-Value="model.ThisDevice" />
+                <span>
+                    This is my device
+                    <span class="auth-check-hint">Stay signed in after you close the browser. Skip this on a shared computer.</span>
+                </span>
+            </label>
 
             <button type="submit" class="auth-submit" disabled="@busy">
                 @(busy ? "Signing in…" : "Sign in")
@@ -37,13 +43,16 @@
         </EditForm>
 
         <p class="auth-footer">
-            <a href="@Routes.ForgotPassword">Forgot password?</a>
-            · No account? <a href="@Routes.SignUp">Create one</a>
+            <a href="@ReturnUrl.WithReturn(Routes.ForgotPassword, Return)">Forgot password?</a>
+            · No account? <a href="@ReturnUrl.WithReturn(Routes.SignUp, Return)">Create one</a>
         </p>
     </div>
 </section>
 
 @code {
+    [SupplyParameterFromQuery(Name = ReturnUrl.Query)]
+    public string? Return { get; set; }
+
     private readonly LoginModel model = new();
     private bool busy;
     private string? error;
@@ -58,12 +67,12 @@
     {
         busy = true;
         error = null;
-        var result = await Accounts.LoginAsync(model.Email, model.Password);
+        var result = await Accounts.LoginAsync(model.Email, model.Password, model.ThisDevice, Return);
         busy = false;
 
         if (result.Succeeded)
         {
-            Nav.NavigateTo(Session.EmailVerified ? Routes.Dashboard : Routes.VerifyEmail);
+            Nav.NavigateTo(result.Value!, forceLoad: true);
             return;
         }
 
@@ -77,5 +86,7 @@
 
         [Required]
         public string Password { get; set; } = "";
+
+        public bool ThisDevice { get; set; }
     }
 }

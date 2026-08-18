@@ -1,19 +1,21 @@
 using System.Net;
+using BeselerNet.Shared.Contracts.OAuth;
 using BeselerNet.Shared.Contracts.Users;
 using BeselerNet.Web.Shared;
 
 namespace BeselerNet.Web.Features.Account;
 
-internal sealed class AccountSession(ApiClient api, LocalStorageAccessor storage)
+internal sealed class AccountSession(ApiClient api, AuthCookie cookie, TokenRefresher refresher, TimeProvider time)
 {
-    private const string ProfileKey = "account_profile";
-
     private readonly ApiClient _api = api;
-    private readonly LocalStorageAccessor _storage = storage;
+    private readonly AuthCookie _cookie = cookie;
+    private readonly TokenRefresher _refresher = refresher;
+    private readonly TimeProvider _time = time;
     private bool _loaded;
 
     public AccountProfileResponse? Profile { get; private set; }
     public bool HasSession { get; private set; }
+    public bool Persist => _cookie.Current?.Persist is true;
     public bool EmailVerified => Profile?.EmailVerified is true;
     public string? Name => string.IsNullOrWhiteSpace(Profile?.Name) ? null : Profile.Name;
 
@@ -27,29 +29,29 @@ internal sealed class AccountSession(ApiClient api, LocalStorageAccessor storage
         if (_loaded)
             return;
 
-        var token = await _storage.TryGetItemAsync<string>(ApiClient.AccessTokenKey);
-        if (!token.Available)
-            return;
-
-        HasSession = !string.IsNullOrWhiteSpace(token.Value);
-        if (HasSession)
+        if (_cookie.Current is null || !await _refresher.EnsureAccessTokenAsync(cancellationToken: cancellationToken))
         {
-            var cached = await _storage.TryGetItemAsync<AccountProfileResponse>(ProfileKey);
-            if (cached.Available)
-                Profile = cached.Value;
-            if (Profile is null)
-                await RefreshProfileAsync(cancellationToken);
+            HasSession = false;
+            Profile = null;
+            _loaded = true;
+            return;
         }
 
-        _loaded = true;
-    }
-
-    public async Task StartAsync(string accessToken, CancellationToken cancellationToken = default)
-    {
-        await _storage.SetItemAsync(ApiClient.AccessTokenKey, accessToken);
         HasSession = true;
         await RefreshProfileAsync(cancellationToken);
         _loaded = true;
+    }
+
+    public async Task<string> EstablishAsync(OAuthTokenResponse tokens, bool persist = false, string? returnUrl = null, CancellationToken cancellationToken = default)
+    {
+        var ticket = AuthTicket.From(tokens, _time, persist: persist);
+        var handoff = _cookie.CreateHandoff(ticket);
+        HasSession = true;
+        await RefreshProfileAsync(cancellationToken);
+        _loaded = true;
+
+        var dest = ReturnUrl.Destination(returnUrl, EmailVerified);
+        return $"{Routes.EstablishSession}?ticket={handoff}&return={Uri.EscapeDataString(dest)}";
     }
 
     public async Task RefreshProfileAsync(CancellationToken cancellationToken = default)
@@ -57,26 +59,13 @@ internal sealed class AccountSession(ApiClient api, LocalStorageAccessor storage
         var result = await _api.GetAsync<AccountProfileResponse>("/v1/accounts/me", session: true, cancellationToken);
         if (result.StatusCode is HttpStatusCode.Unauthorized)
         {
-            await SignOutAsync();
+            HasSession = false;
+            Profile = null;
+            _cookie.Clear();
             return;
         }
 
         if (result.Value is not null)
-            await StoreProfile(result.Value);
-    }
-
-    public async Task SignOutAsync()
-    {
-        Profile = null;
-        HasSession = false;
-        _loaded = true;
-        await _storage.RemoveItemAsync(ApiClient.AccessTokenKey);
-        await _storage.RemoveItemAsync(ProfileKey);
-    }
-
-    private async Task StoreProfile(AccountProfileResponse profile)
-    {
-        Profile = profile;
-        await _storage.SetItemAsync(ProfileKey, profile);
+            Profile = result.Value;
     }
 }

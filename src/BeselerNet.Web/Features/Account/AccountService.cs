@@ -12,7 +12,7 @@ internal sealed class AccountService(ApiClient api, AccountSession session)
     private readonly ApiClient _api = api;
     private readonly AccountSession _session = session;
 
-    public async Task<ApiResult> LoginAsync(string email, string password, CancellationToken cancellationToken = default)
+    public async Task<ApiResult<string>> LoginAsync(string email, string password, bool persist = false, string? returnUrl = null, CancellationToken cancellationToken = default)
     {
         var result = await _api.PostAsync<OAuthTokenResponse>("/v1/accounts/oauth/tokens", new OAuthTokenRequest
         {
@@ -23,34 +23,34 @@ internal sealed class AccountService(ApiClient api, AccountSession session)
         }, cancellationToken: cancellationToken);
 
         if (result.StatusCode is HttpStatusCode.Unauthorized)
-            return ApiResult.Fail("Email or password is wrong.", status: result.StatusCode);
+            return ApiResult<string>.Fail("Email or password is wrong.", status: result.StatusCode);
 
         if (!result.Succeeded || string.IsNullOrWhiteSpace(result.Value?.AccessToken))
             return result.Value is null && result.Succeeded
-                ? ApiResult.Fail("The API returned an empty token response.")
-                : result.WithoutValue();
+                ? ApiResult<string>.Fail("The API returned an empty token response.")
+                : ApiResult<string>.Fail(result.Error ?? "Sign in failed.", result.FieldErrors, result.StatusCode);
 
-        await _session.StartAsync(result.Value.AccessToken, cancellationToken);
-        return ApiResult.Ok();
+        var handoff = await _session.EstablishAsync(result.Value, persist, returnUrl, cancellationToken);
+        return ApiResult<string>.Ok(handoff);
     }
 
-    public async Task<ApiResult> RegisterAsync(RegisterUserRequest request, CancellationToken cancellationToken = default)
+    public async Task<ApiResult<string>> RegisterAsync(RegisterUserRequest request, bool persist = false, string? returnUrl = null, CancellationToken cancellationToken = default)
     {
         var result = await _api.PostAsync("/v1/accounts/register-user", request, cancellationToken: cancellationToken);
         if (result.StatusCode is HttpStatusCode.Created)
-            return await LoginAsync(request.Email, request.Password, cancellationToken);
+            return await LoginAsync(request.Email, request.Password, persist, returnUrl, cancellationToken);
 
-        return result;
+        return ApiResult<string>.Fail(result.Error ?? "Could not create the account.", result.FieldErrors, result.StatusCode);
     }
 
-    public async Task<ApiResult> ConfirmEmailAsync(string token, CancellationToken cancellationToken = default)
+    public async Task<ApiResult<string>> ConfirmEmailAsync(string token, string? returnUrl = null, CancellationToken cancellationToken = default)
     {
         var result = await _api.PostAsync<OAuthTokenResponse>("/v1/accounts/confirm-email", bearer: token, cancellationToken: cancellationToken);
         if (!result.Succeeded || string.IsNullOrWhiteSpace(result.Value?.AccessToken))
-            return result.WithoutValue();
+            return ApiResult<string>.Fail(result.Error ?? "Could not confirm email.", result.FieldErrors, result.StatusCode);
 
-        await _session.StartAsync(result.Value.AccessToken, cancellationToken);
-        return ApiResult.Ok();
+        var handoff = await _session.EstablishAsync(result.Value, _session.Persist, returnUrl, cancellationToken);
+        return ApiResult<string>.Ok(handoff);
     }
 
     public Task<ApiResult> RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default) =>

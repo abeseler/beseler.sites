@@ -34,9 +34,5 @@
         displayName = Session.Name ?? Session.Profile?.Email ?? "Signed in";
     }
 
-    private async Task SignOut()
-    {
-        await Session.SignOutAsync();
-        Nav.NavigateTo(Routes.Login, forceLoad: true);
-    }
+    private void SignOut() => Nav.NavigateTo(Routes.SignOut, forceLoad: true);
 }

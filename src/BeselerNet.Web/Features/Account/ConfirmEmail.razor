@@ -31,6 +31,9 @@
     [SupplyParameterFromQuery]
     public string? Token { get; set; }
 
+    [SupplyParameterFromQuery(Name = ReturnUrl.Query)]
+    public string? Return { get; set; }
+
     private PageState state = PageState.Working;
     private string? error;
     private bool started;
@@ -50,10 +53,10 @@
             return;
         }
 
-        var result = await Accounts.ConfirmEmailAsync(Token);
+        var result = await Accounts.ConfirmEmailAsync(Token, Return);
         if (result.Succeeded)
         {
-            Nav.NavigateTo(Routes.Dashboard, replace: true);
+            Nav.NavigateTo(result.Value!, forceLoad: true);
             return;
         }
 

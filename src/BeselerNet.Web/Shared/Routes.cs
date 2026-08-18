@@ -9,6 +9,8 @@ internal static class Routes
     public const string VerifyEmail = "/account/verify-email";
     public const string ForgotPassword = "/account/forgot-password";
     public const string ResetPassword = "/account/reset-password";
+    public const string EstablishSession = "/account/session";
+    public const string SignOut = "/account/sign-out";
     public const string Dashboard = "/dashboard";
     public const string Budget = "/budget";
 }

@@ -24,13 +24,16 @@
             </button>
 
             <p class="auth-footer">
-                <a href="@Routes.Login">Back to sign in</a>
+                <a href="@ReturnUrl.WithReturn(Routes.Login, Return)">Back to sign in</a>
             </p>
         </div>
     </section>
 </RequireSession>
 
 @code {
+    [SupplyParameterFromQuery(Name = ReturnUrl.Query)]
+    public string? Return { get; set; }
+
     private bool busy;
     private bool sent;
     private string? error;

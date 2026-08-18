@@ -9,11 +9,15 @@ builder.ConfigureLogging();
 builder.AddServiceDefaults();
 builder.AddRedisOutputCache("Cache");
 builder.Services.AddRequestTimeouts();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddScoped<LocalStorageAccessor>();
+builder.Services.AddScoped<AuthCookie>();
+builder.Services.AddScoped<TokenRefresher>();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AccountSession>();
 builder.Services.AddScoped<AccountService>();
@@ -36,6 +40,7 @@ app.UseAntiforgery();
 app.UseOutputCache();
 
 app.MapDefaultEndpoints();
+app.MapAuthCookieEndpoints();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

@@ -5,19 +5,19 @@ using System.Text.Json;
 
 namespace BeselerNet.Web.Shared;
 
-internal sealed class ApiClient(IHttpClientFactory httpFactory, LocalStorageAccessor storage)
+internal sealed class ApiClient(IHttpClientFactory httpFactory, AuthCookie cookie, TokenRefresher refresher)
 {
     public const string ClientName = "beseler-net-api";
-    public const string AccessTokenKey = "access_token";
 
     private readonly IHttpClientFactory _httpFactory = httpFactory;
-    private readonly LocalStorageAccessor _storage = storage;
+    private readonly AuthCookie _cookie = cookie;
+    private readonly TokenRefresher _refresher = refresher;
 
     public Task<ApiResult> PostAsync(string path, object? body = null, string? bearer = null, bool session = false, CancellationToken cancellationToken = default) =>
         SendAsync(HttpMethod.Post, path, body, bearer, session, cancellationToken);
 
     public Task<ApiResult<T>> PostAsync<T>(string path, object? body = null, string? bearer = null, bool session = false, CancellationToken cancellationToken = default) =>
-        SendAsync<T>(HttpMethod.Post, path, body, bearer, session, cancellationToken);
+        SendAsync<T>(HttpMethod.Post, path, body, bearer, session, retry: false, cancellationToken);
 
     public Task<ApiResult<T>> GetAsync<T>(string path, bool session = false, CancellationToken cancellationToken = default) =>
         SendAsync<T>(HttpMethod.Get, path, bearer: null, session: session, cancellationToken: cancellationToken);
@@ -30,7 +30,7 @@ internal sealed class ApiClient(IHttpClientFactory httpFactory, LocalStorageAcce
         bool session = false,
         CancellationToken cancellationToken = default)
     {
-        var result = await SendAsync<object>(method, path, body, bearer, session, cancellationToken);
+        var result = await SendAsync<object>(method, path, body, bearer, session, retry: false, cancellationToken);
         return result.WithoutValue();
     }
 
@@ -40,6 +40,7 @@ internal sealed class ApiClient(IHttpClientFactory httpFactory, LocalStorageAcce
         object? body = null,
         string? bearer = null,
         bool session = false,
+        bool retry = false,
         CancellationToken cancellationToken = default)
     {
         var client = _httpFactory.CreateClient(ClientName);
@@ -49,7 +50,7 @@ internal sealed class ApiClient(IHttpClientFactory httpFactory, LocalStorageAcce
 
         var token = bearer;
         if (session)
-            token ??= await _storage.GetItemAsync<string>(AccessTokenKey);
+            token ??= _cookie.Current?.AccessToken;
 
         if (!string.IsNullOrWhiteSpace(token))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -62,6 +63,13 @@ internal sealed class ApiClient(IHttpClientFactory httpFactory, LocalStorageAcce
         catch (Exception)
         {
             return ApiResult<T>.Fail("Could not reach the API. Is it running?");
+        }
+
+        if (session && !retry && response.StatusCode is HttpStatusCode.Unauthorized
+            && await _refresher.EnsureAccessTokenAsync(force: true, cancellationToken))
+        {
+            response.Dispose();
+            return await SendAsync<T>(method, path, body, bearer: null, session: true, retry: true, cancellationToken);
         }
 
         if (response.IsSuccessStatusCode)

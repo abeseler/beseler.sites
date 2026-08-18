@@ -32,19 +32,11 @@
 @code {
     private string displayName = "you";
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender)
-            return;
-
         await Session.EnsureLoadedAsync();
         displayName = Session.Name ?? Session.Profile?.Email ?? "you";
-        StateHasChanged();
     }
 
-    private async Task SignOut()
-    {
-        await Session.SignOutAsync();
-        Nav.NavigateTo(Routes.Home, forceLoad: true);
-    }
+    private void SignOut() => Nav.NavigateTo(Routes.SignOut, forceLoad: true);
 }

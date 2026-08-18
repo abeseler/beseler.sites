@@ -17,36 +17,69 @@ else
     [Parameter] public bool RedirectIfVerified { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     private bool ready;
-    private bool checkedSession;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (!firstRender || checkedSession)
-            return;
-
-        checkedSession = true;
         await Session.EnsureLoadedAsync();
+
+        var here = CurrentPath();
 
         if (!Session.HasSession)
         {
-            Nav.NavigateTo(Routes.Login, replace: true);
+            Redirect(ReturnUrl.WithReturn(Routes.Login, here));
             return;
         }
 
         if (RequireVerified && !Session.EmailVerified)
         {
-            Nav.NavigateTo(Routes.VerifyEmail, replace: true);
+            Redirect(ReturnUrl.WithReturn(Routes.VerifyEmail, here));
             return;
         }
 
         if (RedirectIfVerified && Session.EmailVerified)
         {
-            Nav.NavigateTo(Routes.Dashboard, replace: true);
+            Redirect(ReturnUrl.Sanitize(ReturnFromQuery()) ?? Routes.Dashboard);
             return;
         }
 
         ready = true;
-        StateHasChanged();
+    }
+
+    private void Redirect(string url)
+    {
+        if (!RendererInfo.IsInteractive && HttpContext is not null)
+        {
+            HttpContext.Response.Redirect(url);
+            return;
+        }
+
+        Nav.NavigateTo(url, replace: true);
+    }
+
+    private string? CurrentPath()
+    {
+        if (HttpContext is not null)
+            return HttpContext.Request.Path + HttpContext.Request.QueryString;
+
+        var relative = Nav.ToBaseRelativePath(Nav.Uri);
+        return relative.StartsWith('/') ? relative : "/" + relative;
+    }
+
+    private string? ReturnFromQuery()
+    {
+        if (HttpContext?.Request.Query.TryGetValue(ReturnUrl.Query, out var value) is true)
+            return value.ToString();
+
+        if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(new Uri(Nav.Uri).Query)
+            .TryGetValue(ReturnUrl.Query, out var fromNav))
+        {
+            return fromNav.ToString();
+        }
+
+        return null;
     }
 }
