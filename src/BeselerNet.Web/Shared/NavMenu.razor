@@ -1,0 +1,42 @@
+@inject AccountSession Session
+@inject NavigationManager Nav
+
+<div class="nav-brand">
+    <a href="@Routes.Home">
+        <span class="auth-brand-mark">beseler</span>
+        <span class="nav-brand-name">Beseler <span>.NET</span></span>
+    </a>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav-list">
+        <NavLink class="nav-link" href="@Routes.Home" Match="NavLinkMatch.All">Home</NavLink>
+        <NavLink class="nav-link" href="@Routes.Dashboard">Dashboard</NavLink>
+        <NavLink class="nav-link" href="@Routes.Budget">Budget</NavLink>
+        <Can Role="admin">
+            <NavLink class="nav-link" href="@Routes.Dashboard">Admin</NavLink>
+        </Can>
+    </nav>
+
+    <div class="nav-user">
+        <span class="nav-user-name">@displayName</span>
+        <button type="button" class="nav-signout" @onclick="SignOut">Sign out</button>
+    </div>
+</div>
+
+@code {
+    private string displayName = "Signed in";
+
+    protected override void OnInitialized()
+    {
+        displayName = Session.Name ?? Session.Profile?.Email ?? "Signed in";
+    }
+
+    private async Task SignOut()
+    {
+        await Session.SignOutAsync();
+        Nav.NavigateTo(Routes.Login, forceLoad: true);
+    }
+}

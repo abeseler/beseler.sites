@@ -1,0 +1,50 @@
+@page "/"
+@layout BasicLayout
+@inject AccountSession Session
+@inject NavigationManager Nav
+
+<PageTitle>@SiteConstants.SiteName</PageTitle>
+
+<section class="auth-shell">
+    <div class="hero-card">
+        <Brand />
+        <h1 class="hero-title">Tools I actually use.</h1>
+        <p class="auth-lede">Budget, accounts, and whatever else this site grows into. Same sign-in across it.</p>
+
+        @if (Session.HasSession)
+        {
+            <p class="hero-meta">Signed in as @displayName</p>
+            <div class="btn-row">
+                <a class="btn btn-primary" href="@Routes.Dashboard">Open dashboard</a>
+                <button type="button" class="btn btn-ghost" @onclick="SignOut">Sign out</button>
+            </div>
+        }
+        else
+        {
+            <div class="btn-row">
+                <a class="btn btn-primary" href="@Routes.Login">Sign in</a>
+                <a class="btn btn-ghost" href="@Routes.SignUp">Create account</a>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private string displayName = "you";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await Session.EnsureLoadedAsync();
+        displayName = Session.Name ?? Session.Profile?.Email ?? "you";
+        StateHasChanged();
+    }
+
+    private async Task SignOut()
+    {
+        await Session.SignOutAsync();
+        Nav.NavigateTo(Routes.Home, forceLoad: true);
+    }
+}

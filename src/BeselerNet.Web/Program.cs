@@ -1,6 +1,7 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Web.Components;
-using BeselerNet.Web.Services;
+using BeselerNet.Web.Features.Account;
+using BeselerNet.Web.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,10 +14,11 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddScoped<LocalStorageAccessor>();
-builder.Services.AddScoped<AuthService>();
-builder.Services.AddSingleton<FeatureManager>();
+builder.Services.AddScoped<ApiClient>();
+builder.Services.AddScoped<AccountSession>();
+builder.Services.AddScoped<AccountService>();
 
-builder.Services.AddHttpClient("beseler-net-api", client =>
+builder.Services.AddHttpClient(ApiClient.ClientName, client =>
     {
         client.BaseAddress = new("https+http://beseler-net-api");
     });

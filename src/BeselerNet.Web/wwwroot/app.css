@@ -141,6 +141,7 @@ h1:focus { outline: none; }
 }
 
 .auth-submit {
+    display: block;
     width: 100%;
     margin-top: 0.5rem;
     padding: 0.75rem 1rem;
@@ -151,9 +152,11 @@ h1:focus { outline: none; }
     font: inherit;
     font-weight: 600;
     cursor: pointer;
+    text-align: center;
+    text-decoration: none;
 }
 
-.auth-submit:hover { filter: brightness(1.06); }
+.auth-submit:hover { color: #062226; filter: brightness(1.06); }
 
 .auth-submit:disabled {
     opacity: 0.6;
@@ -163,6 +166,130 @@ h1:focus { outline: none; }
 .auth-footer {
     margin: 1.35rem 0 0;
     text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.hero-card {
+    width: 100%;
+    max-width: 32rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 2rem 1.75rem 1.85rem;
+}
+
+.hero-title {
+    margin: 0 0 0.65rem;
+    font-size: 1.7rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.25;
+}
+
+.hero-meta,
+.page-lede {
+    margin: 0 0 1.35rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 1.1rem;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--accent);
+    color: #062226;
+}
+
+.btn-primary:hover {
+    color: #062226;
+    filter: brightness(1.06);
+}
+
+.btn-ghost {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--text);
+}
+
+.btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.app-main {
+    max-width: 46rem;
+}
+
+.kicker {
+    margin: 0 0 0.35rem;
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.page-title {
+    margin: 0 0 0.45rem;
+    font-size: 1.7rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+}
+
+.tile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 0.85rem;
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.15rem 1.2rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: inherit;
+    text-decoration: none;
+    box-shadow: var(--shadow);
+}
+
+a.tile:hover {
+    border-color: var(--accent);
+    color: inherit;
+}
+
+.tile-kicker {
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.tile-title {
+    font-weight: 600;
+}
+
+.tile-copy {
     color: var(--muted);
     font-size: 0.85rem;
 }

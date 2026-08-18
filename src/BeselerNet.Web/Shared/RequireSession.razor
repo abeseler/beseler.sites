@@ -1,0 +1,52 @@
+@inject AccountSession Session
+@inject NavigationManager Nav
+
+@if (ready)
+{
+    @ChildContent
+}
+else
+{
+    <div class="auth-shell">
+        <p class="auth-lede">Loading…</p>
+    </div>
+}
+
+@code {
+    [Parameter] public bool RequireVerified { get; set; } = true;
+    [Parameter] public bool RedirectIfVerified { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool ready;
+    private bool checkedSession;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || checkedSession)
+            return;
+
+        checkedSession = true;
+        await Session.EnsureLoadedAsync();
+
+        if (!Session.HasSession)
+        {
+            Nav.NavigateTo(Routes.Login, replace: true);
+            return;
+        }
+
+        if (RequireVerified && !Session.EmailVerified)
+        {
+            Nav.NavigateTo(Routes.VerifyEmail, replace: true);
+            return;
+        }
+
+        if (RedirectIfVerified && Session.EmailVerified)
+        {
+            Nav.NavigateTo(Routes.Dashboard, replace: true);
+            return;
+        }
+
+        ready = true;
+        StateHasChanged();
+    }
+}

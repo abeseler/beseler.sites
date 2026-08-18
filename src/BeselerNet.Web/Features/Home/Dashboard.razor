@@ -1,0 +1,43 @@
+@page "/dashboard"
+@inject AccountSession Session
+
+<PageTitle>@SiteConstants.SiteName: Dashboard</PageTitle>
+
+<div class="app-main">
+    <p class="kicker">Dashboard</p>
+    <h1 class="page-title">Hello@(greeting)</h1>
+    <p class="page-lede">@meta</p>
+
+    <div class="tile-grid">
+        <a class="tile" href="@Routes.Budget">
+            <span class="tile-kicker">Next</span>
+            <span class="tile-title">Budget</span>
+            <span class="tile-copy">Periods, recurring templates, and income / expense / savings. Not built yet.</span>
+        </a>
+
+        <Can Role="admin">
+            <div class="tile">
+                <span class="tile-kicker">Admin</span>
+                <span class="tile-title">Site admin</span>
+                <span class="tile-copy">Accounts, roles, and permissions. Only visible with the admin role.</span>
+            </div>
+        </Can>
+    </div>
+</div>
+
+@code {
+    private string greeting = "";
+    private string meta = "";
+
+    protected override void OnInitialized()
+    {
+        var name = Session.Name;
+        greeting = string.IsNullOrWhiteSpace(name) ? "." : $", {name}.";
+
+        var bits = new List<string>();
+        if (Session.Profile?.Email is { } email)
+            bits.Add(email);
+        bits.AddRange(Session.Profile?.Roles.Select(role => role.Name) ?? []);
+        meta = bits.Count > 0 ? string.Join(" · ", bits) : "Signed in.";
+    }
+}

@@ -53,8 +53,8 @@ internal static class AccountEndpoints
 
         v1.MapPost("/confirm-email", ConfirmEmailHandler.Handle)
             .WithName("ConfirmEmail")
-            .WithDescription("Confirm the email address.")
-            .Produces(Status204NoContent)
+            .WithDescription("Confirm the email address and return a fresh session.")
+            .Produces<OAuthTokenResponse>(Status200OK, Application.Json)
             .Produces(Status401Unauthorized)
             .ProducesProblem(Status403Forbidden, Application.Json)
             .RequireAuthorization();

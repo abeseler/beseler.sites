@@ -1,0 +1,28 @@
+@inject AccountSession Session
+
+@if (IsAllowed)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public string? Role { get; set; }
+    [Parameter] public string? Resource { get; set; }
+    [Parameter] public string? Action { get; set; }
+    [Parameter] public string? Scope { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool IsAllowed
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Role))
+                return Session.HasRole(Role);
+
+            if (!string.IsNullOrWhiteSpace(Resource) && !string.IsNullOrWhiteSpace(Action))
+                return Session.HasPermission(Resource, Action, Scope);
+
+            return false;
+        }
+    }
+}

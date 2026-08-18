@@ -1,7 +1,7 @@
 @attribute [Route(Routes.Login)]
 @layout BasicLayout
-@rendermode InteractiveServer
-@inject AuthService Auth
+@inject AccountService Accounts
+@inject AccountSession Session
 @inject NavigationManager Nav
 @inject IHostEnvironment Env
 
@@ -9,10 +9,7 @@
 
 <section class="auth-shell">
     <div class="auth-card">
-        <a class="auth-brand" href="/">
-            <span class="auth-brand-mark">beseler</span>
-            <span class="auth-brand-name">Beseler <span>.NET</span></span>
-        </a>
+        <Brand />
         <p class="auth-lede">Sign in with the email you registered.</p>
 
         @if (error is not null)
@@ -61,12 +58,12 @@
     {
         busy = true;
         error = null;
-        var result = await Auth.LoginAsync(model.Email, model.Password);
+        var result = await Accounts.LoginAsync(model.Email, model.Password);
         busy = false;
 
         if (result.Succeeded)
         {
-            Nav.NavigateTo(await Auth.IsEmailVerified() ? Routes.Dashboard : Routes.VerifyEmail);
+            Nav.NavigateTo(Session.EmailVerified ? Routes.Dashboard : Routes.VerifyEmail);
             return;
         }
 
@@ -75,10 +72,10 @@
 
     private sealed class LoginModel
     {
-        [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.EmailAddress]
+        [Required, EmailAddress]
         public string Email { get; set; } = "";
 
-        [System.ComponentModel.DataAnnotations.Required]
+        [Required]
         public string Password { get; set; } = "";
     }
 }

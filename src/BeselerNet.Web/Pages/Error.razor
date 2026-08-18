@@ -1,19 +1,24 @@
-﻿@page "/Error"
+@page "/Error"
+@layout BasicLayout
 @using System.Diagnostics
 
 <PageTitle>@SiteConstants.SiteName: Error</PageTitle>
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<section class="auth-shell">
+    <div class="auth-card">
+        <Brand />
+        <p class="auth-lede">Something broke while handling that request.</p>
+        @if (ShowRequestId)
+        {
+            <p class="hero-meta">Request @requestId</p>
+        }
+        <p class="auth-footer">
+            <a href="@Routes.Home">Back home</a>
+        </p>
+    </div>
+</section>
 
-@if (ShowRequestId)
-{
-    <p>
-        <strong>Request ID:</strong> <code>@requestId</code>
-    </p>
-}
-
-@code{
+@code {
     [CascadingParameter]
     public HttpContext? HttpContext { get; set; }
 

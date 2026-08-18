@@ -1,0 +1,54 @@
+@attribute [Route(Routes.VerifyEmail)]
+@layout BasicLayout
+@inject AccountService Accounts
+
+<PageTitle>@SiteConstants.SiteName: Verify email</PageTitle>
+
+<RequireSession RequireVerified="false" RedirectIfVerified="true">
+    <section class="auth-shell">
+        <div class="auth-card">
+            <Brand />
+            <p class="auth-lede">Check your email and open the confirmation link. The link expires in about 10 minutes.</p>
+
+            @if (error is not null)
+            {
+                <p class="auth-alert" role="alert">@error</p>
+            }
+            else if (sent)
+            {
+                <p class="auth-lede">A new message is on the way.</p>
+            }
+
+            <button type="button" class="auth-submit" disabled="@busy" @onclick="Resend">
+                @(busy ? "Sending…" : "Resend confirmation email")
+            </button>
+
+            <p class="auth-footer">
+                <a href="@Routes.Login">Back to sign in</a>
+            </p>
+        </div>
+    </section>
+</RequireSession>
+
+@code {
+    private bool busy;
+    private bool sent;
+    private string? error;
+
+    private async Task Resend()
+    {
+        busy = true;
+        error = null;
+        sent = false;
+        var result = await Accounts.ResendVerificationAsync();
+        busy = false;
+
+        if (result.Succeeded)
+        {
+            sent = true;
+            return;
+        }
+
+        error = result.Error;
+    }
+}

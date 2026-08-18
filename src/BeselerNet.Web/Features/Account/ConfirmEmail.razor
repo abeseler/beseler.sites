@@ -1,26 +1,17 @@
 @attribute [Route(Routes.ConfirmEmail)]
 @layout BasicLayout
-@rendermode InteractiveServer
-@inject AuthService Auth
+@inject AccountService Accounts
 @inject NavigationManager Nav
 
 <PageTitle>@SiteConstants.SiteName: Confirm email</PageTitle>
 
 <section class="auth-shell">
     <div class="auth-card">
-        <a class="auth-brand" href="/">
-            <span class="auth-brand-mark">beseler</span>
-            <span class="auth-brand-name">Beseler <span>.NET</span></span>
-        </a>
+        <Brand />
 
         @if (state == PageState.Working)
         {
             <p class="auth-lede">Confirming your email…</p>
-        }
-        else if (state == PageState.Ok)
-        {
-            <p class="auth-lede">Your email is confirmed. You can use the rest of the site.</p>
-            <a class="auth-submit" href="@Routes.Dashboard" style="display:block;text-align:center;text-decoration:none;">Continue</a>
         }
         else
         {
@@ -42,27 +33,34 @@
 
     private PageState state = PageState.Working;
     private string? error;
+    private bool started;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender || started)
+            return;
+
+        started = true;
+
         if (string.IsNullOrWhiteSpace(Token))
         {
             state = PageState.Failed;
             error = "This page needs the link from your email.";
+            StateHasChanged();
             return;
         }
 
-        var result = await Auth.ConfirmEmailAsync(Token);
+        var result = await Accounts.ConfirmEmailAsync(Token);
         if (result.Succeeded)
         {
-            await Auth.MarkEmailVerified();
-            state = PageState.Ok;
+            Nav.NavigateTo(Routes.Dashboard, replace: true);
             return;
         }
 
         state = PageState.Failed;
         error = result.Error;
+        StateHasChanged();
     }
 
-    private enum PageState { Working, Ok, Failed }
+    private enum PageState { Working, Failed }
 }

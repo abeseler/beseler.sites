@@ -74,6 +74,12 @@ var beselerNetWeb = builder.AddProject<BeselerNet_Web>("beseler-net-web")
         });
         ctx.Urls.Add(new ResourceUrlAnnotation
         {
+            Url = "/budget",
+            DisplayText = "Budget",
+            Endpoint = ctx.GetEndpoint("https")
+        });
+        ctx.Urls.Add(new ResourceUrlAnnotation
+        {
             Url = "/account/confirm-email",
             DisplayText = "Confirm email",
             Endpoint = ctx.GetEndpoint("https")
