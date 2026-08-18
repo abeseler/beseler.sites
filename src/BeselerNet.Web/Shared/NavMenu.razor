@@ -12,19 +12,35 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav-list">
-        <NavLink class="nav-link" href="@Routes.Home" Match="NavLinkMatch.All">Home</NavLink>
-        <NavLink class="nav-link" href="@Routes.Dashboard">Dashboard</NavLink>
-        <NavLink class="nav-link" href="@Routes.Budget">Budget</NavLink>
-        <NavLink class="nav-link" href="@Routes.Account">Account</NavLink>
-        <Can Resource="@Resources.Account" Action="@Actions.Read" Scope="@Scopes.Global">
-            <NavLink class="nav-link" href="@Routes.Accounts">Users</NavLink>
-        </Can>
-        <Can Resource="@Resources.Role" Action="@Actions.Read">
-            <NavLink class="nav-link" href="@Routes.Roles">Roles</NavLink>
-        </Can>
-        <Can Resource="@Resources.Setting" Action="@Actions.Read">
-            <NavLink class="nav-link" href="@Routes.Settings">Settings</NavLink>
-        </Can>
+        <div class="nav-group">
+            <NavLink class="nav-link" href="@Routes.Dashboard">Dashboard</NavLink>
+        </div>
+
+        <div class="nav-group">
+            <p class="nav-group-label">Apps</p>
+            <NavLink class="nav-link" href="@Routes.Budget">Budget</NavLink>
+        </div>
+
+        <div class="nav-group">
+            <p class="nav-group-label">You</p>
+            <NavLink class="nav-link" href="@Routes.Account" Match="NavLinkMatch.All">Account</NavLink>
+        </div>
+
+        @if (Session.SeesAdminNav)
+        {
+            <div class="nav-group">
+                <p class="nav-group-label">Admin</p>
+                <Can Resource="@Resources.Account" Action="@Actions.Read" Scope="@Scopes.Global">
+                    <NavLink class="nav-link" href="@Routes.Accounts">Users</NavLink>
+                </Can>
+                <Can Resource="@Resources.Role" Action="@Actions.Read">
+                    <NavLink class="nav-link" href="@Routes.Roles">Roles</NavLink>
+                </Can>
+                <Can Resource="@Resources.Setting" Action="@Actions.Read">
+                    <NavLink class="nav-link" href="@Routes.Settings">Settings</NavLink>
+                </Can>
+            </div>
+        }
     </nav>
 
     <div class="nav-user">

@@ -8,43 +8,55 @@
     <h1 class="page-title">Hello@(greeting)</h1>
     <p class="page-lede">@meta</p>
 
-    <div class="tile-grid">
-        <a class="tile" href="@Routes.Budget">
-            <span class="tile-kicker">Next</span>
-            <span class="tile-title">Budget</span>
-            <span class="tile-copy">Periods, recurring templates, and income / expense / savings. Not built yet.</span>
-        </a>
-
-        <a class="tile" href="@Routes.Account">
-            <span class="tile-kicker">You</span>
-            <span class="tile-title">Account</span>
-            <span class="tile-copy">Your name and the email you sign in with.</span>
-        </a>
-
-        <Can Resource="@Resources.Account" Action="@Actions.Read" Scope="@Scopes.Global">
-            <a class="tile" href="@Routes.Accounts">
-                <span class="tile-kicker">Access</span>
-                <span class="tile-title">Users</span>
-                <span class="tile-copy">See everyone, edit names, assign roles, disable or unlock.</span>
-            </a>
-        </Can>
-
-        <Can Resource="@Resources.Role" Action="@Actions.Read">
-            <a class="tile" href="@Routes.Roles">
-                <span class="tile-kicker">Access</span>
-                <span class="tile-title">Roles</span>
-                <span class="tile-copy">Built-in and custom roles, and the permissions they grant.</span>
-            </a>
-        </Can>
-
-        <Can Resource="@Resources.Setting" Action="@Actions.Read">
-            <a class="tile" href="@Routes.Settings">
+    <section class="dash-section">
+        <h2 class="dash-section-title">Apps</h2>
+        <div class="tile-grid">
+            <a class="tile tile-app" href="@Routes.Budget">
                 <span class="tile-kicker">App</span>
-                <span class="tile-title">Settings</span>
-                <span class="tile-copy">Public signup and other app-wide switches.</span>
+                <span class="tile-title">Budget</span>
+                <span class="tile-copy">Periods, recurring templates, and income / expense / savings. Not built yet.</span>
             </a>
-        </Can>
-    </div>
+        </div>
+    </section>
+
+    <section class="dash-section">
+        <h2 class="dash-section-title">You</h2>
+        <div class="tile-grid">
+            <a class="tile" href="@Routes.Account">
+                <span class="tile-title">Account</span>
+                <span class="tile-copy">Your name and the email you sign in with.</span>
+            </a>
+        </div>
+    </section>
+
+    @if (Session.SeesAdminNav)
+    {
+        <section class="dash-section">
+            <h2 class="dash-section-title">Admin</h2>
+            <div class="tile-grid">
+                <Can Resource="@Resources.Account" Action="@Actions.Read" Scope="@Scopes.Global">
+                    <a class="tile" href="@Routes.Accounts">
+                        <span class="tile-title">Users</span>
+                        <span class="tile-copy">See everyone, edit names, assign roles, disable or unlock.</span>
+                    </a>
+                </Can>
+
+                <Can Resource="@Resources.Role" Action="@Actions.Read">
+                    <a class="tile" href="@Routes.Roles">
+                        <span class="tile-title">Roles</span>
+                        <span class="tile-copy">Built-in and custom roles, and the permissions they grant.</span>
+                    </a>
+                </Can>
+
+                <Can Resource="@Resources.Setting" Action="@Actions.Read">
+                    <a class="tile" href="@Routes.Settings">
+                        <span class="tile-title">Settings</span>
+                        <span class="tile-copy">Public signup and other app-wide switches.</span>
+                    </a>
+                </Can>
+            </div>
+        </section>
+    }
 </div>
 
 @code {

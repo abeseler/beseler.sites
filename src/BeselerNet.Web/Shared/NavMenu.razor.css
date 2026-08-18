@@ -43,8 +43,24 @@
 .nav-list {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.95rem;
     padding: 0.75rem 0.85rem;
+}
+
+.nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.nav-group-label {
+    margin: 0;
+    padding: 0 0.75rem 0.2rem;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .nav-link {
@@ -57,13 +73,13 @@
 }
 
 .nav-link:hover {
-    color: var(--text);
+    color: var(--warn);
     background: var(--surface-2);
 }
 
 .nav-link.active {
-    background: var(--accent-dim);
-    color: var(--accent);
+    background: var(--warn-dim);
+    color: var(--warn);
 }
 
 .nav-user {
@@ -97,8 +113,8 @@
 }
 
 .nav-signout:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--warn);
+    color: var(--warn);
 }
 
 .nav-scrollable {
@@ -119,6 +135,7 @@
         display: flex;
         flex-direction: column;
         height: calc(100vh - 4.6rem);
+        height: calc(100dvh - 4.6rem);
         overflow-y: auto;
     }
 }

@@ -1,4 +1,5 @@
 using System.Net;
+using BeselerNet.Shared;
 using BeselerNet.Shared.Contracts.OAuth;
 using BeselerNet.Shared.Contracts.Users;
 using BeselerNet.Web.Shared;
@@ -34,6 +35,11 @@ internal sealed class AccountSession(ApiClient api, AuthCookie cookie, TokenRefr
 
         return _permissions.Has(resource, action, scope);
     }
+
+    public bool SeesAdminNav =>
+        HasPermission(Resources.Account, Actions.Read, Scopes.Global)
+        || HasPermission(Resources.Role, Actions.Read)
+        || HasPermission(Resources.Setting, Actions.Read);
 
     public bool HasRole(string name) => Profile?.HasRole(name) is true;
 
