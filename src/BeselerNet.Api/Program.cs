@@ -58,6 +58,7 @@ app.UseRequestLogging();
 app.MapOpenApi().CacheOutput();
 app.MapDefaultEndpoints();
 app.MapAccountEndpoints();
+app.MapRoleEndpoints();
 app.MapWebhookEndpoints();
 
 app.UseSwaggerUI(options =>

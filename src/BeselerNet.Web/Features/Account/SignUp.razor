@@ -6,6 +6,7 @@
 
 <PageTitle>@SiteConstants.SiteName: Create account</PageTitle>
 
+<RedirectIfSignedIn Return="Return">
 <section class="auth-shell">
     <div class="auth-card">
         <Brand />
@@ -61,6 +62,7 @@
         </p>
     </div>
 </section>
+</RedirectIfSignedIn>
 
 @code {
     [SupplyParameterFromQuery(Name = ReturnUrl.Query)]
@@ -114,7 +116,7 @@
         [Required, EmailAddress]
         public string Email { get; set; } = "";
 
-        [Required, MinLength(8)]
+        [Required, MinLength(AuthLimits.PasswordMinLength)]
         public string Password { get; set; } = "";
 
         public bool ThisDevice { get; set; }

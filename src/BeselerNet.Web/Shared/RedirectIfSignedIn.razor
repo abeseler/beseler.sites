@@ -1,0 +1,40 @@
+@inject AccountSession Session
+@inject NavigationManager Nav
+
+@if (ready)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter] public string? Return { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    private bool ready;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (Session.HasSession)
+        {
+            Redirect(ReturnUrl.Destination(Return, Session.EmailVerified));
+            return;
+        }
+
+        ready = true;
+    }
+
+    private void Redirect(string url)
+    {
+        if (!RendererInfo.IsInteractive && HttpContext is not null)
+        {
+            HttpContext.Response.Redirect(url);
+            return;
+        }
+
+        Nav.NavigateTo(url, replace: true);
+    }
+}

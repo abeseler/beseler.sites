@@ -53,6 +53,7 @@ Content-Type: application/json
 
 ### Reset password
 
+# @name reset
 POST {{host}}/v1/accounts/reset-password
 Authorization: Bearer {{login.response.body.$.access_token}}
 Content-Type: application/json

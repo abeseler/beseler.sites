@@ -1,0 +1,71 @@
+@inject AccountSession Session
+@inject SessionActivity Activity
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+@code {
+    private DotNetObjectReference<IdleWatch>? net;
+    private CancellationTokenSource? loop;
+    private DateTimeOffset lastActivity;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || Session.Persist)
+            return;
+
+        lastActivity = DateTimeOffset.UtcNow;
+        net = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("beselerIdle.start", net);
+        loop = new CancellationTokenSource();
+        _ = WatchAsync(loop.Token);
+    }
+
+    [JSInvokable]
+    public void OnActivity()
+    {
+        lastActivity = DateTimeOffset.UtcNow;
+        if (Session.Sid is { } sid)
+            Activity.Touch(sid);
+    }
+
+    private async Task WatchAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (DateTimeOffset.UtcNow - lastActivity >= Activity.IdleAfter)
+                {
+                    Nav.NavigateTo(Routes.SignOut, forceLoad: true);
+                    return;
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        loop?.Cancel();
+        loop?.Dispose();
+        try
+        {
+            await JS.InvokeVoidAsync("beselerIdle.stop");
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (JSException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+
+        net?.Dispose();
+    }
+}

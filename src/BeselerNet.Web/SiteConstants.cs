@@ -1,7 +1,9 @@
-﻿namespace BeselerNet.Web;
+using BeselerNet.Shared;
+
+namespace BeselerNet.Web;
 
 internal static class SiteConstants
 {
-    public const string SiteName = "Beseler .NET";
-    public const string DevelopmentEmail = "testing@beseler.net";
+    public const string SiteName = Branding.ProductName;
+    public const string DevelopmentEmail = Branding.DevelopmentEmail;
 }

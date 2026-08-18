@@ -1,4 +1,5 @@
 ﻿using BeselerNet.Shared.Core;
+using BeselerNet.Shared;
 using System.Diagnostics.CodeAnalysis;
 
 namespace BeselerNet.Shared.Contracts.Users;
@@ -21,7 +22,7 @@ public sealed partial record RegisterUserRequest
         else if (!Extensions.BasicEmailRegex().IsMatch(Email)) errors.Add("email", "Email is invalid.");
 
         if (string.IsNullOrWhiteSpace(Password)) errors.Add("password", "Password is required.");
-        else if (Password.Length <= 7) errors.Add("password", "Password is too short. It must be at least 8 characters.");
+        else if (Password.Length < AuthLimits.PasswordMinLength) errors.Add("password", $"Password is too short. It must be at least {AuthLimits.PasswordMinLength} characters.");
 
         if (string.IsNullOrWhiteSpace(GivenName)) errors.Add("given_name", "Given name is required.");
         if (string.IsNullOrWhiteSpace(FamilyName)) errors.Add("family_name", "Family name is required.");

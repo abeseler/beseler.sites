@@ -19,6 +19,25 @@
 <body>
     <AppRouter @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
+    <script>
+        window.beselerIdle = {
+            start(net) {
+                this.stop();
+                this._net = net;
+                this._fn = () => this._net.invokeMethodAsync('OnActivity');
+                document.addEventListener('pointerdown', this._fn);
+                document.addEventListener('keydown', this._fn);
+            },
+            stop() {
+                if (this._fn) {
+                    document.removeEventListener('pointerdown', this._fn);
+                    document.removeEventListener('keydown', this._fn);
+                }
+                this._fn = null;
+                this._net = null;
+            }
+        };
+    </script>
 </body>
 
 </html>

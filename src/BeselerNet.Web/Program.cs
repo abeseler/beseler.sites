@@ -1,6 +1,7 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Web.Components;
 using BeselerNet.Web.Features.Account;
+using BeselerNet.Web.Features.Roles;
 using BeselerNet.Web.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,6 +13,7 @@ builder.Services.AddRequestTimeouts();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<SessionActivity>();
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -21,6 +23,7 @@ builder.Services.AddScoped<TokenRefresher>();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AccountSession>();
 builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<RoleService>();
 
 builder.Services.AddHttpClient(ApiClient.ClientName, client =>
     {

@@ -24,6 +24,28 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
             "SELECT * FROM account WHERE account_id = @id", new { id });
     }
 
+    public async Task<Account?> WithId_IncludeRoles(int id, CancellationToken cancellationToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        var results = await connection.QueryMultipleAsync(
+            """
+            SELECT * FROM account WHERE account_id = @id;
+
+            SELECT ar.account_id, ar.role_id, r.name, ar.scope, ar.granted_at, ar.granted_by_account_id
+            FROM account_role ar
+            INNER JOIN role r ON r.role_id = ar.role_id
+            WHERE ar.account_id = @id;
+            """, new { id });
+
+        var account = await results.ReadSingleOrDefaultAsync<Account>();
+        if (account is not null)
+        {
+            var roles = await results.ReadAsync<AccountRole>();
+            RolesRef(account) = roles.ToList();
+        }
+        return account;
+    }
+
     public async Task<Account?> WithId_IncludePermissions(int id, CancellationToken cancellationToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
@@ -134,6 +156,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 type,
                 username,
                 email,
+                email_verified_at,
                 secret_hash,
                 secret_hashed_at,
                 given_name,
@@ -149,6 +172,7 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
                 @Type,
                 @Username,
                 @Email,
+                @EmailVerifiedAt,
                 @SecretHash,
                 @SecretHashedAt,
                 @GivenName,

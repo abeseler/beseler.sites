@@ -1,5 +1,6 @@
 ﻿using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Communications;
+using BeselerNet.Shared;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
 
@@ -37,7 +38,7 @@ internal sealed class ResendEmailVerificationHandler
         var emailClaim = new Claim(JwtRegisteredClaimNames.Email, account.Email!);
         var emailVerifiedClaim = new Claim(JwtRegisteredClaimNames.EmailVerified, "true", ClaimValueTypes.Boolean);
 
-        var token = tokens.Generate(subjectClaim, TimeSpan.FromMinutes(10), [emailClaim, emailVerifiedClaim]);
+        var token = tokens.Generate(subjectClaim, AuthLimits.ConfirmEmail, [emailClaim, emailVerifiedClaim]);
 
         var result = await communicationService.SendEmailVerification(account.AccountId, account.Email!, account.Name, token.AccessToken, cancellationToken);
 

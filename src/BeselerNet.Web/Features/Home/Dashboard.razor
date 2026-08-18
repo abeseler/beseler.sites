@@ -15,12 +15,12 @@
             <span class="tile-copy">Periods, recurring templates, and income / expense / savings. Not built yet.</span>
         </a>
 
-        <Can Role="admin">
-            <div class="tile">
-                <span class="tile-kicker">Admin</span>
-                <span class="tile-title">Site admin</span>
-                <span class="tile-copy">Accounts, roles, and permissions. Only visible with the admin role.</span>
-            </div>
+        <Can Resource="@Resources.Role" Action="@Actions.Read">
+            <a class="tile" href="@Routes.Roles">
+                <span class="tile-kicker">Access</span>
+                <span class="tile-title">Roles</span>
+                <span class="tile-copy">Built-in and custom roles, and the permissions they grant.</span>
+            </a>
         </Can>
     </div>
 </div>

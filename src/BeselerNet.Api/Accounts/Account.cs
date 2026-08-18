@@ -1,5 +1,6 @@
 ﻿using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Core;
+using BeselerNet.Shared;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
@@ -69,7 +70,7 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
     }
     public void FailLogin()
     {
-        if (++FailedLoginAttempts == 5)
+        if (++FailedLoginAttempts == AuthLimits.FailedLoginsBeforeLock)
         {
             LockedAt = DateTimeOffset.UtcNow;
         }
@@ -85,6 +86,8 @@ internal sealed class Account : IAuthorizableResource, IOwnedResource
     {
         SecretHash = hash;
         SecretHashedAt = DateTimeOffset.UtcNow;
+        LockedAt = null;
+        FailedLoginAttempts = 0;
         Append(new AccountPasswordChanged(AccountId, hash));
     }
     public void Grant(Permission permission, string scope, int grantedBy)

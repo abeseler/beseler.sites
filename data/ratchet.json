@@ -2,7 +2,8 @@
   {
     "include": [
       "tables",
-      "foreign-keys"
+      "tables/foreign-keys",
+      "tables/seed"
     ],
     "contextFilter": [],
     "requiresContext": false,

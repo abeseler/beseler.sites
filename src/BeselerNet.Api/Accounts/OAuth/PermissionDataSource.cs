@@ -52,6 +52,12 @@ internal sealed class PermissionDataSource(NpgsqlDataSource dataSource, HybridCa
         }, cancellationToken: cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Permission>> List(CancellationToken cancellationToken)
+    {
+        var all = await GetAll(cancellationToken);
+        return all.OrderBy(p => p.Resource).ThenBy(p => p.Action).ToList();
+    }
+
     private async Task<IEnumerable<Permission>> GetAll(CancellationToken cancellationToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);

@@ -263,8 +263,33 @@ h1:focus { outline: none; }
     color: var(--accent);
 }
 
+.btn-danger {
+    background: transparent;
+    border: 1px solid rgba(232, 93, 76, 0.45);
+    color: var(--danger);
+}
+
+.btn-danger:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.btn-small {
+    padding: 0.45rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
 .app-main {
     max-width: 46rem;
+}
+
+.app-main-wide {
+    max-width: 56rem;
 }
 
 .kicker {
@@ -318,6 +343,100 @@ a.tile:hover {
 }
 
 .tile-copy {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.role-toolbar {
+    margin: 0 0 1rem;
+}
+
+.role-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.role-card {
+    padding: 1.15rem 1.2rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.role-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.45rem 0.75rem;
+}
+
+.role-name {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+
+.role-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.badge {
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+}
+
+.perm-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.65rem;
+}
+
+.perm-chip {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.45rem;
+    background: var(--surface-2);
+    border-radius: 6px;
+    color: var(--muted);
+}
+
+.perm-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 0.85rem 0;
+}
+
+.perm-group-title {
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.perm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem 1rem;
+}
+
+.role-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+}
+
+.muted-empty {
+    margin: 0.65rem 0 0;
     color: var(--muted);
     font-size: 0.85rem;
 }

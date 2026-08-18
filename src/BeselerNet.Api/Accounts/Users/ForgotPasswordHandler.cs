@@ -2,6 +2,7 @@
 using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Communications;
 using BeselerNet.Api.Core;
+using BeselerNet.Shared;
 using BeselerNet.Shared.Contracts;
 using BeselerNet.Shared.Contracts.Users;
 using Microsoft.IdentityModel.JsonWebTokens;
@@ -85,7 +86,7 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
             activity?.SetTag_AccountId(account.AccountId);
             var communicationService = scope.ServiceProvider.GetRequiredService<CommunicationService>();
             var subjectClaim = new Claim(JwtRegisteredClaimNames.Sub, account.AccountId.ToString(), ClaimValueTypes.Integer);
-            var token = _tokens.Generate(subjectClaim, TimeSpan.FromMinutes(20)).AccessToken;
+            var token = _tokens.Generate(subjectClaim, AuthLimits.ResetPassword).AccessToken;
 
             var sendResult = account.IsLocked
                 ? await communicationService.SendAccountLocked(account.AccountId, request.Email, account.Name, cancellationToken)

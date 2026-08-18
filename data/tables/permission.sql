@@ -15,9 +15,3 @@ CREATE TABLE permission (
     CONSTRAINT pk_permission PRIMARY KEY (permission_id),
     CONSTRAINT uq_permission_resource_action UNIQUE (resource, action)
 );
-
-/* Migration { "title": "02:seedAccount" } */
-INSERT INTO permission (resource, action) VALUES
-    ('account', 'read'),
-    ('account', 'update'),
-    ('account', 'delete');

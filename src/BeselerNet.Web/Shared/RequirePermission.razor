@@ -1,0 +1,74 @@
+@inject AccountSession Session
+@inject NavigationManager Nav
+
+@if (ready)
+{
+    @if (IsAllowed)
+    {
+        @ChildContent
+    }
+    else if (DeniedContent is not null)
+    {
+        @DeniedContent
+    }
+    else
+    {
+        <div class="app-main">
+            <p class="kicker">Access</p>
+            <h1 class="page-title">You don't have access.</h1>
+            <p class="page-lede">This page isn't available for your account.</p>
+            <a class="btn btn-ghost" href="@Routes.Dashboard">Back to dashboard</a>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public string Resource { get; set; } = "";
+    [Parameter] public string Action { get; set; } = "";
+    [Parameter] public string? Scope { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? DeniedContent { get; set; }
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
+    private bool ready;
+
+    private bool IsAllowed =>
+        !string.IsNullOrWhiteSpace(Resource)
+        && !string.IsNullOrWhiteSpace(Action)
+        && Session.HasPermission(Resource, Action, Scope);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+
+        if (!Session.HasSession)
+        {
+            Redirect(ReturnUrl.WithReturn(Routes.Login, CurrentPath()));
+            return;
+        }
+
+        ready = true;
+    }
+
+    private void Redirect(string url)
+    {
+        if (!RendererInfo.IsInteractive && HttpContext is not null)
+        {
+            HttpContext.Response.Redirect(url);
+            return;
+        }
+
+        Nav.NavigateTo(url, replace: true);
+    }
+
+    private string? CurrentPath()
+    {
+        if (HttpContext is not null)
+            return HttpContext.Request.Path + HttpContext.Request.QueryString;
+
+        var relative = Nav.ToBaseRelativePath(Nav.Uri);
+        return relative.StartsWith('/') ? relative : "/" + relative;
+    }
+}

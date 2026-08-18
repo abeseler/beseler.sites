@@ -15,8 +15,8 @@
         <NavLink class="nav-link" href="@Routes.Home" Match="NavLinkMatch.All">Home</NavLink>
         <NavLink class="nav-link" href="@Routes.Dashboard">Dashboard</NavLink>
         <NavLink class="nav-link" href="@Routes.Budget">Budget</NavLink>
-        <Can Role="admin">
-            <NavLink class="nav-link" href="@Routes.Dashboard">Admin</NavLink>
+        <Can Resource="@Resources.Role" Action="@Actions.Read">
+            <NavLink class="nav-link" href="@Routes.Roles">Roles</NavLink>
         </Can>
     </nav>
 

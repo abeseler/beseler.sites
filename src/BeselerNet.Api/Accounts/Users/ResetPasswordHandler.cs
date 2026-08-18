@@ -1,4 +1,7 @@
-﻿using BeselerNet.Shared.Contracts.Users;
+using BeselerNet.Api.Accounts.OAuth;
+using BeselerNet.Api.Core;
+using BeselerNet.Shared.Contracts.OAuth;
+using BeselerNet.Shared.Contracts.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Security.Claims;
@@ -7,18 +10,38 @@ namespace BeselerNet.Api.Accounts.Users;
 
 internal sealed class ResetPasswordHandler
 {
-    public static async Task<IResult> Handle(ResetPasswordRequest request, ClaimsPrincipal principal, AccountDataSource accounts, IPasswordHasher<Account> passwordHasher, CancellationToken cancellationToken)
+    private const string RefreshCookiePath = "/v1/accounts/oauth/tokens";
+
+    public static async Task<IResult> Handle(
+        ResetPasswordRequest request,
+        ClaimsPrincipal principal,
+        AccountDataSource accounts,
+        IPasswordHasher<Account> passwordHasher,
+        JwtGenerator tokens,
+        TokenLogDataSource tokenLogs,
+        Cookies cookies,
+        CancellationToken cancellationToken)
     {
         if (!int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId))
         {
             return TypedResults.Unauthorized();
         }
 
-        var account = await accounts.WithId(accountId, cancellationToken);
+        if (request.IsInvalid(out var errors))
+        {
+            return TypedResults.ValidationProblem(errors);
+        }
+
+        var account = await accounts.WithId_IncludePermissions(accountId, cancellationToken);
         var problem = account switch
         {
+            null => new()
+            {
+                Title = "Invalid Password Reset",
+                Detail = "The password reset token is invalid.",
+                Status = StatusCodes.Status403Forbidden
+            },
             { IsDisabled: true } => AccountProblems.Disabled,
-            { IsLocked: true } => AccountProblems.Locked,
             _ => null
         };
 
@@ -27,16 +50,31 @@ internal sealed class ResetPasswordHandler
             return TypedResults.Problem(problem);
         }
 
-        if (request.IsInvalid(out var errors))
-        {
-            return TypedResults.ValidationProblem(errors);
-        }
-
         var hashedPassword = passwordHasher.HashPassword(account!, request.Password!);
         account!.ChangePassword(hashedPassword);
-
         await accounts.SaveChanges(account, cancellationToken);
 
-        return TypedResults.NoContent();
+        var tokenResult = tokens.Generate(account.ToClaimsPrincipal());
+        if (tokenResult.RefreshToken is not null)
+        {
+            var log = TokenLog.Create(tokenResult, account.AccountId);
+            await tokenLogs.SaveChanges(log, cancellationToken);
+            cookies.Set(Cookies.RefreshToken, tokenResult.RefreshToken, new()
+            {
+                Expires = tokenResult.RefreshTokenExpires,
+                SameSite = SameSiteMode.Strict,
+                Secure = true,
+                HttpOnly = true,
+                Path = RefreshCookiePath
+            });
+        }
+
+        return TypedResults.Ok(new OAuthTokenResponse
+        {
+            AccessToken = tokenResult.AccessToken,
+            TokenType = "Bearer",
+            ExpiresIn = tokenResult.ExpiresIn,
+            RefreshToken = tokenResult.RefreshToken
+        });
     }
 }

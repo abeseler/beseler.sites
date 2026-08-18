@@ -17,7 +17,7 @@ internal static class AccountEndpoints
 
         v1.MapGet("/me", GetCurrentAccountHandler.Handle)
             .WithName("GetCurrentAccount")
-            .WithDescription("Get the signed-in account profile, including effective roles and permissions.")
+            .WithDescription("Get the signed-in account profile, including role membership.")
             .Produces<AccountProfileResponse>(Status200OK, Application.Json)
             .Produces(Status401Unauthorized)
             .ProducesProblem(Status403Forbidden, Application.Json)
@@ -70,9 +70,9 @@ internal static class AccountEndpoints
 
         v1.MapPost("/reset-password", ResetPasswordHandler.Handle)
             .WithName("ResetUserPassword")
-            .WithDescription("Reset the password.")
+            .WithDescription("Reset the password and return a fresh session.")
             .Accepts<ResetPasswordRequest>(Application.Json)
-            .Produces(Status204NoContent)
+            .Produces<OAuthTokenResponse>(Status200OK, Application.Json)
             .ProducesValidationProblem(Status400BadRequest, Application.Json)
             .Produces(Status401Unauthorized)
             .ProducesProblem(Status403Forbidden, Application.Json)

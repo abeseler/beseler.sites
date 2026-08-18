@@ -1,4 +1,5 @@
 using System.Net;
+using BeselerNet.Shared;
 
 namespace BeselerNet.Api.Communications.Emails;
 
@@ -24,18 +25,21 @@ internal static class EmailTemplates
             heading: "Confirm your email",
             plain:
                 $"""
-                Confirm your Beseler .NET email by opening this link:
+                Confirm your {Branding.ProductName} email by opening this link:
 
                 {url}
+
+                The link expires in {AuthLimits.ConfirmEmailExpiryText}.
 
                 If you did not create an account, you can ignore this email.
                 """,
             bodyHtml:
                 $"""
-                <p style="{P}">Confirm your email to finish setting up your Beseler .NET account.</p>
+                <p style="{P}">Confirm your email to finish setting up your {Encode(Branding.ProductName)} account.</p>
                 {Button(url, "Confirm email")}
                 <p style="{P}{Muted}">If the button does not work, paste this into your browser:</p>
                 <p style="{P}{Muted}word-break:break-all;">{Encode(url)}</p>
+                <p style="{P}{Muted}">The link expires in {AuthLimits.ConfirmEmailExpiryText}.</p>
                 <p style="{P}{Muted}">If you did not create an account, ignore this email.</p>
                 """);
     }
@@ -62,7 +66,7 @@ internal static class EmailTemplates
                 $"""
                 Hi {recipientName},
 
-                Your Beseler .NET account was locked after too many failed sign-in attempts.
+                Your {Branding.ProductName} account was locked after too many failed sign-in attempts.
 
                 {resetPlain}
 
@@ -89,7 +93,7 @@ internal static class EmailTemplates
                 $"""
                 Hi {recipientName},
 
-                We received a request to reset your Beseler .NET password. Open this link (it expires):
+                We received a request to reset your {Branding.ProductName} password. Open this link (it expires in {AuthLimits.ResetPasswordExpiryText}):
 
                 {url}
 
@@ -102,6 +106,7 @@ internal static class EmailTemplates
                 {Button(url, "Reset password")}
                 <p style="{P}{Muted}">If the button does not work, paste this into your browser:</p>
                 <p style="{P}{Muted}word-break:break-all;">{Encode(url)}</p>
+                <p style="{P}{Muted}">The link expires in {AuthLimits.ResetPasswordExpiryText}.</p>
                 <p style="{P}{Muted}">If you did not ask for a reset, ignore this email. Your password will stay the same.</p>
                 """);
     }
@@ -123,10 +128,10 @@ internal static class EmailTemplates
         return new()
         {
             SenderEmail = options.SenderEmail ?? throw new InvalidOperationException("SenderEmail is not configured."),
-            SenderName = options.SenderName ?? "Beseler .NET",
+            SenderName = options.SenderName ?? Branding.ProductName,
             CommunicationName = name,
             Subject = subject,
-            PlainTextContent = $"{plain.Trim()}\n\n— Beseler .NET\n",
+            PlainTextContent = $"{plain.Trim()}\n\n— {Branding.ProductName}\n",
             HtmlContent = $"""
                 <!DOCTYPE html>
                 <html lang="en">
@@ -140,7 +145,7 @@ internal static class EmailTemplates
                   <p style="{mark}">beseler</p>
                   <h1 style="{h1}">{Encode(heading)}</h1>
                   {bodyHtml}
-                  <p style="{foot}">Beseler .NET</p>
+                  <p style="{foot}">{Encode(Branding.ProductName)}</p>
                 </div>
                 </body>
                 </html>

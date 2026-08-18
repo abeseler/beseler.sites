@@ -5,13 +5,14 @@ using System.Text.Json;
 
 namespace BeselerNet.Web.Shared;
 
-internal sealed class ApiClient(IHttpClientFactory httpFactory, AuthCookie cookie, TokenRefresher refresher)
+internal sealed class ApiClient(IHttpClientFactory httpFactory, AuthCookie cookie, TokenRefresher refresher, SessionActivity activity)
 {
     public const string ClientName = "beseler-net-api";
 
     private readonly IHttpClientFactory _httpFactory = httpFactory;
     private readonly AuthCookie _cookie = cookie;
     private readonly TokenRefresher _refresher = refresher;
+    private readonly SessionActivity _activity = activity;
 
     public Task<ApiResult> PostAsync(string path, object? body = null, string? bearer = null, bool session = false, CancellationToken cancellationToken = default) =>
         SendAsync(HttpMethod.Post, path, body, bearer, session, cancellationToken);
@@ -21,6 +22,15 @@ internal sealed class ApiClient(IHttpClientFactory httpFactory, AuthCookie cooki
 
     public Task<ApiResult<T>> GetAsync<T>(string path, bool session = false, CancellationToken cancellationToken = default) =>
         SendAsync<T>(HttpMethod.Get, path, bearer: null, session: session, cancellationToken: cancellationToken);
+
+    public Task<ApiResult<T>> PutAsync<T>(string path, object? body = null, bool session = false, CancellationToken cancellationToken = default) =>
+        SendAsync<T>(HttpMethod.Put, path, body, bearer: null, session, retry: false, cancellationToken);
+
+    public Task<ApiResult> PutAsync(string path, object? body = null, bool session = false, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Put, path, body, bearer: null, session, cancellationToken);
+
+    public Task<ApiResult> DeleteAsync(string path, bool session = false, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Delete, path, session: session, cancellationToken: cancellationToken);
 
     public async Task<ApiResult> SendAsync(
         HttpMethod method,
@@ -72,6 +82,9 @@ internal sealed class ApiClient(IHttpClientFactory httpFactory, AuthCookie cooki
             return await SendAsync<T>(method, path, body, bearer: null, session: true, retry: true, cancellationToken);
         }
 
+        if (session && response.IsSuccessStatusCode && _cookie.Current?.Sid is { } sid)
+            _activity.Touch(sid);
+
         if (response.IsSuccessStatusCode)
         {
             if (response.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.Accepted
@@ -100,10 +113,10 @@ internal sealed class ApiClient(IHttpClientFactory httpFactory, AuthCookie cooki
         {
             var problem = await response.Content.ReadFromJsonAsync<HttpValidationProblemDetails>(cancellationToken);
             if (problem?.Errors is { Count: > 0 })
-                return ApiResult<T>.Fail(problem.Title ?? "Check the highlighted fields.", problem.Errors, response.StatusCode);
+                return ApiResult<T>.Fail(problem.Title ?? "Check the highlighted fields.", problem.Errors, response.StatusCode, problem.Title);
 
             if (!string.IsNullOrWhiteSpace(problem?.Detail))
-                return ApiResult<T>.Fail(problem.Detail, status: response.StatusCode);
+                return ApiResult<T>.Fail(problem.Detail, status: response.StatusCode, title: problem.Title);
         }
         catch (JsonException)
         {

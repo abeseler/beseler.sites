@@ -1,0 +1,17 @@
+@if (Permissions.Count == 0)
+{
+    <p class="muted-empty">No permissions assigned.</p>
+}
+else
+{
+    <div class="perm-chips">
+        @foreach (var permission in Permissions)
+        {
+            <span class="perm-chip">@permission.Resource:@permission.Action</span>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<PermissionResponse> Permissions { get; set; } = [];
+}

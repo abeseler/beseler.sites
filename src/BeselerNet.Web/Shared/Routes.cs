@@ -13,4 +13,5 @@ internal static class Routes
     public const string SignOut = "/account/sign-out";
     public const string Dashboard = "/dashboard";
     public const string Budget = "/budget";
+    public const string Roles = "/roles";
 }

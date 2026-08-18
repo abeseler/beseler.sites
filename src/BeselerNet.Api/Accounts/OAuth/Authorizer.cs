@@ -1,9 +1,10 @@
-﻿using BeselerNet.Shared.Core;
+using BeselerNet.Shared;
+using BeselerNet.Shared.Core;
 using System.Security.Claims;
 
 namespace BeselerNet.Api.Accounts.OAuth;
 
-internal static class AccessController
+internal static class Authorizer
 {
     public static Result Authorize<TResource>(ClaimsPrincipal principal, TResource resource, string action, string? requiredScope) where TResource : IAuthorizableResource
     {
@@ -21,9 +22,9 @@ internal static class AccessController
 
         var scopes = claimValue.Split(' ') ?? [];
 
-        if (requiredScope == "owned")
+        if (requiredScope == Scopes.Owned)
         {
-            if (!scopes.Contains("owned"))
+            if (!scopes.Contains(Scopes.Owned))
             {
                 return new UnauthorizedAccessException($"Authorization failed: User does not have the required scope [{requiredScope}]. Found [{claimValue}].");
             }
@@ -37,9 +38,9 @@ internal static class AccessController
             }
             return Result.Success;
         }
-        else if (requiredScope == "shared")
+        else if (requiredScope == Scopes.Shared)
         {
-            if (!scopes.Contains("shared"))
+            if (!scopes.Contains(Scopes.Shared))
             {
                 return new UnauthorizedAccessException($"Authorization failed: User does not have the required scope [{requiredScope}]. Found [{claimValue}].");
             }
@@ -62,10 +63,10 @@ internal static class AccessController
         {
             var isAuthorized = scope switch
             {
-                "global" => true,
-                "owned" => resource is IOwnedResource owned && owned.IsOwnedBy(principal),
-                "shared" => resource is ISharedResource shared && shared.IsSharedWith(principal),
-                "self" => true,
+                Scopes.Global => true,
+                Scopes.Owned => resource is IOwnedResource owned && owned.IsOwnedBy(principal),
+                Scopes.Shared => resource is ISharedResource shared && shared.IsSharedWith(principal),
+                Scopes.Self => true,
                 _ => false
             };
             if (isAuthorized)

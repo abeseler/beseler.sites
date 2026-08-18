@@ -1,4 +1,5 @@
 using System.Text.Json;
+using BeselerNet.Shared;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -10,7 +11,7 @@ internal sealed class AuthCookie(IHttpContextAccessor http, IDataProtectionProvi
     private const string Purpose = "BeselerNet.Web.AuthCookie.v1";
     private const string SessionPrefix = "auth-session:";
     internal const string HandoffPrefix = "auth-handoff:";
-    private static readonly TimeSpan Lifetime = TimeSpan.FromDays(14);
+    private static readonly TimeSpan Lifetime = AuthLimits.PersistCookie;
 
     private readonly IDataProtector _protector = protection.CreateProtector(Purpose);
     private readonly IHttpContextAccessor _http = http;

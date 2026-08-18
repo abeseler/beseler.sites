@@ -1,4 +1,5 @@
 ﻿using BeselerNet.Api.Accounts.OAuth;
+using BeselerNet.Shared;
 using BeselerNet.Shared.Contracts.Users;
 using Microsoft.AspNetCore.Identity;
 
@@ -21,16 +22,23 @@ internal static class RegisterUserHandler
             return TypedResults.ValidationProblem(errors);
         }
 
-        var member = await roles.WithName("member", cancellationToken);
-        if (member is null)
+        var member = await roles.WithName(Roles.Member, cancellationToken);
+        var admin = await roles.WithName(Roles.Admin, cancellationToken);
+        if (member is null || admin is null)
         {
-            return TypedResults.Problem("Default role is not configured.", statusCode: StatusCodes.Status500InternalServerError);
+            return TypedResults.Problem("Default roles are not configured.", statusCode: StatusCodes.Status500InternalServerError);
         }
 
         var accountId = await accounts.NextId(cancellationToken);
         var secretHash = passwordHasher.HashPassword(default!, request.Password!);
         account = Account.CreateUser(accountId, request.Email, secretHash, request.Email, request.GivenName, request.FamilyName);
-        account.AssignRole(member, "owned", account.AccountId);
+        account.AssignRole(member, Scopes.Owned, account.AccountId);
+
+        if (!await roles.IsAssignedToAnyone(Roles.Admin, cancellationToken))
+        {
+            account.AssignRole(admin, Scopes.Global, account.AccountId);
+            account.VerifyEmail(request.Email);
+        }
 
         await accounts.SaveChanges(account, cancellationToken);
 

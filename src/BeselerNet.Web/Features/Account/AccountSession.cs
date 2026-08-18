@@ -5,22 +5,35 @@ using BeselerNet.Web.Shared;
 
 namespace BeselerNet.Web.Features.Account;
 
-internal sealed class AccountSession(ApiClient api, AuthCookie cookie, TokenRefresher refresher, TimeProvider time)
+internal sealed class AccountSession(ApiClient api, AuthCookie cookie, TokenRefresher refresher, SessionActivity activity, TimeProvider time)
 {
     private readonly ApiClient _api = api;
     private readonly AuthCookie _cookie = cookie;
     private readonly TokenRefresher _refresher = refresher;
+    private readonly SessionActivity _activity = activity;
     private readonly TimeProvider _time = time;
     private bool _loaded;
+    private string? _permissionToken;
+    private AccessClaims _permissions = AccessClaims.Empty;
 
     public AccountProfileResponse? Profile { get; private set; }
     public bool HasSession { get; private set; }
     public bool Persist => _cookie.Current?.Persist is true;
+    public string? Sid => _cookie.Current?.Sid;
     public bool EmailVerified => Profile?.EmailVerified is true;
     public string? Name => string.IsNullOrWhiteSpace(Profile?.Name) ? null : Profile.Name;
 
-    public bool HasPermission(string resource, string action, string? scope = null) =>
-        Profile?.HasPermission(resource, action, scope) is true;
+    public bool HasPermission(string resource, string action, string? scope = null)
+    {
+        var token = _cookie.Current?.AccessToken;
+        if (!string.Equals(token, _permissionToken, StringComparison.Ordinal))
+        {
+            _permissionToken = token;
+            _permissions = AccessClaims.FromAccessToken(token);
+        }
+
+        return _permissions.Has(resource, action, scope);
+    }
 
     public bool HasRole(string name) => Profile?.HasRole(name) is true;
 
@@ -29,14 +42,24 @@ internal sealed class AccountSession(ApiClient api, AuthCookie cookie, TokenRefr
         if (_loaded)
             return;
 
-        if (_cookie.Current is null || !await _refresher.EnsureAccessTokenAsync(cancellationToken: cancellationToken))
+        var ticket = _cookie.Current;
+        if (ticket is null || _activity.IsExpired(ticket))
         {
-            HasSession = false;
-            Profile = null;
+            if (ticket is not null)
+                _cookie.Clear();
+            ClearSession();
             _loaded = true;
             return;
         }
 
+        if (!await _refresher.EnsureAccessTokenAsync(cancellationToken: cancellationToken))
+        {
+            ClearSession();
+            _loaded = true;
+            return;
+        }
+
+        _activity.Touch(ticket.Sid);
         HasSession = true;
         await RefreshProfileAsync(cancellationToken);
         _loaded = true;
@@ -46,6 +69,7 @@ internal sealed class AccountSession(ApiClient api, AuthCookie cookie, TokenRefr
     {
         var ticket = AuthTicket.From(tokens, _time, persist: persist);
         var handoff = _cookie.CreateHandoff(ticket);
+        _activity.Touch(ticket.Sid);
         HasSession = true;
         await RefreshProfileAsync(cancellationToken);
         _loaded = true;
@@ -59,13 +83,20 @@ internal sealed class AccountSession(ApiClient api, AuthCookie cookie, TokenRefr
         var result = await _api.GetAsync<AccountProfileResponse>("/v1/accounts/me", session: true, cancellationToken);
         if (result.StatusCode is HttpStatusCode.Unauthorized)
         {
-            HasSession = false;
-            Profile = null;
             _cookie.Clear();
+            ClearSession();
             return;
         }
 
         if (result.Value is not null)
             Profile = result.Value;
+    }
+
+    private void ClearSession()
+    {
+        HasSession = false;
+        Profile = null;
+        _permissionToken = null;
+        _permissions = AccessClaims.Empty;
     }
 }

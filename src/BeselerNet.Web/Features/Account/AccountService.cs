@@ -22,13 +22,16 @@ internal sealed class AccountService(ApiClient api, AccountSession session)
             ClientId = ClientId
         }, cancellationToken: cancellationToken);
 
+        if (result.IsLocked)
+            return ApiResult<string>.Fail(result.Error ?? "Your account is locked. Reset your password to unlock it.", result.FieldErrors, result.StatusCode, result.Title);
+
         if (result.StatusCode is HttpStatusCode.Unauthorized)
             return ApiResult<string>.Fail("Email or password is wrong.", status: result.StatusCode);
 
         if (!result.Succeeded || string.IsNullOrWhiteSpace(result.Value?.AccessToken))
             return result.Value is null && result.Succeeded
                 ? ApiResult<string>.Fail("The API returned an empty token response.")
-                : ApiResult<string>.Fail(result.Error ?? "Sign in failed.", result.FieldErrors, result.StatusCode);
+                : ApiResult<string>.Fail(result.Error ?? "Sign in failed.", result.FieldErrors, result.StatusCode, result.Title);
 
         var handoff = await _session.EstablishAsync(result.Value, persist, returnUrl, cancellationToken);
         return ApiResult<string>.Ok(handoff);
@@ -56,8 +59,15 @@ internal sealed class AccountService(ApiClient api, AccountSession session)
     public Task<ApiResult> RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default) =>
         _api.PostAsync("/v1/accounts/forgot-password", new ForgotPasswordRequest { Email = email }, cancellationToken: cancellationToken);
 
-    public Task<ApiResult> ResetPasswordAsync(string token, string password, CancellationToken cancellationToken = default) =>
-        _api.PostAsync("/v1/accounts/reset-password", new ResetPasswordRequest { Password = password }, bearer: token, cancellationToken: cancellationToken);
+    public async Task<ApiResult<string>> ResetPasswordAsync(string token, string password, bool persist = false, string? returnUrl = null, CancellationToken cancellationToken = default)
+    {
+        var result = await _api.PostAsync<OAuthTokenResponse>("/v1/accounts/reset-password", new ResetPasswordRequest { Password = password }, bearer: token, cancellationToken: cancellationToken);
+        if (!result.Succeeded || string.IsNullOrWhiteSpace(result.Value?.AccessToken))
+            return ApiResult<string>.Fail(result.Error ?? "Could not reset the password.", result.FieldErrors, result.StatusCode);
+
+        var handoff = await _session.EstablishAsync(result.Value, persist, returnUrl, cancellationToken);
+        return ApiResult<string>.Ok(handoff);
+    }
 
     public async Task<ApiResult> ResendVerificationAsync(CancellationToken cancellationToken = default)
     {

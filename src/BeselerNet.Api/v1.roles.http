@@ -1,0 +1,67 @@
+@host={{$projectUrl}}
+@email=testing@beseler.net
+@password=password
+
+### Login
+
+# @name login
+POST {{host}}/v1/accounts/oauth/tokens
+Content-Type: application/json
+
+{
+  "grant_type": "password",
+  "username": "{{email}}",
+  "password": "{{password}}"
+}
+
+### List roles
+
+GET {{host}}/v1/roles
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### List permissions
+
+GET {{host}}/v1/permissions
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Create role
+
+# @name create
+POST {{host}}/v1/roles
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "reviewer",
+  "permission_ids": []
+}
+
+### Get role
+
+GET {{host}}/v1/roles/{{create.response.body.$.role_id}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Rename role
+
+PUT {{host}}/v1/roles/{{create.response.body.$.role_id}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "reviewer-renamed"
+}
+
+### Set role permissions
+
+PUT {{host}}/v1/roles/{{create.response.body.$.role_id}}/permissions
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "permission_ids": [1, 2]
+}
+
+### Delete role
+
+DELETE {{host}}/v1/roles/{{create.response.body.$.role_id}}
+Authorization: Bearer {{login.response.body.$.access_token}}

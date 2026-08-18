@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using BeselerNet.Shared;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BeselerNet.Api.Accounts;
 
@@ -6,7 +7,7 @@ internal static class AccountProblems
 {
     public static ProblemDetails Locked { get; } = new()
     {
-        Title = "Account Locked",
+        Title = AuthLimits.AccountLockedTitle,
         Detail = "Your account is locked. Please contact support.",
         Status = StatusCodes.Status403Forbidden
     };

@@ -13,7 +13,7 @@ internal static class GetCurrentAccountHandler
             return TypedResults.Unauthorized();
         }
 
-        var account = await accounts.WithId_IncludePermissions(accountId, cancellationToken);
+        var account = await accounts.WithId_IncludeRoles(accountId, cancellationToken);
         if (account is null)
         {
             return TypedResults.Unauthorized();
@@ -36,19 +36,6 @@ internal static class GetCurrentAccountHandler
 
     private static AccountProfileResponse Map(Account account)
     {
-        var permissions = account.Permissions
-            .Concat(account.RolePermissions)
-            .GroupBy(permission => (permission.Resource, permission.Action))
-            .Select(group => new AccountPermissionResponse
-            {
-                Resource = group.Key.Resource,
-                Action = group.Key.Action,
-                Scopes = [.. group.Select(permission => permission.Scope).Distinct()]
-            })
-            .OrderBy(permission => permission.Resource)
-            .ThenBy(permission => permission.Action)
-            .ToArray();
-
         var roles = account.Roles
             .Select(role => new AccountRoleResponse
             {
@@ -67,8 +54,7 @@ internal static class GetCurrentAccountHandler
             GivenName = account.GivenName,
             FamilyName = account.FamilyName,
             Name = account.Name,
-            Roles = roles,
-            Permissions = permissions
+            Roles = roles
         };
     }
 }

@@ -1,0 +1,292 @@
+@attribute [Route(Routes.Roles)]
+@inject RoleService RolesApi
+@inject AccountSession Session
+
+<PageTitle>@SiteConstants.SiteName: Roles</PageTitle>
+
+<RequirePermission Resource="@Resources.Role" Action="@Actions.Read">
+<div class="app-main app-main-wide">
+    <p class="kicker">Access</p>
+    <h1 class="page-title">Roles</h1>
+    <p class="page-lede">Built-in and custom roles, and the permissions each one grants.</p>
+
+    @if (error is not null)
+    {
+        <p class="auth-alert" role="alert">@error</p>
+    }
+
+    @if (CanManage)
+    {
+        @if (creating)
+        {
+            <section class="role-card">
+                <span class="tile-kicker">New role</span>
+                <div class="auth-field">
+                    <label for="new-role-name">Name</label>
+                    <input id="new-role-name" @bind="editName" maxlength="64" disabled="@busy" />
+                </div>
+                <PermissionPicker Catalog="catalog" Selected="selected" Disabled="busy" />
+                <div class="role-actions">
+                    <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="Create">
+                        @(busy ? "Saving…" : "Create role")
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="CancelEdit">Cancel</button>
+                </div>
+            </section>
+        }
+        else
+        {
+            <p class="role-toolbar">
+                <button type="button" class="btn btn-primary btn-small" @onclick="StartCreate">New role</button>
+            </p>
+        }
+    }
+
+    @if (loading)
+    {
+        <p class="page-lede">Loading roles…</p>
+    }
+    else if (roles.Count == 0)
+    {
+        <p class="muted-empty">No roles yet.</p>
+    }
+    else
+    {
+        <div class="role-list">
+            @foreach (var role in roles)
+            {
+                var editingThis = editingId == role.RoleId;
+                <article class="role-card">
+                    <div class="role-card-head">
+                        <span class="role-name">@role.Name</span>
+                        <span class="role-badges">
+                            @if (role.Protected)
+                            {
+                                <span class="badge">Built-in</span>
+                            }
+                            @if (role.LockedGrants)
+                            {
+                                <span class="badge">Grants locked</span>
+                            }
+                        </span>
+                    </div>
+
+                    @if (editingThis)
+                    {
+                        @if (!role.Protected)
+                        {
+                            <div class="auth-field">
+                                <label for="@($"role-name-{role.RoleId}")">Name</label>
+                                <input id="@($"role-name-{role.RoleId}")" @bind="editName" maxlength="64" disabled="@busy" />
+                            </div>
+                        }
+                        @if (!role.LockedGrants)
+                        {
+                            <PermissionPicker Catalog="catalog" Selected="selected" Disabled="busy" />
+                        }
+                        else
+                        {
+                            <PermissionChips Permissions="role.Permissions" />
+                            <p class="muted-empty">This role's permissions cannot be changed.</p>
+                        }
+                        <div class="role-actions">
+                            <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="() => SaveEdit(role)">
+                                @(busy ? "Saving…" : "Save")
+                            </button>
+                            <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="CancelEdit">Cancel</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <PermissionChips Permissions="role.Permissions" />
+                        @if (CanManage)
+                        {
+                            <div class="role-actions">
+                                @if (!role.Protected || !role.LockedGrants)
+                                {
+                                    <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="() => StartEdit(role)">Edit</button>
+                                }
+                                @if (!role.Protected)
+                                {
+                                    @if (pendingDeleteId == role.RoleId)
+                                    {
+                                        <button type="button" class="btn btn-danger btn-small" disabled="@busy" @onclick="() => Delete(role)">
+                                            @(busy ? "Deleting…" : "Confirm delete")
+                                        </button>
+                                        <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="() => pendingDeleteId = null">Keep</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-danger btn-small" disabled="@busy" @onclick="() => pendingDeleteId = role.RoleId">Delete</button>
+                                    }
+                                }
+                            </div>
+                        }
+                    }
+                </article>
+            }
+        </div>
+    }
+</div>
+</RequirePermission>
+
+@code {
+    private IReadOnlyList<RoleResponse> roles = [];
+    private IReadOnlyList<PermissionResponse> catalog = [];
+    private readonly HashSet<int> selected = [];
+    private bool loading = true;
+    private bool busy;
+    private bool creating;
+    private int? editingId;
+    private int? pendingDeleteId;
+    private string editName = "";
+    private string? error;
+
+    private bool CanManage => Session.HasPermission(Resources.Role, Actions.Update);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        loading = true;
+        error = null;
+        var listed = await RolesApi.ListAsync();
+        if (!listed.Succeeded)
+        {
+            roles = [];
+            error = listed.Error ?? "Could not load roles.";
+            loading = false;
+            return;
+        }
+
+        roles = listed.Value ?? [];
+
+        if (CanManage)
+        {
+            var permissions = await RolesApi.ListPermissionsAsync();
+            if (permissions.Succeeded)
+                catalog = permissions.Value ?? [];
+            else
+                error = permissions.Error ?? "Could not load the permission catalog.";
+        }
+
+        loading = false;
+    }
+
+    private void StartCreate()
+    {
+        creating = true;
+        editingId = null;
+        pendingDeleteId = null;
+        editName = "";
+        selected.Clear();
+        error = null;
+    }
+
+    private void StartEdit(RoleResponse role)
+    {
+        creating = false;
+        editingId = role.RoleId;
+        pendingDeleteId = null;
+        editName = role.Name;
+        selected.Clear();
+        foreach (var permission in role.Permissions)
+            selected.Add(permission.PermissionId);
+        error = null;
+    }
+
+    private void CancelEdit()
+    {
+        creating = false;
+        editingId = null;
+        pendingDeleteId = null;
+        editName = "";
+        selected.Clear();
+    }
+
+    private async Task Create()
+    {
+        if (string.IsNullOrWhiteSpace(editName))
+        {
+            error = "Name is required.";
+            return;
+        }
+
+        busy = true;
+        error = null;
+        var result = await RolesApi.CreateAsync(editName.Trim(), [.. selected]);
+        busy = false;
+
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not create the role.";
+            return;
+        }
+
+        CancelEdit();
+        await Reload();
+    }
+
+    private async Task SaveEdit(RoleResponse role)
+    {
+        busy = true;
+        error = null;
+
+        if (!role.Protected)
+        {
+            var name = editName.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                busy = false;
+                error = "Name is required.";
+                return;
+            }
+
+            if (!string.Equals(name, role.Name, StringComparison.Ordinal))
+            {
+                var renamed = await RolesApi.RenameAsync(role.RoleId, name);
+                if (!renamed.Succeeded)
+                {
+                    busy = false;
+                    error = renamed.Error ?? "Could not rename the role.";
+                    return;
+                }
+            }
+        }
+
+        if (!role.LockedGrants)
+        {
+            var granted = await RolesApi.SetPermissionsAsync(role.RoleId, [.. selected]);
+            if (!granted.Succeeded)
+            {
+                busy = false;
+                error = granted.Error ?? "Could not update permissions.";
+                return;
+            }
+        }
+
+        busy = false;
+        CancelEdit();
+        await Reload();
+    }
+
+    private async Task Delete(RoleResponse role)
+    {
+        busy = true;
+        error = null;
+        var result = await RolesApi.DeleteAsync(role.RoleId);
+        busy = false;
+
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not delete the role.";
+            return;
+        }
+
+        CancelEdit();
+        await Reload();
+    }
+}

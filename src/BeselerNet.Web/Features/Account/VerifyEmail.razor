@@ -1,6 +1,7 @@
 @attribute [Route(Routes.VerifyEmail)]
 @layout BasicLayout
 @inject AccountService Accounts
+@inject AccountSession Session
 
 <PageTitle>@SiteConstants.SiteName: Verify email</PageTitle>
 
@@ -8,7 +9,10 @@
     <section class="auth-shell">
         <div class="auth-card">
             <Brand />
-            <p class="auth-lede">Check your email and open the confirmation link. The link expires in about 10 minutes.</p>
+            <p class="auth-lede">
+                We sent a confirmation link to <strong>@address</strong>.
+                Open it to finish. The link expires in @AuthLimits.ConfirmEmailExpiryText.
+            </p>
 
             @if (error is not null)
             {
@@ -16,7 +20,7 @@
             }
             else if (sent)
             {
-                <p class="auth-lede">A new message is on the way.</p>
+                <p class="auth-lede">A new message is on the way to @address.</p>
             }
 
             <button type="button" class="auth-submit" disabled="@busy" @onclick="Resend">
@@ -24,7 +28,7 @@
             </button>
 
             <p class="auth-footer">
-                <a href="@ReturnUrl.WithReturn(Routes.Login, Return)">Back to sign in</a>
+                <a href="@Routes.SignOut">Sign out</a>
             </p>
         </div>
     </section>
@@ -37,6 +41,12 @@
     private bool busy;
     private bool sent;
     private string? error;
+    private string address = "your email";
+
+    protected override void OnInitialized()
+    {
+        address = Session.Profile?.Email ?? "your email";
+    }
 
     private async Task Resend()
     {
