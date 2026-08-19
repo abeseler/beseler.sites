@@ -51,6 +51,22 @@ internal static class BudgetEndpoints
             .ProducesProblem(Status403Forbidden, Application.Json)
             .ProducesProblem(Status404NotFound, Application.Json);
 
+        years.MapGet("/{year:int}/export", BudgetHandlers.ExportYear)
+            .WithName("ExportBudgetYear")
+            .Produces<BudgetPack>(Status200OK, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .ProducesProblem(Status404NotFound, Application.Json);
+
+        years.MapPost("/{year:int}/import", BudgetHandlers.ImportYear)
+            .WithName("ImportBudgetYear")
+            .Accepts<BudgetPack>(Application.Json)
+            .Produces<BudgetYearResponse>(Status200OK, Application.Json)
+            .ProducesValidationProblem(Status400BadRequest, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .ProducesProblem(Status404NotFound, Application.Json);
+
         years.MapGet("/{year:int}/months/{month:int}", BudgetHandlers.GetMonth)
             .WithName("GetBudgetMonth")
             .Produces<BudgetMonthResponse>(Status200OK, Application.Json)

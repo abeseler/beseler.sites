@@ -31,6 +31,17 @@
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.register("/service-worker.js");
         }
+        window.beselerDownload = {
+            json(filename, text) {
+                const blob = new Blob([text], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        };
         window.beselerClock = {
             snapshot() {
                 const now = new Date();

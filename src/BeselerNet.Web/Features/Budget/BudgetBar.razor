@@ -1,8 +1,14 @@
 <div class="budget-bar">
     <div class="budget-bar-nav">
-        <a class="budget-bar-arrow" href="@PrevHref" aria-label="Previous month">‹</a>
+        @if (PrevHref is { } prev)
+        {
+            <a class="budget-bar-arrow" href="@prev" aria-label="Previous month">‹</a>
+        }
         <span class="budget-bar-title">@Title</span>
-        <a class="budget-bar-arrow" href="@NextHref" aria-label="Next month">›</a>
+        @if (NextHref is { } next)
+        {
+            <a class="budget-bar-arrow" href="@next" aria-label="Next month">›</a>
+        }
     </div>
     <div class="budget-bar-links">
         <a href="@Routes.BudgetYear(Year)">Summary</a>
@@ -10,11 +16,38 @@
     </div>
 </div>
 
+@if (Years.Count > 1)
+{
+    <div class="budget-year-jump">
+        @foreach (var item in Years.OrderBy(value => value))
+        {
+            if (item == Year)
+            {
+                <span class="is-now">@item</span>
+            }
+            else
+            {
+                <a href="@Routes.BudgetYear(item)">@item</a>
+            }
+        }
+    </div>
+}
+
 @code {
     [Parameter] public int Year { get; set; }
     [Parameter] public int Month { get; set; } = 1;
     [Parameter] public string Title { get; set; } = "";
+    [Parameter] public IReadOnlyList<int> Years { get; set; } = [];
 
-    private string PrevHref => Month <= 1 ? Routes.BudgetMonth(Year - 1, 12) : Routes.BudgetMonth(Year, Month - 1);
-    private string NextHref => Month >= 12 ? Routes.BudgetMonth(Year + 1, 1) : Routes.BudgetMonth(Year, Month + 1);
+    private string? PrevHref =>
+        Month > 1 ? Routes.BudgetMonth(Year, Month - 1)
+        : HasYear(Year - 1) ? Routes.BudgetMonth(Year - 1, 12)
+        : null;
+
+    private string? NextHref =>
+        Month < 12 ? Routes.BudgetMonth(Year, Month + 1)
+        : HasYear(Year + 1) ? Routes.BudgetMonth(Year + 1, 1)
+        : null;
+
+    private bool HasYear(int year) => Years.Contains(year);
 }

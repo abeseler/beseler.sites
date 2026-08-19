@@ -1,0 +1,134 @@
+@using System.Text.Json
+@inject BudgetService Budget
+
+<p class="page-lede">@Lede</p>
+
+<InputFile OnChange="OnFile" accept=".json,application/json" disabled="@busy" />
+@if (fileName is not null)
+{
+    <p class="muted-empty">@fileName</p>
+}
+
+@if (RequireConfirm && pack is not null)
+{
+    <div class="auth-field">
+        <label for="@confirmId">Type @Year to confirm replace</label>
+        <input id="@confirmId" @bind="confirmYear" disabled="@busy" />
+    </div>
+}
+
+@foreach (var message in ExtraErrors())
+{
+    <p class="field-error">@message</p>
+}
+@if (error is not null)
+{
+    <p class="field-error">@error</p>
+}
+
+<div class="role-actions">
+    <button type="button" class="btn btn-primary btn-small" disabled="@(busy || pack is null)" @onclick="Import">
+        @(busy ? "Importing…" : $"Import {Year}")
+    </button>
+    @if (OnCancel.HasDelegate)
+    {
+        <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="OnCancel">Keep</button>
+    }
+</div>
+
+@code {
+    [Parameter] public int Year { get; set; }
+    [Parameter] public bool RequireConfirm { get; set; }
+    [Parameter] public string Lede { get; set; } = "";
+    [Parameter] public EventCallback OnImported { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private readonly string confirmId = $"confirm-import-{Guid.NewGuid():N}";
+    private BudgetPack? pack;
+    private string? fileName;
+    private bool busy;
+    private string confirmYear = "";
+    private string? error;
+    private IDictionary<string, string[]>? fieldErrors;
+
+    private async Task OnFile(InputFileChangeEventArgs args)
+    {
+        error = null;
+        fieldErrors = null;
+        pack = null;
+        confirmYear = "";
+        fileName = args.File.Name;
+        try
+        {
+            await using var stream = args.File.OpenReadStream(512 * 1024);
+            pack = await JsonSerializer.DeserializeAsync<BudgetPack>(stream, JsonSerializerOptions.Web);
+        }
+        catch (Exception)
+        {
+            error = "That file is not valid JSON.";
+            return;
+        }
+
+        if (pack is null)
+        {
+            error = "That file is empty.";
+            return;
+        }
+
+        if (pack.Year?.Year is { } fileYear && fileYear != Year)
+        {
+            error = $"This file is {fileYear}, not {Year}.";
+            pack = null;
+            return;
+        }
+
+        if (pack.IsInvalid(Year, out var errors) && errors is { Count: > 0 })
+        {
+            fieldErrors = errors;
+            pack = null;
+        }
+    }
+
+    private async Task Import()
+    {
+        if (pack is null)
+        {
+            error = "Choose a JSON file first.";
+            return;
+        }
+
+        if (RequireConfirm && confirmYear != Year.ToString())
+        {
+            error = $"Type {Year} to replace this year.";
+            return;
+        }
+
+        error = null;
+        fieldErrors = null;
+        busy = true;
+        var result = await Budget.ImportYearAsync(Year, pack);
+        busy = false;
+        if (!result.Succeeded)
+        {
+            fieldErrors = result.FieldErrors;
+            error = result.FieldErrors is { Count: > 0 } ? null : result.Error ?? "Could not import.";
+            return;
+        }
+
+        await OnImported.InvokeAsync();
+    }
+
+    private IEnumerable<string> ExtraErrors()
+    {
+        if (fieldErrors is null)
+            yield break;
+        foreach (var pair in fieldErrors)
+        {
+            foreach (var message in pair.Value)
+            {
+                if (!string.IsNullOrWhiteSpace(message))
+                    yield return message;
+            }
+        }
+    }
+}

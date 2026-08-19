@@ -1,3 +1,4 @@
+using BeselerNet.Shared.Contracts.Budget;
 using Dapper;
 using Npgsql;
 
@@ -44,6 +45,13 @@ internal sealed class StampDateRow
     public DateOnly Date { get; init; }
 }
 
+internal sealed class BudgetNameHintRow
+{
+    public required string Section { get; init; }
+    public required string Name { get; init; }
+    public DateOnly? OnDate { get; init; }
+}
+
 internal sealed class BudgetDataSource(NpgsqlDataSource dataSource)
 {
     private readonly NpgsqlDataSource _dataSource = dataSource;
@@ -77,6 +85,56 @@ internal sealed class BudgetDataSource(NpgsqlDataSource dataSource)
             """,
             new { accountId, year });
         return rows.AsList();
+    }
+
+    public async Task<IReadOnlyDictionary<string, IReadOnlyList<string>>> SuggestedNames(
+        int accountId,
+        int year,
+        int month,
+        CancellationToken cancellationToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<BudgetNameHintRow>(
+            """
+            SELECT l.section, l.name, l.on_date
+            FROM budget_line l
+            INNER JOIN budget_period p ON p.budget_period_id = l.budget_period_id
+            WHERE p.account_id = @accountId
+            ORDER BY l.on_date DESC NULLS LAST
+            """,
+            new { accountId });
+
+        var inMonth = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var row in rows)
+        {
+            if (row.OnDate is not { } date || date.Year != year || date.Month != month)
+                continue;
+            inMonth.Add($"{BudgetSections.Normalize(row.Section)}\n{row.Name.Trim()}");
+        }
+
+        var hints = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var section in new[] { BudgetSections.Income, BudgetSections.Expense, BudgetSections.Savings })
+        {
+            var names = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var row in rows)
+            {
+                if (!string.Equals(row.Section, section, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var name = row.Name.Trim();
+                if (name.Length == 0 || !seen.Add(name))
+                    continue;
+                if (inMonth.Contains($"{section}\n{name}"))
+                    continue;
+                names.Add(name);
+                if (names.Count == 3)
+                    break;
+            }
+
+            hints[section] = names;
+        }
+
+        return hints;
     }
 
     public async Task<IReadOnlyList<BudgetLineRow>> LinesForYear(int accountId, int year, CancellationToken cancellationToken)
@@ -385,4 +443,138 @@ internal sealed class BudgetDataSource(NpgsqlDataSource dataSource)
 
         await transaction.CommitAsync(cancellationToken);
     }
+
+    public async Task ImportYear(
+        int accountId,
+        int year,
+        decimal startingBalance,
+        IReadOnlyList<BudgetImportTemplate> newTemplates,
+        IReadOnlyDictionary<string, int> existingKeys,
+        IReadOnlyList<BudgetImportLine> lines,
+        CancellationToken cancellationToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        var keys = new Dictionary<string, int>(existingKeys, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var template in newTemplates)
+        {
+            var created = await connection.QuerySingleAsync<BudgetTemplateRow>(
+                """
+                INSERT INTO budget_recurring_template (
+                    account_id, name, section, amount, schedule_type, day_of_month, anchor_date, interval_days)
+                VALUES (
+                    @accountId, @name, @section, @amount, @scheduleType, @dayOfMonth, @anchorDate, @intervalDays)
+                RETURNING budget_recurring_template_id, account_id, name, section, amount, schedule_type,
+                          day_of_month, interval_days, anchor_date
+                """,
+                new
+                {
+                    accountId,
+                    name = template.Name,
+                    section = template.Section,
+                    amount = template.Amount,
+                    scheduleType = template.ScheduleType,
+                    dayOfMonth = template.DayOfMonth,
+                    anchorDate = template.AnchorDate,
+                    intervalDays = template.IntervalDays
+                },
+                transaction);
+            keys[template.Key] = created.BudgetRecurringTemplateId;
+        }
+
+        var exists = await connection.ExecuteScalarAsync<bool>(
+            "SELECT EXISTS (SELECT 1 FROM budget_period WHERE account_id = @accountId AND year = @year)",
+            new { accountId, year },
+            transaction);
+
+        if (!exists)
+        {
+            for (var month = 1; month <= 12; month++)
+            {
+                await connection.ExecuteAsync(
+                    """
+                    INSERT INTO budget_period (account_id, year, month, starting_balance)
+                    VALUES (@accountId, @year, @month, @startingBalance)
+                    """,
+                    new { accountId, year, month, startingBalance = month == 1 ? startingBalance : (decimal?)null },
+                    transaction);
+            }
+        }
+        else
+        {
+            await connection.ExecuteAsync(
+                """
+                DELETE FROM budget_line l
+                USING budget_period p
+                WHERE l.budget_period_id = p.budget_period_id
+                  AND p.account_id = @accountId AND p.year = @year
+                """,
+                new { accountId, year },
+                transaction);
+            await connection.ExecuteAsync(
+                """
+                UPDATE budget_period
+                SET starting_balance = @startingBalance, updated_at = NOW()
+                WHERE account_id = @accountId AND year = @year AND month = 1
+                """,
+                new { accountId, year, startingBalance },
+                transaction);
+        }
+
+        var periods = (await connection.QueryAsync<BudgetPeriodRow>(
+            """
+            SELECT budget_period_id, account_id, year, month, starting_balance
+            FROM budget_period
+            WHERE account_id = @accountId AND year = @year
+            """,
+            new { accountId, year },
+            transaction)).ToDictionary(period => (int)period.Month);
+
+        foreach (var line in lines)
+        {
+            int? templateId = null;
+            if (!string.IsNullOrWhiteSpace(line.TemplateKey) && keys.TryGetValue(line.TemplateKey, out var id))
+                templateId = id;
+
+            await connection.ExecuteAsync(
+                """
+                INSERT INTO budget_line (
+                    budget_period_id, name, section, amount, on_date, committed, budget_recurring_template_id)
+                VALUES (
+                    @periodId, @name, @section, @amount, @onDate, @committed, @templateId)
+                """,
+                new
+                {
+                    periodId = periods[line.OnDate.Month].BudgetPeriodId,
+                    name = line.Name,
+                    section = line.Section,
+                    amount = line.Amount,
+                    onDate = line.OnDate,
+                    committed = line.Committed,
+                    templateId
+                },
+                transaction);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+    }
 }
+
+internal sealed record BudgetImportTemplate(
+    string Key,
+    string Name,
+    string Section,
+    decimal? Amount,
+    string ScheduleType,
+    int? DayOfMonth,
+    DateOnly? AnchorDate,
+    int? IntervalDays);
+
+internal sealed record BudgetImportLine(
+    string Name,
+    string Section,
+    decimal? Amount,
+    DateOnly OnDate,
+    bool Committed,
+    string? TemplateKey);

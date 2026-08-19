@@ -22,6 +22,12 @@ internal sealed class BudgetService(ApiClient api)
     public Task<ApiResult> DeleteYearAsync(int year, CancellationToken cancellationToken = default) =>
         _api.DeleteAsync($"/v1/budget/years/{year}", session: true, cancellationToken);
 
+    public Task<ApiResult<BudgetPack>> ExportYearAsync(int year, CancellationToken cancellationToken = default) =>
+        _api.GetAsync<BudgetPack>($"/v1/budget/years/{year}/export", session: true, cancellationToken);
+
+    public Task<ApiResult<BudgetYearResponse>> ImportYearAsync(int year, BudgetPack pack, CancellationToken cancellationToken = default) =>
+        _api.PostAsync<BudgetYearResponse>($"/v1/budget/years/{year}/import", pack, session: true, cancellationToken: cancellationToken);
+
     public Task<ApiResult<BudgetMonthResponse>> GetMonthAsync(int year, int month, CancellationToken cancellationToken = default) =>
         _api.GetAsync<BudgetMonthResponse>($"/v1/budget/years/{year}/months/{month}", session: true, cancellationToken);
 

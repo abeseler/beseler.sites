@@ -2,7 +2,16 @@
 
 <div class="auth-field">
     <label>Name</label>
-    <input @bind="name" maxlength="128" disabled="@Busy" />
+    <input @bind="name" @bind:event="oninput" maxlength="128" disabled="@Busy" />
+    @if (string.Equals(section, BudgetSections.Savings, StringComparison.OrdinalIgnoreCase))
+    {
+        <div class="budget-name-hints">
+            @foreach (var hint in BudgetSections.SavingsNames)
+            {
+                <button type="button" class="budget-name-hint @(string.Equals(name, hint, StringComparison.OrdinalIgnoreCase) ? "active" : null)" disabled="@Busy" @onclick="() => name = hint">@hint</button>
+            }
+        </div>
+    }
     <FieldError Keys="fieldErrors" Name="name" />
 </div>
 <div class="auth-field">
@@ -84,6 +93,7 @@ else
     private DateTime? anchor;
     private string? error;
     private IDictionary<string, string[]>? fieldErrors;
+    private int? loadedTemplateId;
 
     private string AnchorHint => schedule switch
     {
@@ -96,7 +106,15 @@ else
     protected override void OnParametersSet()
     {
         if (Template is null)
+        {
+            loadedTemplateId = null;
             return;
+        }
+
+        if (loadedTemplateId == Template.TemplateId)
+            return;
+
+        loadedTemplateId = Template.TemplateId;
         name = Template.Name;
         section = Template.Section;
         amountText = Template.Amount?.ToString("0.##") ?? "";

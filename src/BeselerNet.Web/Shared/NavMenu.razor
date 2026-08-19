@@ -2,7 +2,7 @@
 @inject NavigationManager Nav
 
 <div class="nav-brand">
-    <a href="@Routes.Home">
+    <a href="@Routes.Dashboard">
         <span class="auth-brand-mark">beseler</span>
         <span class="nav-brand-name">Beseler <span>.NET</span></span>
     </a>
@@ -12,10 +12,6 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav-list">
-        <div class="nav-group">
-            <NavLink class="nav-link" href="@Routes.Dashboard">Dashboard</NavLink>
-        </div>
-
         <div class="nav-group">
             <p class="nav-group-label">Apps</p>
             <NavLink class="nav-link" href="@Routes.Budget">Budget</NavLink>

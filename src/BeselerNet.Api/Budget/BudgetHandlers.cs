@@ -1,5 +1,6 @@
 using BeselerNet.Shared;
 using BeselerNet.Shared.Contracts.Budget;
+using BeselerNet.Shared.Core;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Npgsql;
 using System.Security.Claims;
@@ -105,6 +106,160 @@ internal static class BudgetHandlers
         return TypedResults.NoContent();
     }
 
+    public static async Task<IResult> ExportYear(int year, ClaimsPrincipal user, BudgetDataSource budget, HttpContext http, CancellationToken cancellationToken)
+    {
+        if (AccountId(user) is not { } accountId)
+            return TypedResults.Unauthorized();
+        if (BudgetProblems.Forbid(user, accountId, Actions.Read) is { } denied)
+            return denied;
+
+        var periods = await budget.PeriodsForYear(accountId, year, cancellationToken);
+        if (periods.Count == 0)
+            return TypedResults.Problem(BudgetProblems.YearNotFound);
+
+        var templates = await budget.ListTemplates(accountId, cancellationToken);
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var keys = new Dictionary<int, string>();
+        var packTemplates = new List<BudgetPackTemplate>(templates.Count);
+        foreach (var template in templates)
+        {
+            var key = BudgetTemplateIdentity.FileKey(template.Name, used);
+            keys[template.BudgetRecurringTemplateId] = key;
+            packTemplates.Add(new BudgetPackTemplate
+            {
+                Key = key,
+                Name = template.Name,
+                Section = template.Section,
+                Amount = template.Amount,
+                ScheduleType = template.ScheduleType,
+                DayOfMonth = template.DayOfMonth,
+                IntervalDays = template.IntervalDays,
+                AnchorDate = template.AnchorDate
+            });
+        }
+
+        var lines = await budget.LinesForYear(accountId, year, cancellationToken);
+        var pack = new BudgetPack
+        {
+            Format = BudgetPackFormat.Name,
+            Version = BudgetPackFormat.Version,
+            ExportedAt = DateTimeOffset.UtcNow,
+            Templates = packTemplates,
+            Year = new BudgetPackYear
+            {
+                Year = year,
+                StartingBalance = periods.First(period => period.Month == 1).StartingBalance ?? 0,
+                Lines = lines.Select(line => new BudgetPackLine
+                {
+                    Name = line.Name,
+                    Section = line.Section,
+                    Amount = line.Amount,
+                    OnDate = line.OnDate,
+                    Committed = line.Committed,
+                    TemplateKey = line.BudgetRecurringTemplateId is { } id && keys.TryGetValue(id, out var key) ? key : null
+                }).ToArray()
+            }
+        };
+
+        http.Response.Headers.ContentDisposition = $"attachment; filename=\"budget-{year}.json\"";
+        return TypedResults.Json(pack);
+    }
+
+    public static async Task<IResult> ImportYear(
+        int year,
+        BudgetPack pack,
+        ClaimsPrincipal user,
+        BudgetDataSource budget,
+        TimeProvider time,
+        HttpContext http,
+        CancellationToken cancellationToken)
+    {
+        if (AccountId(user) is not { } accountId)
+            return TypedResults.Unauthorized();
+        if (BudgetProblems.Forbid(user, accountId, Actions.Update) is { } denied)
+            return denied;
+        if (pack.IsInvalid(year, out var errors))
+            return TypedResults.ValidationProblem(errors);
+        if (Today(time, http) is not { } today)
+            return TypedResults.Problem(BudgetProblems.UnknownTimeZone);
+
+        var exists = await budget.YearExists(accountId, year, cancellationToken);
+        if (!exists && year < today.Year)
+            return TypedResults.Problem(BudgetProblems.PastYear);
+
+        var existing = await budget.ListTemplates(accountId, cancellationToken);
+        var bySignature = existing.ToLookup(template => BudgetTemplateIdentity.MatchKey(
+            template.Name,
+            template.Section,
+            template.ScheduleType,
+            template.DayOfMonth,
+            template.IntervalDays,
+            template.AnchorDate));
+
+        var existingKeys = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var created = new List<BudgetImportTemplate>();
+        var collector = new ErrorCollector();
+        for (var i = 0; i < pack.Templates.Count; i++)
+        {
+            var template = pack.Templates[i];
+            var key = template.Key.Trim();
+            var schedule = BudgetSchedules.Normalize(template.ScheduleType);
+            var signature = BudgetTemplateIdentity.MatchKey(
+                template.Name, template.Section, schedule, template.DayOfMonth, template.IntervalDays, template.AnchorDate);
+            var matches = bySignature[signature].ToArray();
+            if (matches.Length > 1)
+            {
+                collector.Add("templates", i, "key", "Two templates already match this name, section, and schedule. Rename one, then import again.");
+                continue;
+            }
+
+            if (matches.Length == 1)
+            {
+                existingKeys[key] = matches[0].BudgetRecurringTemplateId;
+                continue;
+            }
+
+            created.Add(new BudgetImportTemplate(
+                key,
+                template.Name.Trim(),
+                BudgetSections.Normalize(template.Section),
+                template.Amount,
+                schedule,
+                schedule == BudgetSchedules.Monthly ? template.DayOfMonth : null,
+                schedule == BudgetSchedules.Monthly ? null : template.AnchorDate,
+                BudgetSchedules.StepDays(schedule, template.IntervalDays)));
+        }
+
+        if (collector.Count > 0)
+            return TypedResults.ValidationProblem(collector.Collection!);
+
+        var importLines = pack.Year!.Lines.Select(line => new BudgetImportLine(
+            line.Name.Trim(),
+            BudgetSections.Normalize(line.Section),
+            line.Amount,
+            line.OnDate!.Value,
+            line.Committed,
+            string.IsNullOrWhiteSpace(line.TemplateKey) ? null : line.TemplateKey.Trim())).ToArray();
+
+        try
+        {
+            await budget.ImportYear(
+                accountId,
+                year,
+                pack.Year.StartingBalance!.Value,
+                created,
+                existingKeys,
+                importLines,
+                cancellationToken);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            return TypedResults.Problem(BudgetProblems.YearExists);
+        }
+
+        return TypedResults.Ok(await LoadYear(budget, accountId, year, cancellationToken));
+    }
+
     public static async Task<IResult> GetMonth(int year, int month, ClaimsPrincipal user, BudgetDataSource budget, CancellationToken cancellationToken)
     {
         if (AccountId(user) is not { } accountId)
@@ -124,6 +279,7 @@ internal static class BudgetHandlers
         var monthLines = (await budget.LinesForYear(accountId, year, cancellationToken))
             .Where(line => line.BudgetPeriodId == period.BudgetPeriodId)
             .ToArray();
+        var suggested = await budget.SuggestedNames(accountId, year, month, cancellationToken);
 
         return TypedResults.Ok(new BudgetMonthResponse
         {
@@ -136,7 +292,8 @@ internal static class BudgetHandlers
             CashFlow = summary.CashFlow,
             EndingBalance = summary.EndingBalance,
             Lines = monthLines.Select(MapLine).ToArray(),
-            Days = BudgetCalculator.Days(year, month, summary.StartingBalance, monthLines)
+            Days = BudgetCalculator.Days(year, month, summary.StartingBalance, monthLines),
+            SuggestedNames = suggested
         });
     }
 

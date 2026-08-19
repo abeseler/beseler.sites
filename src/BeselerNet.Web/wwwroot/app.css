@@ -322,6 +322,7 @@ h1:focus { outline: none; }
 
 .app-main-wide {
     max-width: 56rem;
+    overflow-x: hidden;
 }
 
 .kicker {
@@ -619,8 +620,34 @@ a.tile-app:hover {
 
 .budget-bar-links {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.9rem;
     font-size: 0.85rem;
+}
+
+.budget-bar-action {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.budget-bar-action:hover { color: var(--accent); }
+
+.budget-year-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.85rem;
+    margin: -0.35rem 0 1.1rem;
+    font-size: 0.85rem;
+}
+
+.budget-year-jump .is-now {
+    color: var(--warn);
+    font-weight: 600;
 }
 
 .budget-totals {
@@ -704,18 +731,35 @@ a.tile-app:hover {
     font-weight: 600;
 }
 
+.budget-line-head,
+.budget-line {
+    display: grid;
+    grid-template-columns: 2ch minmax(0, 1fr) minmax(5.25rem, 6.5rem);
+    column-gap: 0.95rem;
+    align-items: baseline;
+}
+
+.budget-line-head {
+    margin: 0 0 0.2rem;
+    padding: 0 0.15rem 0.3rem;
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.budget-line-head span:first-child { letter-spacing: 0; }
+.budget-line-head span:last-child { text-align: right; }
+
 .budget-lines {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
     margin-bottom: 0.75rem;
 }
 
 .budget-line {
     appearance: none;
-    display: grid;
-    grid-template-columns: 1fr 2.2rem auto;
-    gap: 0.5rem;
     width: 100%;
     padding: 0.4rem 0.15rem;
     border: 0;
@@ -723,20 +767,58 @@ a.tile-app:hover {
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: 0.88rem;
+    font-size: 0.82rem;
     text-align: left;
     cursor: pointer;
 }
 
 .budget-line:disabled { cursor: default; }
 
-.budget-line-day { color: var(--muted); text-align: right; }
+.budget-line-day {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    text-align: left;
+    white-space: pre;
+}
+
+.budget-line-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .budget-line-amt { text-align: right; font-variant-numeric: tabular-nums; }
 .budget-est {
     margin-left: 0.35rem;
     color: var(--warn);
     font-size: 0.7rem;
     letter-spacing: 0.04em;
+}
+
+.budget-name-hints {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin: 0.4rem 0 0;
+}
+
+.budget-name-hint {
+    appearance: none;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.budget-name-hint:hover,
+.budget-name-hint.active {
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 .budget-line-form { margin: 0.5rem 0 0.75rem; }
@@ -867,9 +949,10 @@ a.tile-app:hover {
 .budget-month-head,
 .budget-month-row {
     display: grid;
-    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1.1fr);
-    gap: 0.4rem;
+    grid-template-columns: 3.2rem minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.35rem;
     align-items: baseline;
+    max-width: 100%;
 }
 
 .budget-month-head {
@@ -889,6 +972,7 @@ a.tile-app:hover {
 .budget-month-list {
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 
 .budget-month-row {
@@ -924,6 +1008,12 @@ a.tile-app:hover {
 .budget-month-flow { font-weight: 600; }
 .budget-month-check { color: var(--muted); }
 
+.budget-month-row.is-future .budget-month-flow {
+    color: var(--muted);
+    font-weight: 400;
+}
+.budget-month-row.is-future .budget-month-flow.is-neg { color: var(--danger); }
+
 @media (min-width: 641px) {
     .budget-tabs { display: none; }
 
@@ -938,7 +1028,12 @@ a.tile-app:hover {
     .budget-col {
         width: auto;
         flex: none;
+        font-size: 0.9rem;
     }
+
+    .budget-line { font-size: 0.76rem; }
+    .budget-col-total { font-size: 0.88rem; }
+    .budget-totals { font-size: 0.9rem; }
 
     .budget-day-list {
         display: block;

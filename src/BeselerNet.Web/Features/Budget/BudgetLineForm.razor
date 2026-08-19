@@ -4,7 +4,16 @@
 <div class="budget-line-form">
     <div class="auth-field">
         <label>Name</label>
-        <input @bind="name" maxlength="128" disabled="@Busy" />
+        <input @bind="name" @bind:event="oninput" maxlength="128" disabled="@Busy" />
+        @if (Line is null && Hints.Count > 0)
+        {
+            <div class="budget-name-hints">
+                @foreach (var hint in Hints)
+                {
+                    <button type="button" class="budget-name-hint @(string.Equals(name, hint, StringComparison.OrdinalIgnoreCase) ? "active" : null)" disabled="@Busy" @onclick="() => name = hint">@hint</button>
+                }
+            </div>
+        }
         <FieldError Keys="fieldErrors" Name="name" />
     </div>
     <div class="budget-line-form-row">
@@ -19,7 +28,10 @@
             <FieldError Keys="fieldErrors" Name="amount" />
         </div>
     </div>
-    <p class="budget-hint">@BudgetSections.AmountHint(Section)</p>
+    @if (Line is null)
+    {
+        <p class="budget-hint">@BudgetSections.AmountHint(Section)</p>
+    }
     @if (Line is not null)
     {
         <label class="auth-check">
@@ -51,6 +63,7 @@
     [Parameter] public int Month { get; set; }
     [Parameter] public string Section { get; set; } = "";
     [Parameter] public BudgetLineResponse? Line { get; set; }
+    [Parameter] public IReadOnlyList<string> NameHints { get; set; } = [];
     [Parameter] public bool Busy { get; set; }
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
@@ -61,17 +74,35 @@
     private bool committed = true;
     private string? error;
     private IDictionary<string, string[]>? fieldErrors;
+    private int? loadedLineId;
     private bool SavingsAmount => string.Equals(Section, BudgetSections.Savings, StringComparison.OrdinalIgnoreCase);
+
+    private IReadOnlyList<string> Hints
+    {
+        get
+        {
+            if (!SavingsAmount)
+                return NameHints;
+            var extra = NameHints.Where(hint =>
+                !BudgetSections.SavingsNames.Contains(hint, StringComparer.OrdinalIgnoreCase));
+            return BudgetSections.SavingsNames.Concat(extra).Take(5).ToArray();
+        }
+    }
 
     protected override void OnParametersSet()
     {
         if (Line is null)
         {
+            loadedLineId = null;
             if (string.IsNullOrWhiteSpace(dayText) && Clock.Year == Year && Clock.Month == Month && Clock.Day > 0)
                 dayText = Clock.Day.ToString();
             return;
         }
 
+        if (loadedLineId == Line.LineId)
+            return;
+
+        loadedLineId = Line.LineId;
         name = Line.Name;
         dayText = Line.OnDate?.Day.ToString() ?? "";
         amountText = Line.Amount?.ToString("0.##") ?? "";

@@ -4,6 +4,7 @@
 @inject AccountSession Session
 @inject NavigationManager Nav
 @inject IJSRuntime Js
+@using System.Text.Json
 
 <PageTitle>@SiteConstants.SiteName: @Year Budget</PageTitle>
 
@@ -15,9 +16,27 @@
         <p class="page-lede">Loading…</p>
     </div>
 }
-else if (year is null)
+else if (year is null && CanStartThisYear)
 {
     <BudgetStart Year="Year" OnStarted="_ => Reload()" />
+}
+else if (year is null)
+{
+    <div class="app-main">
+        <p class="kicker">Budget</p>
+        <h1 class="page-title">@Year</h1>
+        <p class="page-lede">That year has not been started.</p>
+        @if (years.Count > 0)
+        {
+            <div class="budget-year-jump">
+                @foreach (var item in years.OrderBy(value => value))
+                {
+                    <a href="@Routes.BudgetYear(item)">@item</a>
+                }
+            </div>
+        }
+        <p><a href="@Routes.Budget">This month</a></p>
+    </div>
 }
 else
 {
@@ -38,8 +57,34 @@ else
             <div class="budget-bar-links">
                 <a href="@Routes.BudgetMonth(Year, Clock.Year == Year ? Clock.Month : 1)">This month</a>
                 <a href="@Routes.BudgetTemplates">Templates</a>
+                <button type="button" class="budget-bar-action" disabled="@busy" @onclick="Export">Export</button>
+                @if (CanUpdate)
+                {
+                    <button type="button" class="budget-bar-action" disabled="@busy" @onclick="ToggleImport">Import</button>
+                }
+                @if (CanStartNextYear)
+                {
+                    <a href="@Routes.BudgetYear(Year + 1)">Start @(Year + 1)</a>
+                }
             </div>
         </div>
+
+        @if (years.Count > 1)
+        {
+            <div class="budget-year-jump">
+                @foreach (var item in years.OrderBy(value => value))
+                {
+                    if (item == Year)
+                    {
+                        <span class="is-now">@item</span>
+                    }
+                    else
+                    {
+                        <a href="@Routes.BudgetYear(item)">@item</a>
+                    }
+                }
+            </div>
+        }
 
         @if (error is not null)
         {
@@ -48,6 +93,14 @@ else
         @if (notice is not null)
         {
             <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
+        }
+
+        @if (importing)
+        {
+            <section class="role-card budget-start-over">
+                <span class="tile-kicker">Import</span>
+                <BudgetPackImport Year="Year" RequireConfirm="true" Lede="@($"Replaces {Year} lines and the January start. Templates are created only if missing.")" OnImported="Imported" OnCancel="ToggleImport" />
+            </section>
         }
 
         @if (startingOver)
@@ -100,11 +153,11 @@ else
                 <BudgetMoney Value="CheckingNow" />
             </div>
             <div>
-                <span class="tile-kicker">Cash flow</span>
+                <span class="tile-kicker">@(IsCurrentYear ? "Cash flow YTD" : "Cash flow")</span>
                 <BudgetMoney Value="YearCashFlow" />
             </div>
             <div>
-                <span class="tile-kicker">Saved</span>
+                <span class="tile-kicker">@(IsCurrentYear ? "Saved YTD" : "Saved")</span>
                 <BudgetMoney Value="YearSaved" />
             </div>
         </div>
@@ -113,16 +166,16 @@ else
             <span class="tile-kicker">Months</span>
             <div class="budget-month-head">
                 <span></span>
-                <span>Cash flow</span>
-                <span>Checking</span>
+                <span>Flow</span>
+                <span>End</span>
             </div>
             <div class="budget-month-list">
                 @foreach (var item in year.Months)
                 {
-                    <a class="budget-month-row @(IsNow(item.Month) ? "is-now" : null)" href="@Routes.BudgetMonth(Year, item.Month)">
+                    <a class="budget-month-row @(IsNow(item.Month) ? "is-now" : null) @(IsFuture(item.Month) ? "is-future" : null)" href="@Routes.BudgetMonth(Year, item.Month)">
                         <span class="budget-month-name">@Abbrev(item.Month)</span>
-                        <BudgetMoney Value="item.CashFlow" Extra="budget-month-flow" />
-                        <BudgetMoney Value="item.EndingBalance" Extra="budget-month-check" />
+                        <BudgetMoney Value="item.CashFlow" Compact="true" Extra="budget-month-flow" />
+                        <BudgetMoney Value="item.EndingBalance" Compact="true" Extra="budget-month-check" />
                     </a>
                 }
             </div>
@@ -143,9 +196,15 @@ else
     private string confirmYear = "";
     private bool editingBalance;
     private bool startingOver;
+    private bool importing;
+    private IReadOnlyList<int> years = [];
 
     private bool CanUpdate => Session.HasPermission(Resources.Budget, Actions.Update);
     private bool IsCurrentYear => Clock.Year == Year;
+    private bool CanStartThisYear =>
+        CanUpdate && (Year == Clock.Year || (Clock.Month == 12 && Year == Clock.Year + 1));
+    private bool CanStartNextYear =>
+        CanUpdate && IsCurrentYear && Clock.Month == 12 && !years.Contains(Year + 1);
 
     private decimal CheckingNow
     {
@@ -159,8 +218,13 @@ else
         }
     }
 
-    private decimal YearCashFlow => year?.Months.Sum(item => item.CashFlow) ?? 0;
-    private decimal YearSaved => year?.Months.Sum(item => item.Savings) ?? 0;
+    private IEnumerable<BudgetMonthSummary> CountedMonths =>
+        year is null ? []
+        : IsCurrentYear ? year.Months.Where(item => item.Month <= Clock.Month)
+        : year.Months;
+
+    private decimal YearCashFlow => CountedMonths.Sum(item => item.CashFlow);
+    private decimal YearSaved => CountedMonths.Sum(item => item.Savings);
 
     protected override async Task OnParametersSetAsync()
     {
@@ -172,6 +236,9 @@ else
     {
         loading = true;
         error = null;
+        var listed = await Budget.ListYearsAsync();
+        if (listed.Succeeded)
+            years = listed.Value?.Years ?? [];
         var result = await Budget.GetYearAsync(Year);
         loading = false;
         if (result.StatusCode is System.Net.HttpStatusCode.NotFound)
@@ -236,8 +303,39 @@ else
     private void ToggleStartOver()
     {
         startingOver = !startingOver;
+        importing = false;
         confirmYear = "";
         error = null;
+    }
+
+    private void ToggleImport()
+    {
+        importing = !importing;
+        startingOver = false;
+        error = null;
+    }
+
+    private async Task Imported()
+    {
+        importing = false;
+        notice = $"{Year} imported.";
+        await Reload();
+    }
+
+    private async Task Export()
+    {
+        busy = true;
+        error = null;
+        var result = await Budget.ExportYearAsync(Year);
+        busy = false;
+        if (!result.Succeeded || result.Value is null)
+        {
+            error = result.Error ?? "Could not export.";
+            return;
+        }
+
+        var json = JsonSerializer.Serialize(result.Value, new JsonSerializerOptions(JsonSerializerOptions.Web) { WriteIndented = true });
+        await Js.InvokeVoidAsync("beselerDownload.json", $"budget-{Year}.json", json);
     }
 
     private async Task DeleteYear()
@@ -262,6 +360,7 @@ else
     }
 
     private bool IsNow(int month) => IsCurrentYear && Clock.Month == month;
+    private bool IsFuture(int month) => Year > Clock.Year || (IsCurrentYear && month > Clock.Month);
 
     private static string Abbrev(int month) => new DateOnly(2000, month, 1).ToString("MMM");
 }

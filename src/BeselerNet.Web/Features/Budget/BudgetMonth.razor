@@ -15,15 +15,33 @@
         <p class="page-lede">Loading…</p>
     </div>
 }
-else if (month is null)
+else if (month is null && CanStartThisYear)
 {
     <BudgetStart Year="Year" OnStarted="Reload" />
+}
+else if (month is null)
+{
+    <div class="app-main">
+        <p class="kicker">Budget</p>
+        <h1 class="page-title">@monthName @Year</h1>
+        <p class="page-lede">That year has not been started.</p>
+        @if (years.Count > 0)
+        {
+            <div class="budget-year-jump">
+                @foreach (var item in years.OrderBy(value => value))
+                {
+                    <a href="@Routes.BudgetYear(item)">@item</a>
+                }
+            </div>
+        }
+        <p><a href="@Routes.Budget">This month</a></p>
+    </div>
 }
 else
 {
     <div class="app-main app-main-wide">
         <p class="kicker">Budget</p>
-        <BudgetBar Year="Year" Month="Month" Title="@($"{monthName} {Year}")" />
+        <BudgetBar Year="Year" Month="Month" Title="@($"{monthName} {Year}")" Years="years" />
 
         @if (error is not null)
         {
@@ -60,9 +78,9 @@ else
              @onpointerdown="OnPointerDown"
              @onpointerup="OnPointerUp">
             <div class="budget-slides">
-                <BudgetSectionList Title="Income" Section="@BudgetSections.Income" Total="month.Income" Lines="Income" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
-                <BudgetSectionList Title="Expenses" Section="@BudgetSections.Expense" Total="month.Expenses" Lines="Expenses" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
-                <BudgetSectionList Title="Savings" Section="@BudgetSections.Savings" Total="month.Savings" Lines="Savings" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
+                <BudgetSectionList Title="Income" Section="@BudgetSections.Income" Total="month.Income" Lines="Income" NameHints="Hints(BudgetSections.Income)" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
+                <BudgetSectionList Title="Expenses" Section="@BudgetSections.Expense" Total="month.Expenses" Lines="Expenses" NameHints="Hints(BudgetSections.Expense)" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
+                <BudgetSectionList Title="Savings" Section="@BudgetSections.Savings" Total="month.Savings" Lines="Savings" NameHints="Hints(BudgetSections.Savings)" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
             </div>
         </div>
 
@@ -105,9 +123,15 @@ else
     private double pointerY;
     private bool pointerDown;
 
+    private IReadOnlyList<int> years = [];
     private bool CanUpdate => Session.HasPermission(Resources.Budget, Actions.Update);
+    private bool CanStartThisYear =>
+        CanUpdate && (Year == Clock.Year || (Clock.Month == 12 && Year == Clock.Year + 1));
     private string monthName => new DateOnly(Year, Month, 1).ToString("MMMM");
     private decimal LowestDay => month?.Days.Count > 0 ? month.Days.Min(day => day.Balance) : 0;
+    private IReadOnlyList<string> Hints(string section) =>
+        month?.SuggestedNames is { } map && map.TryGetValue(section, out var names) ? names : [];
+
     private IReadOnlyList<BudgetLineResponse> Income => Lines(BudgetSections.Income);
     private IReadOnlyList<BudgetLineResponse> Expenses => Lines(BudgetSections.Expense);
     private IReadOnlyList<BudgetLineResponse> Savings => Lines(BudgetSections.Savings);
@@ -128,6 +152,9 @@ else
     {
         loading = true;
         error = null;
+        var listed = await Budget.ListYearsAsync();
+        if (listed.Succeeded)
+            years = listed.Value?.Years ?? [];
         var result = await Budget.GetMonthAsync(Year, Month);
         loading = false;
         if (result.StatusCode is System.Net.HttpStatusCode.NotFound)

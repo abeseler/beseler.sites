@@ -4,7 +4,17 @@
 <div class="app-main">
     <p class="kicker">Budget</p>
     <h1 class="page-title">Start @Year</h1>
-    <p class="page-lede">Creates all 12 months and stamps templates from today forward.</p>
+    <p class="page-lede">Creates all 12 months and stamps templates from today forward. Or import a @Year pack.</p>
+
+    @if (years.Count > 0)
+    {
+        <div class="budget-year-jump">
+            @foreach (var item in years.OrderBy(value => value))
+            {
+                <a href="@Routes.BudgetYear(item)">@item</a>
+            }
+        </div>
+    }
 
     @if (error is not null)
     {
@@ -12,6 +22,7 @@
     }
 
     <section class="role-card">
+        <span class="tile-kicker">January starting balance</span>
         <div class="auth-field">
             <label for="start-balance">January starting balance</label>
             <input id="start-balance" inputmode="decimal" @bind="balanceText" disabled="@busy" />
@@ -22,6 +33,14 @@
             </button>
         </div>
     </section>
+
+    @if (CanUpdate)
+    {
+        <section class="role-card">
+            <span class="tile-kicker">Import</span>
+            <BudgetPackImport Year="Year" Lede="@($"Load a {Year} JSON pack instead of starting empty.")" OnImported="Imported" />
+        </section>
+    }
 </div>
 
 @code {
@@ -31,8 +50,16 @@
     private string balanceText = "0";
     private bool busy;
     private string? error;
+    private IReadOnlyList<int> years = [];
 
     private bool CanUpdate => Session.HasPermission(Resources.Budget, Actions.Update);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var listed = await Budget.ListYearsAsync();
+        if (listed.Succeeded)
+            years = listed.Value?.Years ?? [];
+    }
 
     private async Task Start()
     {
@@ -54,4 +81,6 @@
 
         await OnStarted.InvokeAsync(Year);
     }
+
+    private Task Imported() => OnStarted.InvokeAsync(Year);
 }

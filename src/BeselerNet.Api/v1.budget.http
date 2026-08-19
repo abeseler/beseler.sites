@@ -159,3 +159,44 @@ Content-Type: application/json
 
 GET {{host}}/v1/budget/templates
 Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Export year
+
+GET {{host}}/v1/budget/years/2026/export
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Import year
+
+POST {{host}}/v1/budget/years/2026/import
+Authorization: Bearer {{login.response.body.$.access_token}}
+X-Time-Zone: America/Chicago
+Content-Type: application/json
+
+{
+  "format": "beseler.budget",
+  "version": 1,
+  "templates": [
+    {
+      "key": "paycheck",
+      "name": "Paycheck",
+      "section": "income",
+      "amount": 4207.96,
+      "schedule_type": "biweekly",
+      "anchor_date": "2026-01-16"
+    }
+  ],
+  "year": {
+    "year": 2026,
+    "starting_balance": 3280.52,
+    "lines": [
+      {
+        "name": "Paycheck",
+        "section": "income",
+        "amount": 4207.96,
+        "on_date": "2026-08-14",
+        "committed": true,
+        "template_key": "paycheck"
+      }
+    ]
+  }
+}

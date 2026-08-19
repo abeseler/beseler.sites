@@ -11,16 +11,26 @@
         <p class="muted-empty">Nothing yet.</p>
     }
 
+    @if (Ordered.Any() || editing is not null)
+    {
+        <div class="budget-line-head">
+            <span>Day</span>
+            <span>Name</span>
+            <span>Amount</span>
+        </div>
+    }
+
     <div class="budget-lines">
-        @foreach (var line in Lines)
+        @foreach (var line in Ordered)
         {
             @if (editing?.LineId == line.LineId)
             {
-                <BudgetLineForm Year="@Year" Month="@Month" Section="@Section" Line="line" Busy="@(Busy || saving)" OnSaved="Saved" OnCancel="() => editing = null" />
+                <BudgetLineForm @key="@($"edit-{line.LineId}")" Year="@Year" Month="@Month" Section="@Section" Line="line" NameHints="NameHints" Busy="@(Busy || saving)" OnSaved="Saved" OnCancel="CloseForm" />
             }
             else
             {
-                <button type="button" class="budget-line" disabled="@(!CanEdit || Busy)" @onclick="() => editing = line">
+                <button type="button" class="budget-line" disabled="@(!CanEdit || Busy)" @onclick="() => BeginEdit(line)">
+                    <span class="budget-line-day">@DayLabel(line)</span>
                     <span class="budget-line-name">
                         @line.Name
                         @if (line.TemplateId is not null && !line.Committed)
@@ -28,7 +38,6 @@
                             <span class="budget-est">est</span>
                         }
                     </span>
-                    <span class="budget-line-day">@(line.OnDate?.Day.ToString() ?? "—")</span>
                     <BudgetMoney Value="@(line.Amount ?? 0)" Extra="budget-line-amt" />
                 </button>
             }
@@ -37,11 +46,11 @@
 
     @if (adding)
     {
-        <BudgetLineForm Year="@Year" Month="@Month" Section="@Section" Busy="@(Busy || saving)" OnSaved="Saved" OnCancel="() => adding = false" />
+        <BudgetLineForm @key="@("add")" Year="@Year" Month="@Month" Section="@Section" NameHints="NameHints" Busy="@(Busy || saving)" OnSaved="Saved" OnCancel="CloseForm" />
     }
     else if (CanEdit)
     {
-        <button type="button" class="btn btn-ghost btn-small" disabled="@Busy" @onclick="() => { adding = true; editing = null; }">Add</button>
+        <button type="button" class="btn btn-ghost btn-small" disabled="@Busy" @onclick="BeginAdd">Add</button>
     }
 </section>
 
@@ -50,6 +59,7 @@
     [Parameter] public string Section { get; set; } = "";
     [Parameter] public decimal Total { get; set; }
     [Parameter] public IReadOnlyList<BudgetLineResponse> Lines { get; set; } = [];
+    [Parameter] public IReadOnlyList<string> NameHints { get; set; } = [];
     [Parameter] public int Year { get; set; }
     [Parameter] public int Month { get; set; }
     [Parameter] public bool CanEdit { get; set; }
@@ -60,10 +70,48 @@
     private bool adding;
     private bool saving;
 
-    private async Task Saved()
+    private void BeginAdd()
+    {
+        editing = null;
+        adding = true;
+    }
+
+    private void BeginEdit(BudgetLineResponse line)
+    {
+        adding = false;
+        editing = line;
+    }
+
+    private void CloseForm()
     {
         adding = false;
         editing = null;
+    }
+
+    private IEnumerable<BudgetLineResponse> Ordered =>
+        Lines.OrderBy(line => line.OnDate).ThenBy(line => line.Name, StringComparer.OrdinalIgnoreCase);
+
+    private bool PadDays
+    {
+        get
+        {
+            var days = Lines.Select(line => line.OnDate?.Day).OfType<int>().ToArray();
+            return days.Any(day => day < 10) && days.Any(day => day >= 10);
+        }
+    }
+
+    private string DayLabel(BudgetLineResponse line)
+    {
+        if (line.OnDate is not { } date)
+            return "—";
+        if (PadDays && date.Day < 10)
+            return "\u2007" + date.Day;
+        return date.Day.ToString();
+    }
+
+    private async Task Saved()
+    {
+        CloseForm();
         saving = false;
         await OnChanged.InvokeAsync();
     }

@@ -1,12 +1,14 @@
 using Beseler.ServiceDefaults;
 using BeselerNet.Shared;
 using BeselerNet.Web.Components;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Options;
 using BeselerNet.Web.Features.Account;
 using BeselerNet.Web.Features.Accounts;
 using BeselerNet.Web.Features.Roles;
 using BeselerNet.Web.Features.Settings;
 using BeselerNet.Web.Shared;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,16 @@ builder.AddRedisOutputCache("Cache");
 builder.Services.AddRequestTimeouts();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
+
+var cacheConnection = builder.Configuration.GetConnectionString("Cache");
+if (!string.IsNullOrWhiteSpace(cacheConnection))
+{
+    var redis = ConnectionMultiplexer.Connect(cacheConnection);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+    builder.Services.AddDataProtection()
+        .SetApplicationName(builder.Environment.ApplicationName)
+        .PersistKeysToStackExchangeRedis(redis, "Web-DataProtection-Keys");
+}
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<SessionActivity>();
 

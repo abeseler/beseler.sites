@@ -75,6 +75,9 @@ public sealed record BudgetMonthResponse
     public required decimal EndingBalance { get; init; }
     public required IReadOnlyList<BudgetLineResponse> Lines { get; init; }
     public required IReadOnlyList<BudgetDayBalance> Days { get; init; }
+    [JsonPropertyName("suggested_names")]
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> SuggestedNames { get; init; } =
+        new Dictionary<string, IReadOnlyList<string>>();
 }
 
 public sealed record BudgetDayBalance
@@ -232,6 +235,8 @@ public static class BudgetSections
             Savings => "Positive adds to savings (leaves checking). Negative pulls from savings into checking.",
             _ => "Enter a positive amount. Adds to checking."
         };
+
+    public static readonly string[] SavingsNames = ["Set aside", "Draw"];
 }
 
 public static class BudgetSchedules

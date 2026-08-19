@@ -13,10 +13,11 @@ Personal sites and the API behind them. Local development is Aspire. Production 
 |---|---|
 | `Beseler.AppHost` | Aspire host (Postgres, Redis, ratchet, the apps) |
 | `BeselerDev.Web` | Static personal site |
-| `BeselerNet.Web` | Blazor front end |
-| `BeselerNet.Api` | HTTP API, accounts, mail |
+| `BeselerNet.Web` | Blazor Server app |
+| `BeselerNet.Api` | HTTP API (accounts, budget, mail) |
 | `BeselerNet.Shared` | Shared contracts |
 | `Beseler.ServiceDefaults` | Logging, health, OpenTelemetry |
+| `Beseler.Console` | Local helper (not shipped) |
 | `data/` | Postgres schema for ratchet |
 
 Images on Docker Hub:
@@ -34,7 +35,7 @@ Need the .NET 10 SDK and Docker (Postgres, Redis, ratchet).
 dotnet run --project src/Beseler.AppHost
 ```
 
-Or open `src/Beseler.slnx` and launch the AppHost. Aspire starts Postgres and Redis, runs ratchet against `data/` (image bind-mounted), then the API (waits for migrations) and the net web app. Dev-web is explicit-start.
+Or open `src/Beseler.slnx` and launch the AppHost. Aspire starts Postgres and Redis, runs ratchet against `data/` (image bind-mounted), then the API (waits for migrations), the net web app, and the personal site.
 
 Set the `AzureCommunicationService` parameter if you exercise email locally.
 
@@ -80,7 +81,7 @@ flowchart TD
   wait --> deploy["Deploy on beseler-private<br/>self-hosted runner"]
 ```
 
-1. **Tag version** (`.github/workflows/tag-version.yml`) — build, `ratchet validate`, `version.sh`. README / LICENSE / editorconfig pushes are ignored.
+1. **Tag version** (`.github/workflows/tag-version.yml`) — build, `ratchet validate`, `version.sh`. README / LICENSE / editorconfig / gitattributes pushes are ignored.
 2. Each new tag starts **Docker CI** (`.github/workflows/docker-ci.yml`) — one image, tags `x.y.z` and `latest`. Builds may run in parallel. This job does not deploy.
 3. The same Tag version run then **sequences deploys** into [beseler-private](https://github.com/abeseler/beseler-private): **db → api → web → dev-web**. Each step waits for the image on Hub, then runs that repo’s **Deploy** workflow (`kubectl set image`, or a Job for dbdeploy).
 
