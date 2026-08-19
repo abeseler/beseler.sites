@@ -212,11 +212,15 @@ else
         {
             if (year is null || year.Months.Count == 0)
                 return 0;
-            var month = IsCurrentYear && Clock.Month is >= 1 and <= 12 ? Clock.Month : 12;
-            return year.Months.FirstOrDefault(item => item.Month == month)?.EndingBalance
-                ?? year.Months[^1].EndingBalance;
+            if (IsCurrentYear)
+                return year.CheckingNow ?? MonthEnd(Clock.Month);
+            return MonthEnd(12);
         }
     }
+
+    private decimal MonthEnd(int month) =>
+        year!.Months.FirstOrDefault(item => item.Month == month)?.EndingBalance
+        ?? year.Months[^1].EndingBalance;
 
     private IEnumerable<BudgetMonthSummary> CountedMonths =>
         year is null ? []

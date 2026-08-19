@@ -13,7 +13,8 @@ internal static class SettingHandlers
     {
         return TypedResults.Ok(new AppStatusResponse
         {
-            SignupOpen = await AppStatus.SignupOpen(roles, settings, cancellationToken)
+            SignupOpen = await AppStatus.SignupOpen(roles, settings, cancellationToken),
+            ApiVersion = AppVersion.Of(typeof(SettingHandlers).Assembly)
         });
     }
 

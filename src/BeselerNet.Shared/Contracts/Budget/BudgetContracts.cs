@@ -44,6 +44,8 @@ public sealed record BudgetYearResponse
     [JsonPropertyName("starting_balance")]
     public required decimal StartingBalance { get; init; }
     public required IReadOnlyList<BudgetMonthSummary> Months { get; init; }
+    [JsonPropertyName("checking_now")]
+    public decimal? CheckingNow { get; init; }
 }
 
 public sealed record BudgetMonthSummary

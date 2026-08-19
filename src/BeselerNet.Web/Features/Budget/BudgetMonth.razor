@@ -88,6 +88,10 @@ else
             <button type="button" class="budget-days-toggle" aria-expanded="@daysOpen" @onclick="() => daysOpen = !daysOpen">
                 <span class="tile-kicker">Checking by day</span>
                 <span class="budget-days-peek">
+                    @if (IsCurrentMonth)
+                    {
+                        <span>Now <BudgetMoney Value="CheckingNow" /></span>
+                    }
                     <span>Lowest <BudgetMoney Value="LowestDay" /></span>
                     <span class="budget-days-chevron" aria-hidden="true">@(daysOpen ? "▴" : "▾")</span>
                 </span>
@@ -97,7 +101,7 @@ else
                 <div class="budget-day-list">
                     @foreach (var day in month.Days)
                     {
-                        <div class="budget-day @(day.Balance < 0 ? "is-neg" : null)">
+                        <div class="budget-day @(IsToday(day.Day) ? "is-now" : null) @(day.Balance < 0 ? "is-neg" : null)" aria-current="@(IsToday(day.Day) ? "date" : null)">
                             <span>@day.Day</span>
                             <BudgetMoney Value="day.Balance" />
                         </div>
@@ -128,7 +132,11 @@ else
     private bool CanStartThisYear =>
         CanUpdate && (Year == Clock.Year || (Clock.Month == 12 && Year == Clock.Year + 1));
     private string monthName => new DateOnly(Year, Month, 1).ToString("MMMM");
+    private bool IsCurrentMonth => Clock.Year == Year && Clock.Month == Month;
     private decimal LowestDay => month?.Days.Count > 0 ? month.Days.Min(day => day.Balance) : 0;
+    private decimal CheckingNow =>
+        month?.Days.FirstOrDefault(day => day.Day == Clock.Day)?.Balance ?? 0;
+    private bool IsToday(int day) => IsCurrentMonth && Clock.Day == day;
     private IReadOnlyList<string> Hints(string section) =>
         month?.SuggestedNames is { } map && map.TryGetValue(section, out var names) ? names : [];
 

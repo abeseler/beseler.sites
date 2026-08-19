@@ -7,6 +7,8 @@ public sealed record AppStatusResponse
 {
     [JsonPropertyName("signup_open")]
     public required bool SignupOpen { get; init; }
+    [JsonPropertyName("api_version")]
+    public string? ApiVersion { get; init; }
 }
 
 public sealed record AppSettingResponse

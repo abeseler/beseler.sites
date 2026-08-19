@@ -2,7 +2,6 @@
 @layout BasicLayout
 @inject AccountService Accounts
 @inject NavigationManager Nav
-@inject IHostEnvironment Env
 @inject AppService App
 
 <PageTitle>@SiteConstants.SiteName: Create account</PageTitle>
@@ -98,8 +97,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (Env.IsDevelopment())
-            model.Email = SiteConstants.DevelopmentEmail;
         var status = await App.GetStatusAsync();
         signupOpen = status.Value?.SignupOpen is true;
     }

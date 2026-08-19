@@ -24,16 +24,32 @@
     }
     else
     {
-        <section class="role-card">
-            <span class="tile-kicker">Access</span>
-            <label class="auth-check">
-                <input type="checkbox" checked="@publicSignup" disabled="@(!CanUpdate || busy)" @onchange="ToggleSignup" />
-                <span>
-                    Public signup
-                    <span class="auth-check-hint">When off, only an invite creates an account. The first user can always register so the site can bootstrap.</span>
-                </span>
-            </label>
-        </section>
+        <div class="role-list">
+            @if (settingsLoaded)
+            {
+                <section class="role-card">
+                    <span class="tile-kicker">Access</span>
+                    <label class="auth-check">
+                        <input type="checkbox" checked="@publicSignup" disabled="@(!CanUpdate || busy)" @onchange="ToggleSignup" />
+                        <span>
+                            Public signup
+                            <span class="auth-check-hint">When off, only an invite creates an account. The first user can always register so the site can bootstrap.</span>
+                        </span>
+                    </label>
+                </section>
+            }
+            <section class="role-card">
+                <span class="tile-kicker">Build</span>
+                <div class="auth-field">
+                    <label>Web</label>
+                    <p class="account-static">@webVersion</p>
+                </div>
+                <div class="auth-field">
+                    <label>API</label>
+                    <p class="account-static">@apiVersion</p>
+                </div>
+            </section>
+        </div>
     }
 </div>
 </RequirePermission>
@@ -42,15 +58,22 @@
     [Inject] private AccountSession Session { get; set; } = default!;
 
     private bool loading = true;
+    private bool settingsLoaded;
     private bool busy;
     private bool publicSignup;
     private string? error;
     private string? notice;
+    private string webVersion = SiteConstants.Version;
+    private string apiVersion = "—";
 
     private bool CanUpdate => Session.HasPermission(Resources.Setting, Actions.Update);
 
     protected override async Task OnInitializedAsync()
     {
+        var status = await App.GetStatusAsync();
+        if (status.Succeeded && !string.IsNullOrWhiteSpace(status.Value?.ApiVersion))
+            apiVersion = status.Value.ApiVersion;
+
         var result = await App.ListAsync();
         loading = false;
         if (!result.Succeeded)
@@ -59,6 +82,7 @@
             return;
         }
 
+        settingsLoaded = true;
         var row = result.Value?.FirstOrDefault(setting =>
             string.Equals(setting.Key, BeselerNet.Shared.Settings.PublicSignup, StringComparison.OrdinalIgnoreCase));
         publicSignup = row is not null && bool.TryParse(row.Value, out var on) && on;

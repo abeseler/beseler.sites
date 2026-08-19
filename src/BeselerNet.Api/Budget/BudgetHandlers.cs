@@ -55,17 +55,17 @@ internal static class BudgetHandlers
         foreach (var template in await budget.ListTemplates(accountId, cancellationToken))
             await budget.Stamp(template, periods, today, skip: new HashSet<(int, int, DateOnly)>(), cancellationToken);
 
-        return TypedResults.Created($"/v1/budget/years/{year}", await LoadYear(budget, accountId, year, cancellationToken));
+        return TypedResults.Created($"/v1/budget/years/{year}", await LoadYear(budget, accountId, year, today, cancellationToken));
     }
 
-    public static async Task<IResult> GetYear(int year, ClaimsPrincipal user, BudgetDataSource budget, CancellationToken cancellationToken)
+    public static async Task<IResult> GetYear(int year, ClaimsPrincipal user, BudgetDataSource budget, TimeProvider time, HttpContext http, CancellationToken cancellationToken)
     {
         if (AccountId(user) is not { } accountId)
             return TypedResults.Unauthorized();
         if (BudgetProblems.Forbid(user, accountId, Actions.Read) is { } denied)
             return denied;
 
-        var response = await LoadYear(budget, accountId, year, cancellationToken);
+        var response = await LoadYear(budget, accountId, year, Today(time, http), cancellationToken);
         return response is null ? TypedResults.Problem(BudgetProblems.YearNotFound) : TypedResults.Ok(response);
     }
 
@@ -74,6 +74,8 @@ internal static class BudgetHandlers
         SetStartingBalanceRequest request,
         ClaimsPrincipal user,
         BudgetDataSource budget,
+        TimeProvider time,
+        HttpContext http,
         CancellationToken cancellationToken)
     {
         if (AccountId(user) is not { } accountId)
@@ -86,7 +88,7 @@ internal static class BudgetHandlers
             return TypedResults.Problem(BudgetProblems.YearNotFound);
 
         await budget.SetJanuaryStartingBalance(accountId, year, request.StartingBalance!.Value, cancellationToken);
-        return TypedResults.Ok(await LoadYear(budget, accountId, year, cancellationToken));
+        return TypedResults.Ok(await LoadYear(budget, accountId, year, Today(time, http), cancellationToken));
     }
 
     public static async Task<IResult> DeleteYear(int year, ClaimsPrincipal user, BudgetDataSource budget, TimeProvider time, HttpContext http, CancellationToken cancellationToken)
@@ -257,7 +259,7 @@ internal static class BudgetHandlers
             return TypedResults.Problem(BudgetProblems.YearExists);
         }
 
-        return TypedResults.Ok(await LoadYear(budget, accountId, year, cancellationToken));
+        return TypedResults.Ok(await LoadYear(budget, accountId, year, today, cancellationToken));
     }
 
     public static async Task<IResult> GetMonth(int year, int month, ClaimsPrincipal user, BudgetDataSource budget, CancellationToken cancellationToken)
@@ -269,7 +271,7 @@ internal static class BudgetHandlers
         if (month is < 1 or > 12)
             return TypedResults.Problem(BudgetProblems.MonthNotFound);
 
-        var yearResponse = await LoadYear(budget, accountId, year, cancellationToken);
+        var yearResponse = await LoadYear(budget, accountId, year, today: null, cancellationToken);
         if (yearResponse is null)
             return TypedResults.Problem(BudgetProblems.YearNotFound);
 
@@ -523,7 +525,7 @@ internal static class BudgetHandlers
         await budget.Stamp(template, periods, today, skip, cancellationToken);
     }
 
-    private static async Task<BudgetYearResponse?> LoadYear(BudgetDataSource budget, int accountId, int year, CancellationToken cancellationToken)
+    private static async Task<BudgetYearResponse?> LoadYear(BudgetDataSource budget, int accountId, int year, DateOnly? today, CancellationToken cancellationToken)
     {
         var periods = await budget.PeriodsForYear(accountId, year, cancellationToken);
         if (periods.Count == 0)
@@ -531,11 +533,20 @@ internal static class BudgetHandlers
 
         var lines = await budget.LinesForYear(accountId, year, cancellationToken);
         var months = BudgetCalculator.Summarize(periods, lines);
+        decimal? checkingNow = null;
+        if (today is { } date && date.Year == year)
+        {
+            var month = months.FirstOrDefault(item => item.Month == date.Month);
+            if (month is not null)
+                checkingNow = BudgetCalculator.BalanceOn(date, month.StartingBalance, lines);
+        }
+
         return new BudgetYearResponse
         {
             Year = year,
             StartingBalance = months[0].StartingBalance,
-            Months = months
+            Months = months,
+            CheckingNow = checkingNow
         };
     }
 

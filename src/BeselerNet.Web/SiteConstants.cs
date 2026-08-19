@@ -5,5 +5,5 @@ namespace BeselerNet.Web;
 internal static class SiteConstants
 {
     public const string SiteName = Branding.ProductName;
-    public const string DevelopmentEmail = Branding.DevelopmentEmail;
+    public static readonly string Version = AppVersion.Of(typeof(SiteConstants).Assembly);
 }

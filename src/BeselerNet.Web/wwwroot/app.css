@@ -910,8 +910,10 @@ a.tile-app:hover {
 
 .budget-days-peek {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: baseline;
-    gap: 0.5rem;
+    gap: 0.5rem 0.75rem;
     color: var(--muted);
     font-size: 0.8rem;
     min-width: 0;
@@ -940,6 +942,16 @@ a.tile-app:hover {
 }
 
 .budget-day span:first-child { color: var(--muted); }
+
+.budget-day.is-now {
+    background: var(--warn-dim);
+    border-left-color: var(--warn);
+}
+
+.budget-day.is-now span:first-child {
+    color: var(--warn);
+    font-weight: 600;
+}
 
 .budget-day.is-neg {
     background: rgba(232, 93, 76, 0.1);

@@ -124,18 +124,36 @@ internal static class BudgetCalculator
             {
                 if (line.OnDate!.Value.Day > day)
                     continue;
-                var amount = line.Amount ?? 0;
-                if (string.Equals(line.Section, BudgetSections.Income, StringComparison.OrdinalIgnoreCase))
-                    balance += Math.Abs(amount);
-                else if (string.Equals(line.Section, BudgetSections.Expense, StringComparison.OrdinalIgnoreCase))
-                    balance -= Math.Abs(amount);
-                else
-                    balance -= amount;
+                Apply(ref balance, line);
             }
 
             days.Add(new BudgetDayBalance { Day = day, Balance = balance });
         }
 
         return days;
+    }
+
+    public static decimal BalanceOn(DateOnly date, decimal startingBalance, IEnumerable<BudgetLineRow> lines)
+    {
+        var balance = startingBalance;
+        foreach (var line in lines)
+        {
+            if (line.OnDate is not { } on || on.Year != date.Year || on.Month != date.Month || on.Day > date.Day)
+                continue;
+            Apply(ref balance, line);
+        }
+
+        return balance;
+    }
+
+    private static void Apply(ref decimal balance, BudgetLineRow line)
+    {
+        var amount = line.Amount ?? 0;
+        if (string.Equals(line.Section, BudgetSections.Income, StringComparison.OrdinalIgnoreCase))
+            balance += Math.Abs(amount);
+        else if (string.Equals(line.Section, BudgetSections.Expense, StringComparison.OrdinalIgnoreCase))
+            balance -= Math.Abs(amount);
+        else
+            balance -= amount;
     }
 }
