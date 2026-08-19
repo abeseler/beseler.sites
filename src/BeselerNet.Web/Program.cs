@@ -1,3 +1,4 @@
+using System.Globalization;
 using Beseler.ServiceDefaults;
 using BeselerNet.Shared;
 using BeselerNet.Web.Components;
@@ -9,6 +10,10 @@ using BeselerNet.Web.Features.Roles;
 using BeselerNet.Web.Features.Settings;
 using BeselerNet.Web.Shared;
 using StackExchange.Redis;
+
+var culture = CultureInfo.GetCultureInfo("en-US");
+CultureInfo.DefaultThreadCurrentCulture = culture;
+CultureInfo.DefaultThreadCurrentUICulture = culture;
 
 var builder = WebApplication.CreateBuilder(args);
 

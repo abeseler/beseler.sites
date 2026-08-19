@@ -1,3 +1,5 @@
+@using System.Globalization
+
 <span class="budget-money @(Value < 0 ? "is-neg" : null) @Extra">@Text</span>
 
 @code {
@@ -5,5 +7,7 @@
     [Parameter] public bool Compact { get; set; }
     [Parameter] public string? Extra { get; set; }
 
-    private string Text => Compact ? Value.ToString("N0") : Value.ToString("C2");
+    private static readonly CultureInfo Usd = CultureInfo.GetCultureInfo("en-US");
+
+    private string Text => Compact ? Value.ToString("N0", Usd) : Value.ToString("C2", Usd);
 }
