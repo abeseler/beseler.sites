@@ -1,0 +1,57 @@
+@inject BudgetService Budget
+@inject AccountSession Session
+
+<div class="app-main">
+    <p class="kicker">Budget</p>
+    <h1 class="page-title">Start @Year</h1>
+    <p class="page-lede">Creates all 12 months and stamps templates from today forward.</p>
+
+    @if (error is not null)
+    {
+        <p class="auth-alert" role="alert">@error</p>
+    }
+
+    <section class="role-card">
+        <div class="auth-field">
+            <label for="start-balance">January starting balance</label>
+            <input id="start-balance" inputmode="decimal" @bind="balanceText" disabled="@busy" />
+        </div>
+        <div class="role-actions">
+            <button type="button" class="btn btn-primary" disabled="@(!CanUpdate || busy)" @onclick="Start">
+                @(busy ? "Starting…" : $"Start {Year}")
+            </button>
+        </div>
+    </section>
+</div>
+
+@code {
+    [Parameter] public int Year { get; set; }
+    [Parameter] public EventCallback<int> OnStarted { get; set; }
+
+    private string balanceText = "0";
+    private bool busy;
+    private string? error;
+
+    private bool CanUpdate => Session.HasPermission(Resources.Budget, Actions.Update);
+
+    private async Task Start()
+    {
+        if (!decimal.TryParse(balanceText, out var balance))
+        {
+            error = "Starting balance must be a number.";
+            return;
+        }
+
+        busy = true;
+        error = null;
+        var result = await Budget.StartYearAsync(Year, balance);
+        busy = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not start that year.";
+            return;
+        }
+
+        await OnStarted.InvokeAsync(Year);
+    }
+}

@@ -34,3 +34,32 @@ CREATE TABLE budget_recurring_template (
     CONSTRAINT chk_budget_recurring_template_weekday CHECK (weekday IS NULL OR (weekday BETWEEN 0 AND 6)),
     CONSTRAINT chk_budget_recurring_template_week_of_month CHECK (week_of_month IS NULL OR (week_of_month BETWEEN 1 AND 5))
 );
+
+/* Migration { "title": "02:dropCashflowRenameAmount" } */
+ALTER TABLE budget_recurring_template
+    DROP COLUMN include_in_cashflow;
+-- NewStatement
+ALTER TABLE budget_recurring_template
+    RENAME COLUMN estimated_amount TO amount;
+
+/* Migration { "title": "03:expandScheduleTypes" } */
+ALTER TABLE budget_recurring_template
+    DROP CONSTRAINT chk_budget_recurring_template_schedule_type;
+-- NewStatement
+ALTER TABLE budget_recurring_template
+    ADD CONSTRAINT chk_budget_recurring_template_schedule_type
+    CHECK (schedule_type IN ('monthly', 'weekly', 'biweekly', 'interval'));
+-- NewStatement
+ALTER TABLE budget_recurring_template
+    DROP CONSTRAINT chk_budget_recurring_template_schedule;
+-- NewStatement
+ALTER TABLE budget_recurring_template
+    ADD CONSTRAINT chk_budget_recurring_template_schedule CHECK (
+        (schedule_type = 'monthly' AND day_of_month IS NOT NULL)
+        OR (schedule_type IN ('weekly', 'biweekly') AND anchor_date IS NOT NULL)
+        OR (schedule_type = 'interval' AND anchor_date IS NOT NULL AND interval_days IS NOT NULL AND interval_days BETWEEN 1 AND 365)
+    );
+-- NewStatement
+ALTER TABLE budget_recurring_template
+    ADD CONSTRAINT chk_budget_recurring_template_interval_days
+    CHECK (interval_days IS NULL OR (interval_days BETWEEN 1 AND 365));

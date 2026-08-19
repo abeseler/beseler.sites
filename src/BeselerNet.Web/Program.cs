@@ -25,12 +25,14 @@ builder.Services.AddRazorComponents()
 builder.Services.AddOptions<OAuthOptions>().BindConfiguration(OAuthOptions.SectionName);
 builder.Services.AddScoped<AuthCookie>();
 builder.Services.AddScoped<TokenRefresher>();
+builder.Services.AddScoped<ClientClock>();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AccountSession>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<AccountsService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<AppService>();
+builder.Services.AddScoped<BeselerNet.Web.Features.Budget.BudgetService>();
 
 builder.Services.AddHttpClient(ApiClient.ClientName, client =>
     {

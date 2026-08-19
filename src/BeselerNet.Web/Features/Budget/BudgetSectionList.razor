@@ -1,0 +1,71 @@
+@inject BudgetService Budget
+
+<section class="budget-col role-card">
+    <div class="budget-col-head">
+        <span class="tile-kicker">@Title</span>
+        <BudgetMoney Value="Total" Extra="budget-col-total" />
+    </div>
+
+    @if (Lines.Count == 0 && editing is null)
+    {
+        <p class="muted-empty">Nothing yet.</p>
+    }
+
+    <div class="budget-lines">
+        @foreach (var line in Lines)
+        {
+            @if (editing?.LineId == line.LineId)
+            {
+                <BudgetLineForm Year="@Year" Month="@Month" Section="@Section" Line="line" Busy="@(Busy || saving)" OnSaved="Saved" OnCancel="() => editing = null" />
+            }
+            else
+            {
+                <button type="button" class="budget-line" disabled="@(!CanEdit || Busy)" @onclick="() => editing = line">
+                    <span class="budget-line-name">
+                        @line.Name
+                        @if (line.TemplateId is not null && !line.Committed)
+                        {
+                            <span class="budget-est">est</span>
+                        }
+                    </span>
+                    <span class="budget-line-day">@(line.OnDate?.Day.ToString() ?? "—")</span>
+                    <BudgetMoney Value="@(line.Amount ?? 0)" Extra="budget-line-amt" />
+                </button>
+            }
+        }
+    </div>
+
+    @if (adding)
+    {
+        <BudgetLineForm Year="@Year" Month="@Month" Section="@Section" Busy="@(Busy || saving)" OnSaved="Saved" OnCancel="() => adding = false" />
+    }
+    else if (CanEdit)
+    {
+        <button type="button" class="btn btn-ghost btn-small" disabled="@Busy" @onclick="() => { adding = true; editing = null; }">Add</button>
+    }
+</section>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Section { get; set; } = "";
+    [Parameter] public decimal Total { get; set; }
+    [Parameter] public IReadOnlyList<BudgetLineResponse> Lines { get; set; } = [];
+    [Parameter] public int Year { get; set; }
+    [Parameter] public int Month { get; set; }
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private BudgetLineResponse? editing;
+    private bool adding;
+    private bool saving;
+
+    private async Task Saved()
+    {
+        adding = false;
+        editing = null;
+        saving = false;
+        await OnChanged.InvokeAsync();
+    }
+
+}

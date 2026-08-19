@@ -1,0 +1,181 @@
+@page "/budget/templates"
+@inject BudgetService Budget
+@inject ClientClock Clock
+@inject AccountSession Session
+@inject IJSRuntime Js
+
+<PageTitle>@SiteConstants.SiteName: Templates</PageTitle>
+
+<RequirePermission Resource="@Resources.Budget" Action="@Actions.Read">
+<div class="app-main">
+    <p class="kicker">Budget</p>
+    <div class="budget-bar">
+        <div class="budget-bar-nav">
+            <span class="budget-bar-title">Templates</span>
+        </div>
+        <div class="budget-bar-links">
+            <a href="@Routes.Budget">This month</a>
+            @if (Clock.Year > 0)
+            {
+                <a href="@Routes.BudgetYear(Clock.Year)">Summary</a>
+            }
+        </div>
+    </div>
+    <p class="page-lede">Repeating rows. Changes stamp from today forward. History stays put.</p>
+
+    @if (error is not null)
+    {
+        <p class="auth-alert" role="alert">@error</p>
+    }
+    @if (notice is not null)
+    {
+        <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
+    }
+
+    @if (CanUpdate)
+    {
+        @if (creating)
+        {
+            <section class="role-card">
+                <span class="tile-kicker">New template</span>
+                <BudgetTemplateForm Busy="busy" OnSaved="Created" OnCancel="() => creating = false" />
+            </section>
+        }
+        else
+        {
+            <p class="role-toolbar">
+                <button type="button" class="btn btn-primary btn-small" @onclick="() => creating = true">New template</button>
+            </p>
+        }
+    }
+
+    @if (loading)
+    {
+        <p class="page-lede">Loading…</p>
+    }
+    else if (templates.Count == 0)
+    {
+        <p class="muted-empty">No templates yet.</p>
+    }
+    else
+    {
+        <div class="role-list">
+            @foreach (var template in templates)
+            {
+                <article class="role-card">
+                    @if (editingId == template.TemplateId)
+                    {
+                        <BudgetTemplateForm Template="template" Busy="busy" OnSaved="Saved" OnCancel="() => editingId = null" />
+                    }
+                    else
+                    {
+                        <div class="role-card-head">
+                            <span class="role-name">@template.Name</span>
+                            <span class="badge">@template.Section</span>
+                        </div>
+                        <p class="muted-empty">
+                            @if (template.Amount is { } amount)
+                            {
+                                <BudgetMoney Value="amount" />
+                            }
+                            else
+                            {
+                                <span>no amount</span>
+                            }
+                            <span> · @Describe(template)</span>
+                        </p>
+                        @if (CanUpdate)
+                        {
+                            <div class="role-actions">
+                                <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="() => editingId = template.TemplateId">Edit</button>
+                                @if (pendingDelete == template.TemplateId)
+                                {
+                                    <button type="button" class="btn btn-danger btn-small" disabled="@busy" @onclick="() => Delete(template)">Confirm delete</button>
+                                    <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="() => pendingDelete = null">Keep</button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn btn-danger btn-small" disabled="@busy" @onclick="() => pendingDelete = template.TemplateId">Delete</button>
+                                }
+                            </div>
+                        }
+                    }
+                </article>
+            }
+        </div>
+    }
+</div>
+</RequirePermission>
+
+@code {
+    private IReadOnlyList<BudgetTemplateResponse> templates = [];
+    private bool loading = true;
+    private bool busy;
+    private bool creating;
+    private int? editingId;
+    private int? pendingDelete;
+    private string? error;
+    private string? notice;
+
+    private bool CanUpdate => Session.HasPermission(Resources.Budget, Actions.Update);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Clock.EnsureAsync(Js);
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        loading = true;
+        var result = await Budget.ListTemplatesAsync();
+        loading = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not load templates.";
+            return;
+        }
+
+        templates = result.Value ?? [];
+    }
+
+    private async Task Created()
+    {
+        creating = false;
+        notice = "Template saved. Future months were stamped from today.";
+        await Reload();
+    }
+
+    private async Task Saved()
+    {
+        editingId = null;
+        notice = "Template updated. Uncommitted future rows were restamped.";
+        await Reload();
+    }
+
+    private async Task Delete(BudgetTemplateResponse template)
+    {
+        busy = true;
+        error = null;
+        var result = await Budget.DeleteTemplateAsync(template.TemplateId);
+        busy = false;
+        pendingDelete = null;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not delete.";
+            return;
+        }
+
+        notice = "Template removed. Today-forward stamps are gone.";
+        await Reload();
+    }
+
+    private static string Describe(BudgetTemplateResponse template) =>
+        template.ScheduleType switch
+        {
+            BudgetSchedules.Weekly => $"every week from {template.AnchorDate:yyyy-MM-dd}",
+            BudgetSchedules.Biweekly => $"every 2 weeks from {template.AnchorDate:yyyy-MM-dd}",
+            BudgetSchedules.Interval => $"every {template.IntervalDays} days from {template.AnchorDate:yyyy-MM-dd}",
+            _ => $"day {template.DayOfMonth} each month"
+        };
+}

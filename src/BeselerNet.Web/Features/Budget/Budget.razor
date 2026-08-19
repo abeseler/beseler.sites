@@ -1,27 +1,53 @@
 @page "/budget"
+@inject BudgetService Api
+@inject ClientClock Clock
+@inject NavigationManager Nav
+@inject IJSRuntime Js
 
 <PageTitle>@SiteConstants.SiteName: Budget</PageTitle>
 
-<div class="app-main">
-    <p class="kicker">Budget</p>
-    <h1 class="page-title">Not built yet.</h1>
-    <p class="page-lede">This is the placeholder so the feature has a home. Periods, recurring templates, and the three sections — income, expense, savings — will land here.</p>
-
-    <div class="tile-grid">
-        <div class="tile">
-            <span class="tile-kicker">Period</span>
-            <span class="tile-title">A month you can close</span>
-            <span class="tile-copy">Starting balance plus the lines that belong to it.</span>
-        </div>
-        <div class="tile">
-            <span class="tile-kicker">Recurring</span>
-            <span class="tile-title">Monthly or every two weeks</span>
-            <span class="tile-copy">Templates that stamp into a period so you are not retyping rent.</span>
-        </div>
-        <div class="tile">
-            <span class="tile-kicker">Sections</span>
-            <span class="tile-title">Income, expense, savings</span>
-            <span class="tile-copy">The three buckets. No more, until we need more.</span>
-        </div>
+<RequirePermission Resource="@Resources.Budget" Action="@Actions.Read">
+@if (loading)
+{
+    <div class="app-main">
+        <p class="kicker">Budget</p>
+        <p class="page-lede">Loading…</p>
     </div>
-</div>
+}
+else if (showStart)
+{
+    <BudgetStart Year="Clock.Year" OnStarted="GoToMonth" />
+}
+else
+{
+    <p class="page-lede">Opening this month…</p>
+}
+</RequirePermission>
+
+@code {
+    private bool loading = true;
+    private bool showStart;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Clock.EnsureAsync(Js);
+        var years = await Api.ListYearsAsync();
+        loading = false;
+        if (!years.Succeeded)
+        {
+            showStart = true;
+            return;
+        }
+
+        var list = years.Value?.Years ?? [];
+        if (list.Contains(Clock.Year))
+        {
+            Nav.NavigateTo(Routes.BudgetMonth(Clock.Year, Clock.Month), replace: true);
+            return;
+        }
+
+        showStart = true;
+    }
+
+    private void GoToMonth(int year) => Nav.NavigateTo(Routes.BudgetMonth(year, Clock.Year == year ? Clock.Month : 1));
+}

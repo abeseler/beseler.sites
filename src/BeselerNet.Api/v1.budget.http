@@ -1,0 +1,161 @@
+@host={{$projectUrl}}
+@email=testing@beseler.net
+@password=password
+@clientId=beseler-net-web
+@clientSecret=local-dev-web-client-secret
+# IANA zone so "today" / current year match the caller, not UTC.
+# X-Time-Zone: America/Chicago
+
+### Login
+
+# @name login
+POST {{host}}/v1/accounts/oauth/tokens
+Content-Type: application/json
+
+{
+  "grant_type": "password",
+  "username": "{{email}}",
+  "password": "{{password}}",
+  "client_id": "{{clientId}}",
+  "client_secret": "{{clientSecret}}"
+}
+
+### List years
+
+GET {{host}}/v1/budget/years
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Start year
+
+POST {{host}}/v1/budget/years/2026
+Authorization: Bearer {{login.response.body.$.access_token}}
+X-Time-Zone: America/Chicago
+Content-Type: application/json
+
+{
+  "starting_balance": 3280.52
+}
+
+### Get year
+
+GET {{host}}/v1/budget/years/2026
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Set starting balance
+
+PUT {{host}}/v1/budget/years/2026/starting-balance
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "starting_balance": 3300
+}
+
+### Get August
+
+GET {{host}}/v1/budget/years/2026/months/8
+Authorization: Bearer {{login.response.body.$.access_token}}
+
+### Add line
+
+# @name line
+POST {{host}}/v1/budget/years/2026/months/8/lines
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "Paycheck",
+  "section": "income",
+  "amount": 4207.96,
+  "on_date": "2026-08-14"
+}
+
+### Update line
+
+PUT {{host}}/v1/budget/lines/{{line.response.body.$.line_id}}
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "Paycheck",
+  "section": "income",
+  "amount": 4210.00,
+  "on_date": "2026-08-14",
+  "committed": true
+}
+
+### Create monthly template
+
+POST {{host}}/v1/budget/templates
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "Mortgage",
+  "section": "expense",
+  "amount": 3000,
+  "schedule_type": "monthly",
+  "day_of_month": 1
+}
+
+### Create biweekly template
+
+POST {{host}}/v1/budget/templates
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "Paycheck",
+  "section": "income",
+  "amount": 4207.96,
+  "schedule_type": "biweekly",
+  "anchor_date": "2026-01-16"
+}
+
+### Create weekly template
+
+POST {{host}}/v1/budget/templates
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "Allowance",
+  "section": "expense",
+  "amount": 40,
+  "schedule_type": "weekly",
+  "anchor_date": "2026-01-05"
+}
+
+### Create every-10-days template
+
+POST {{host}}/v1/budget/templates
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "Transfer",
+  "section": "savings",
+  "amount": 150,
+  "schedule_type": "interval",
+  "interval_days": 10,
+  "anchor_date": "2026-01-04"
+}
+
+### Create monthly 31st template (clamps to last day)
+
+POST {{host}}/v1/budget/templates
+Authorization: Bearer {{login.response.body.$.access_token}}
+Content-Type: application/json
+
+{
+  "name": "Rent",
+  "section": "expense",
+  "amount": 1800,
+  "schedule_type": "monthly",
+  "day_of_month": 31
+}
+
+### List templates
+
+GET {{host}}/v1/budget/templates
+Authorization: Bearer {{login.response.body.$.access_token}}

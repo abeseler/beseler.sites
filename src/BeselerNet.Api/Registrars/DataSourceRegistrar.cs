@@ -1,5 +1,7 @@
 ﻿using BeselerNet.Api.Accounts;
 using BeselerNet.Api.Accounts.OAuth;
+using BeselerNet.Api.Budget;
+using BeselerNet.Api.Core;
 using BeselerNet.Api.Communications;
 using BeselerNet.Api.Settings;
 using BeselerNet.Api.Events;
@@ -17,6 +19,7 @@ internal static class DataSourceRegistrar
         builder.AddNpgsqlDataSource("Database");
         builder.Services
             .AddScoped<AccountDataSource>()
+            .AddScoped<BudgetDataSource>()
             .AddScoped<CommunicationDataSource>()
             .AddSingleton<OutboxDataSource>()
             .AddSingleton<EventLogDataSource>()
@@ -26,6 +29,8 @@ internal static class DataSourceRegistrar
             .AddScoped<TokenLogDataSource>();
 
         DefaultTypeMap.MatchNamesWithUnderscores = true;
+        SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
+        SqlMapper.AddTypeHandler(new NullableDateOnlyTypeHandler());
 
         return builder;
     }

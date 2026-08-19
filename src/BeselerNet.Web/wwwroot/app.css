@@ -114,8 +114,10 @@ h1:focus { outline: none; }
     font-size: 0.8rem;
 }
 
-.auth-field input {
+.auth-field input,
+.auth-field input[type="date"] {
     width: 100%;
+    min-width: 0;
     padding: 0.7rem 0.8rem;
     color: var(--text);
     background: var(--surface-2);
@@ -133,6 +135,7 @@ h1:focus { outline: none; }
     box-shadow: 0 0 0 3px var(--accent-dim);
 }
 
+.field-error,
 .auth-field .field-error {
     display: block;
     margin-top: 0.3rem;
@@ -546,6 +549,14 @@ a.tile-app:hover {
     font-size: 0.85rem;
 }
 
+.auth-field .auth-select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    padding: 0.7rem 0.8rem;
+    font-size: 0.95rem;
+}
+
 .auth-select:focus {
     outline: none;
     border-color: var(--accent);
@@ -578,4 +589,365 @@ a.tile-app:hover {
     position: absolute;
     right: 0.75rem;
     top: 0.5rem;
+}
+
+.budget-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.65rem 1.25rem;
+    margin: 0 0 1.1rem;
+}
+
+.budget-bar-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.budget-bar-title {
+    font-size: 1.35rem;
+    font-weight: 600;
+}
+
+.budget-bar-arrow {
+    font-size: 1.4rem;
+    text-decoration: none;
+    line-height: 1;
+}
+
+.budget-bar-links {
+    display: flex;
+    gap: 0.9rem;
+    font-size: 0.85rem;
+}
+
+.budget-totals {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0 0 1.1rem;
+}
+
+.role-card + .budget-totals { margin-top: 1.1rem; }
+
+.budget-totals > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.budget-totals .budget-money {
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+}
+
+.budget-tabs {
+    display: flex;
+    gap: 0.35rem;
+    margin: 0 0 0.75rem;
+}
+
+.budget-tab {
+    appearance: none;
+    flex: 1;
+    padding: 0.45rem 0.4rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.budget-tab.active {
+    border-color: var(--warn);
+    background: var(--warn-dim);
+    color: var(--warn);
+}
+
+.budget-deck {
+    overflow: hidden;
+    touch-action: pan-y;
+    margin: 0 0 1.1rem;
+}
+
+.budget-slides {
+    display: flex;
+    width: 300%;
+    transform: translateX(calc(var(--slide, 0) * -33.333%));
+    transition: transform 0.2s ease;
+}
+
+.budget-col {
+    width: 33.333%;
+    flex: 0 0 33.333%;
+    box-sizing: border-box;
+}
+
+.budget-col-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.65rem;
+}
+
+.budget-col-total { font-weight: 600; }
+
+.budget-money { font-variant-numeric: tabular-nums; }
+.budget-money.is-neg {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.budget-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.budget-line {
+    appearance: none;
+    display: grid;
+    grid-template-columns: 1fr 2.2rem auto;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.4rem 0.15rem;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.88rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.budget-line:disabled { cursor: default; }
+
+.budget-line-day { color: var(--muted); text-align: right; }
+.budget-line-amt { text-align: right; font-variant-numeric: tabular-nums; }
+.budget-est {
+    margin-left: 0.35rem;
+    color: var(--warn);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+}
+
+.budget-line-form { margin: 0.5rem 0 0.75rem; }
+.budget-line-form .auth-field { margin-bottom: 0.65rem; }
+.budget-line-form-row {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: start;
+}
+.budget-line-form-row .auth-field { margin-bottom: 0; }
+.budget-line-form .budget-hint { margin: 0.35rem 0 0.65rem; }
+
+.budget-start-lock {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.35rem;
+}
+
+.budget-edit-icon {
+    appearance: none;
+    display: inline-grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.budget-edit-icon:hover { color: var(--accent); }
+.budget-danger-icon:hover { color: var(--danger); }
+
+.budget-hint {
+    margin: 0.3rem 0 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.budget-start-over { margin-bottom: 1.1rem; }
+
+.budget-start-edit {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.45rem;
+}
+
+.budget-start-edit input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.7rem 0.8rem;
+    color: var(--text);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font: inherit;
+    font-size: 0.95rem;
+}
+
+.budget-start-edit input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.budget-days { margin-top: 0.25rem; }
+
+.budget-days-toggle {
+    appearance: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+
+.budget-days-peek {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    min-width: 0;
+}
+
+.budget-days-chevron {
+    color: var(--muted);
+    font-size: 0.75rem;
+}
+
+.budget-day-list {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0.65rem;
+    font-size: 0.85rem;
+}
+
+.budget-day {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.4rem 0.35rem 0.4rem 0.65rem;
+    border-bottom: 1px solid var(--line);
+    border-left: 3px solid transparent;
+    font-variant-numeric: tabular-nums;
+}
+
+.budget-day span:first-child { color: var(--muted); }
+
+.budget-day.is-neg {
+    background: rgba(232, 93, 76, 0.1);
+    border-left-color: var(--danger);
+}
+
+.budget-month-head,
+.budget-month-row {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.1fr) minmax(0, 1.1fr);
+    gap: 0.4rem;
+    align-items: baseline;
+}
+
+.budget-month-head {
+    margin-top: 0.55rem;
+    padding: 0 0.15rem 0.35rem 0.65rem;
+    border-left: 3px solid transparent;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.budget-month-head span:nth-child(2),
+.budget-month-head span:nth-child(3) { text-align: right; }
+
+.budget-month-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.budget-month-row {
+    padding: 0.55rem 0.15rem 0.55rem 0.65rem;
+    border-bottom: 1px solid var(--line);
+    border-left: 3px solid transparent;
+    color: inherit;
+    text-decoration: none;
+    font-size: 0.88rem;
+}
+
+.budget-month-row:hover { color: var(--accent); }
+
+.budget-month-row.is-now {
+    background: var(--warn-dim);
+    border-left-color: var(--warn);
+}
+
+.budget-month-name {
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.budget-month-flow,
+.budget-month-check {
+    min-width: 0;
+    text-align: right;
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+.budget-month-flow { font-weight: 600; }
+.budget-month-check { color: var(--muted); }
+
+@media (min-width: 641px) {
+    .budget-tabs { display: none; }
+
+    .budget-slides {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        width: 100%;
+        transform: none;
+        gap: 0.85rem;
+    }
+
+    .budget-col {
+        width: auto;
+        flex: none;
+    }
+
+    .budget-day-list {
+        display: block;
+        column-count: 3;
+        column-gap: 2rem;
+    }
+
+    .budget-day {
+        break-inside: avoid;
+        padding: 0.35rem 0.35rem 0.35rem 0.65rem;
+    }
 }

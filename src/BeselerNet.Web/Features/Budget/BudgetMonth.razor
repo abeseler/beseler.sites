@@ -1,0 +1,186 @@
+@page "/budget/{Year:int}/{Month:int}"
+@inject BudgetService Budget
+@inject ClientClock Clock
+@inject NavigationManager Nav
+@inject AccountSession Session
+@inject IJSRuntime Js
+
+<PageTitle>@SiteConstants.SiteName: @monthName @Year</PageTitle>
+
+<RequirePermission Resource="@Resources.Budget" Action="@Actions.Read">
+@if (loading)
+{
+    <div class="app-main">
+        <p class="kicker">Budget</p>
+        <p class="page-lede">Loading…</p>
+    </div>
+}
+else if (month is null)
+{
+    <BudgetStart Year="Year" OnStarted="Reload" />
+}
+else
+{
+    <div class="app-main app-main-wide">
+        <p class="kicker">Budget</p>
+        <BudgetBar Year="Year" Month="Month" Title="@($"{monthName} {Year}")" />
+
+        @if (error is not null)
+        {
+            <p class="auth-alert" role="alert">@error</p>
+        }
+        @if (notice is not null)
+        {
+            <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
+        }
+
+        <div class="budget-totals">
+            <div>
+                <span class="tile-kicker">Starting</span>
+                <BudgetMoney Value="month.StartingBalance" />
+            </div>
+            <div>
+                <span class="tile-kicker">Cash flow</span>
+                <BudgetMoney Value="month.CashFlow" />
+            </div>
+            <div>
+                <span class="tile-kicker">Ending</span>
+                <BudgetMoney Value="month.EndingBalance" />
+            </div>
+        </div>
+
+        <div class="budget-tabs" role="tablist">
+            <button type="button" class="budget-tab @(slide == 0 ? "active" : null)" @onclick="() => slide = 0">Income</button>
+            <button type="button" class="budget-tab @(slide == 1 ? "active" : null)" @onclick="() => slide = 1">Expenses</button>
+            <button type="button" class="budget-tab @(slide == 2 ? "active" : null)" @onclick="() => slide = 2">Savings</button>
+        </div>
+
+        <div class="budget-deck"
+             style="@($"--slide:{slide}")"
+             @onpointerdown="OnPointerDown"
+             @onpointerup="OnPointerUp">
+            <div class="budget-slides">
+                <BudgetSectionList Title="Income" Section="@BudgetSections.Income" Total="month.Income" Lines="Income" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
+                <BudgetSectionList Title="Expenses" Section="@BudgetSections.Expense" Total="month.Expenses" Lines="Expenses" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
+                <BudgetSectionList Title="Savings" Section="@BudgetSections.Savings" Total="month.Savings" Lines="Savings" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
+            </div>
+        </div>
+
+        <section class="role-card budget-days">
+            <button type="button" class="budget-days-toggle" aria-expanded="@daysOpen" @onclick="() => daysOpen = !daysOpen">
+                <span class="tile-kicker">Checking by day</span>
+                <span class="budget-days-peek">
+                    <span>Lowest <BudgetMoney Value="LowestDay" /></span>
+                    <span class="budget-days-chevron" aria-hidden="true">@(daysOpen ? "▴" : "▾")</span>
+                </span>
+            </button>
+            @if (daysOpen)
+            {
+                <div class="budget-day-list">
+                    @foreach (var day in month.Days)
+                    {
+                        <div class="budget-day @(day.Balance < 0 ? "is-neg" : null)">
+                            <span>@day.Day</span>
+                            <BudgetMoney Value="day.Balance" />
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+}
+</RequirePermission>
+
+@code {
+    [Parameter] public int Year { get; set; }
+    [Parameter] public int Month { get; set; }
+
+    private BudgetMonthResponse? month;
+    private bool loading = true;
+    private string? error;
+    private string? notice;
+    private int slide;
+    private bool daysOpen;
+    private double pointerX;
+    private double pointerY;
+    private bool pointerDown;
+
+    private bool CanUpdate => Session.HasPermission(Resources.Budget, Actions.Update);
+    private string monthName => new DateOnly(Year, Month, 1).ToString("MMMM");
+    private decimal LowestDay => month?.Days.Count > 0 ? month.Days.Min(day => day.Balance) : 0;
+    private IReadOnlyList<BudgetLineResponse> Income => Lines(BudgetSections.Income);
+    private IReadOnlyList<BudgetLineResponse> Expenses => Lines(BudgetSections.Expense);
+    private IReadOnlyList<BudgetLineResponse> Savings => Lines(BudgetSections.Savings);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Clock.EnsureAsync(Js);
+        if (Month is < 1 or > 12)
+        {
+            Nav.NavigateTo(Routes.Budget, replace: true);
+            return;
+        }
+
+        await Load();
+    }
+
+    private async Task Load()
+    {
+        loading = true;
+        error = null;
+        var result = await Budget.GetMonthAsync(Year, Month);
+        loading = false;
+        if (result.StatusCode is System.Net.HttpStatusCode.NotFound)
+        {
+            month = null;
+            return;
+        }
+
+        if (!result.Succeeded || result.Value is null)
+        {
+            month = null;
+            error = result.Error ?? "Could not load that month.";
+            return;
+        }
+
+        month = result.Value;
+    }
+
+    private async Task Reload() => await Load();
+
+    private async Task ReloadSilent()
+    {
+        var result = await Budget.GetMonthAsync(Year, Month);
+        if (result.Succeeded && result.Value is not null)
+            month = result.Value;
+        else
+            error = result.Error ?? "Could not refresh.";
+    }
+
+    private IReadOnlyList<BudgetLineResponse> Lines(string section) =>
+        month?.Lines.Where(line => string.Equals(line.Section, section, StringComparison.OrdinalIgnoreCase)).ToArray()
+        ?? [];
+
+    private void OnPointerDown(PointerEventArgs e)
+    {
+        pointerDown = true;
+        pointerX = e.ClientX;
+        pointerY = e.ClientY;
+    }
+
+    private void OnPointerUp(PointerEventArgs e)
+    {
+        if (!pointerDown)
+            return;
+        pointerDown = false;
+        var dx = e.ClientX - pointerX;
+        var dy = e.ClientY - pointerY;
+        if (Math.Abs(dx) < 48 || Math.Abs(dx) < Math.Abs(dy))
+            return;
+        if (dx < 0 && slide < 2)
+            slide++;
+        else if (dx > 0 && slide > 0)
+            slide--;
+    }
+
+}

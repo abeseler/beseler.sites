@@ -20,3 +20,8 @@ CREATE TABLE budget_period (
     CONSTRAINT uq_budget_period UNIQUE (account_id, year, month),
     CONSTRAINT chk_budget_period_month CHECK (month BETWEEN 1 AND 12)
 );
+
+/* Migration { "title": "02:startingBalanceOptional" } */
+ALTER TABLE budget_period
+    ALTER COLUMN starting_balance DROP NOT NULL,
+    ALTER COLUMN starting_balance DROP DEFAULT;

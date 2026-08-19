@@ -6,6 +6,7 @@ public static class Resources
     public const string Role = "role";
     public const string Permission = "permission";
     public const string Setting = "setting";
+    public const string Budget = "budget";
 }
 
 public static class Actions

@@ -1,0 +1,177 @@
+@inject BudgetService Budget
+@inject ClientClock Clock
+
+<div class="budget-line-form">
+    <div class="auth-field">
+        <label>Name</label>
+        <input @bind="name" maxlength="128" disabled="@Busy" />
+        <FieldError Keys="fieldErrors" Name="name" />
+    </div>
+    <div class="budget-line-form-row">
+        <div class="auth-field">
+            <label>Day</label>
+            <input inputmode="numeric" @bind="dayText" disabled="@Busy" />
+            <FieldError Keys="fieldErrors" Name="on_date" />
+        </div>
+        <div class="auth-field">
+            <label>Amount</label>
+            <input inputmode="@(SavingsAmount ? "text" : "decimal")" @bind="amountText" disabled="@Busy" />
+            <FieldError Keys="fieldErrors" Name="amount" />
+        </div>
+    </div>
+    <p class="budget-hint">@BudgetSections.AmountHint(Section)</p>
+    @if (Line is not null)
+    {
+        <label class="auth-check">
+            <input type="checkbox" checked="@committed" disabled="@Busy" @onchange="e => committed = IsChecked(e.Value)" />
+            <span>Committed</span>
+        </label>
+    }
+    <FieldError Keys="fieldErrors" Name="section" />
+    @foreach (var message in ExtraErrors())
+    {
+        <p class="field-error">@message</p>
+    }
+    @if (error is not null)
+    {
+        <p class="field-error">@error</p>
+    }
+    <div class="role-actions">
+        <button type="button" class="btn btn-primary btn-small" disabled="@Busy" @onclick="Save">Save</button>
+        <button type="button" class="btn btn-ghost btn-small" disabled="@Busy" @onclick="OnCancel">Cancel</button>
+        @if (Line is not null)
+        {
+            <button type="button" class="btn btn-danger btn-small" disabled="@Busy" @onclick="Delete">Delete</button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Year { get; set; }
+    [Parameter] public int Month { get; set; }
+    [Parameter] public string Section { get; set; } = "";
+    [Parameter] public BudgetLineResponse? Line { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string name = "";
+    private string dayText = "";
+    private string amountText = "";
+    private bool committed = true;
+    private string? error;
+    private IDictionary<string, string[]>? fieldErrors;
+    private bool SavingsAmount => string.Equals(Section, BudgetSections.Savings, StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnParametersSet()
+    {
+        if (Line is null)
+        {
+            if (string.IsNullOrWhiteSpace(dayText) && Clock.Year == Year && Clock.Month == Month && Clock.Day > 0)
+                dayText = Clock.Day.ToString();
+            return;
+        }
+
+        name = Line.Name;
+        dayText = Line.OnDate?.Day.ToString() ?? "";
+        amountText = Line.Amount?.ToString("0.##") ?? "";
+        committed = Line.Committed;
+    }
+
+    private async Task Save()
+    {
+        fieldErrors = null;
+        error = null;
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            error = "Name is required.";
+            return;
+        }
+
+        if (!int.TryParse(dayText, out var day) || day < 1 || day > DateTime.DaysInMonth(Year, Month))
+        {
+            error = "Day must be a date in this month.";
+            return;
+        }
+
+        decimal? amount = null;
+        if (!string.IsNullOrWhiteSpace(amountText))
+        {
+            if (!decimal.TryParse(amountText, out var parsed))
+            {
+                error = "Amount must be a number.";
+                return;
+            }
+
+            amount = parsed;
+            if (BudgetSections.AmountError(Section, amount) is { } amountError)
+            {
+                error = amountError;
+                return;
+            }
+        }
+
+        var request = new UpsertBudgetLineRequest
+        {
+            Name = name.Trim(),
+            Section = Section,
+            Amount = amount,
+            OnDate = new DateOnly(Year, Month, day),
+            Committed = Line is null || committed
+        };
+
+        var result = Line is null
+            ? await Budget.CreateLineAsync(Year, Month, request)
+            : await Budget.UpdateLineAsync(Line.LineId, request);
+
+        if (!result.Succeeded)
+        {
+            Show(result.FieldErrors, result.Error ?? "Could not save.");
+            return;
+        }
+
+        await OnSaved.InvokeAsync();
+    }
+
+    private async Task Delete()
+    {
+        if (Line is null)
+            return;
+        var result = await Budget.DeleteLineAsync(Line.LineId);
+        if (!result.Succeeded)
+        {
+            Show(result.FieldErrors, result.Error ?? "Could not delete.");
+            return;
+        }
+
+        await OnSaved.InvokeAsync();
+    }
+
+    private void Show(IDictionary<string, string[]>? fields, string fallback)
+    {
+        fieldErrors = fields;
+        error = fields is { Count: > 0 } ? null : fallback;
+    }
+
+    private IEnumerable<string> ExtraErrors()
+    {
+        if (fieldErrors is null)
+            yield break;
+
+        var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "name", "section", "amount", "on_date", "committed" };
+        foreach (var pair in fieldErrors)
+        {
+            if (known.Contains(pair.Key))
+                continue;
+            foreach (var message in pair.Value)
+            {
+                if (!string.IsNullOrWhiteSpace(message))
+                    yield return message;
+            }
+        }
+    }
+
+    private static bool IsChecked(object? value) =>
+        value is true || (value is string text && bool.TryParse(text, out var parsed) && parsed);
+}

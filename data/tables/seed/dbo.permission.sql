@@ -9,3 +9,8 @@ INSERT INTO permission (resource, action) VALUES
     ('permission', 'update'),
     ('setting', 'read'),
     ('setting', 'update');
+
+/* Migration { "title": "01:budget" } */
+INSERT INTO permission (resource, action) VALUES
+    ('budget', 'read'),
+    ('budget', 'update');

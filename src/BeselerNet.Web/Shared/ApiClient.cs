@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace BeselerNet.Web.Shared;
 
-internal sealed class ApiClient(IHttpClientFactory httpFactory, AuthCookie cookie, TokenRefresher refresher, SessionActivity activity)
+internal sealed class ApiClient(IHttpClientFactory httpFactory, AuthCookie cookie, TokenRefresher refresher, SessionActivity activity, ClientClock clock)
 {
     public const string ClientName = "beseler-net-api";
 
@@ -12,6 +12,7 @@ internal sealed class ApiClient(IHttpClientFactory httpFactory, AuthCookie cooki
     private readonly AuthCookie _cookie = cookie;
     private readonly TokenRefresher _refresher = refresher;
     private readonly SessionActivity _activity = activity;
+    private readonly ClientClock _clock = clock;
 
     public Task<ApiResult> PostAsync(string path, object? body = null, string? bearer = null, bool session = false, CancellationToken cancellationToken = default) =>
         SendAsync(HttpMethod.Post, path, body, bearer, session, cancellationToken);
@@ -63,6 +64,9 @@ internal sealed class ApiClient(IHttpClientFactory httpFactory, AuthCookie cooki
 
         if (!string.IsNullOrWhiteSpace(token))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        if (!string.IsNullOrWhiteSpace(_clock.TimeZone))
+            request.Headers.TryAddWithoutValidation("X-Time-Zone", _clock.TimeZone);
 
         HttpResponseMessage response;
         try

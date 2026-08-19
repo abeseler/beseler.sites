@@ -1,0 +1,211 @@
+@inject BudgetService Budget
+
+<div class="auth-field">
+    <label>Name</label>
+    <input @bind="name" maxlength="128" disabled="@Busy" />
+    <FieldError Keys="fieldErrors" Name="name" />
+</div>
+<div class="auth-field">
+    <label>Section</label>
+    <select class="auth-select" @bind="section" disabled="@Busy">
+        <option value="@BudgetSections.Income">income</option>
+        <option value="@BudgetSections.Expense">expense</option>
+        <option value="@BudgetSections.Savings">savings</option>
+    </select>
+    <FieldError Keys="fieldErrors" Name="section" />
+</div>
+<div class="auth-field">
+    <label>Amount</label>
+    <input inputmode="@(string.Equals(section, BudgetSections.Savings, StringComparison.OrdinalIgnoreCase) ? "text" : "decimal")" @bind="amountText" disabled="@Busy" />
+    <p class="budget-hint">@BudgetSections.AmountHint(section)</p>
+    <FieldError Keys="fieldErrors" Name="amount" />
+</div>
+<div class="auth-field">
+    <label>Schedule</label>
+    <select class="auth-select" @bind="schedule" disabled="@Busy">
+        <option value="@BudgetSchedules.Monthly">monthly · a specific day each month</option>
+        <option value="@BudgetSchedules.Weekly">every week</option>
+        <option value="@BudgetSchedules.Biweekly">every 2 weeks</option>
+        <option value="@BudgetSchedules.Interval">every N days</option>
+    </select>
+    <FieldError Keys="fieldErrors" Name="schedule_type" />
+</div>
+@if (schedule == BudgetSchedules.Monthly)
+{
+    <div class="auth-field">
+        <label>Day of month</label>
+        <input inputmode="numeric" @bind="dayText" disabled="@Busy" />
+        <p class="budget-hint">Same calendar day each month. If that day does not exist (31 in April, February), the last day of the month is used.</p>
+        <FieldError Keys="fieldErrors" Name="day_of_month" />
+    </div>
+}
+else
+{
+    @if (schedule == BudgetSchedules.Interval)
+    {
+        <div class="auth-field">
+            <label>Every how many days</label>
+            <input inputmode="numeric" @bind="intervalText" disabled="@Busy" />
+            <FieldError Keys="fieldErrors" Name="interval_days" />
+        </div>
+    }
+    <div class="auth-field">
+        <label>Starts on</label>
+        <input type="date" @bind="anchor" disabled="@Busy" />
+        <p class="budget-hint">@AnchorHint</p>
+        <FieldError Keys="fieldErrors" Name="anchor_date" />
+    </div>
+}
+@foreach (var message in ExtraErrors())
+{
+    <p class="field-error">@message</p>
+}
+@if (error is not null)
+{
+    <p class="field-error">@error</p>
+}
+<div class="role-actions">
+    <button type="button" class="btn btn-primary btn-small" disabled="@Busy" @onclick="Save">Save</button>
+    <button type="button" class="btn btn-ghost btn-small" disabled="@Busy" @onclick="OnCancel">Cancel</button>
+</div>
+
+@code {
+    [Parameter] public BudgetTemplateResponse? Template { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string name = "";
+    private string section = BudgetSections.Income;
+    private string amountText = "";
+    private string schedule = BudgetSchedules.Monthly;
+    private string dayText = "1";
+    private string intervalText = "10";
+    private DateTime? anchor;
+    private string? error;
+    private IDictionary<string, string[]>? fieldErrors;
+
+    private string AnchorHint => schedule switch
+    {
+        BudgetSchedules.Weekly => "Repeats every 7 days from this date.",
+        BudgetSchedules.Biweekly => "Repeats every 14 days from this date. Some months get three occurrences.",
+        BudgetSchedules.Interval => "Repeats every N days from this date.",
+        _ => ""
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (Template is null)
+            return;
+        name = Template.Name;
+        section = Template.Section;
+        amountText = Template.Amount?.ToString("0.##") ?? "";
+        schedule = Template.ScheduleType;
+        dayText = Template.DayOfMonth?.ToString() ?? "1";
+        intervalText = Template.IntervalDays?.ToString() ?? "10";
+        anchor = Template.AnchorDate?.ToDateTime(TimeOnly.MinValue);
+    }
+
+    private async Task Save()
+    {
+        fieldErrors = null;
+        error = null;
+
+        decimal? amount = null;
+        if (!string.IsNullOrWhiteSpace(amountText))
+        {
+            if (!decimal.TryParse(amountText, out var parsed))
+            {
+                error = "Amount must be a number.";
+                return;
+            }
+
+            amount = parsed;
+            if (BudgetSections.AmountError(section, amount) is { } amountError)
+            {
+                error = amountError;
+                return;
+            }
+        }
+
+        int? day = null;
+        int? interval = null;
+        DateOnly? anchorDate = null;
+        if (schedule == BudgetSchedules.Monthly)
+        {
+            if (!int.TryParse(dayText, out var parsedDay) || parsedDay is < 1 or > 31)
+            {
+                error = "Day of month must be 1-31. Shorter months use their last day.";
+                return;
+            }
+
+            day = parsedDay;
+        }
+        else
+        {
+            if (schedule == BudgetSchedules.Interval)
+            {
+                if (!int.TryParse(intervalText, out var parsedInterval) || parsedInterval is < 1 or > 365)
+                {
+                    error = "Interval must be between 1 and 365 days.";
+                    return;
+                }
+
+                interval = parsedInterval;
+            }
+
+            if (anchor is null)
+            {
+                error = "A start date is required for this schedule.";
+                return;
+            }
+
+            anchorDate = DateOnly.FromDateTime(anchor.Value);
+        }
+
+        var request = new UpsertBudgetTemplateRequest
+        {
+            Name = name.Trim(),
+            Section = section,
+            Amount = amount,
+            ScheduleType = schedule,
+            DayOfMonth = day,
+            IntervalDays = interval,
+            AnchorDate = anchorDate
+        };
+
+        var result = Template is null
+            ? await Budget.CreateTemplateAsync(request)
+            : await Budget.UpdateTemplateAsync(Template.TemplateId, request);
+
+        if (!result.Succeeded)
+        {
+            fieldErrors = result.FieldErrors;
+            error = result.FieldErrors is { Count: > 0 } ? null : result.Error ?? "Could not save.";
+            return;
+        }
+
+        await OnSaved.InvokeAsync();
+    }
+
+    private IEnumerable<string> ExtraErrors()
+    {
+        if (fieldErrors is null)
+            yield break;
+
+        var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "name", "section", "amount", "schedule_type", "day_of_month", "interval_days", "anchor_date"
+        };
+        foreach (var pair in fieldErrors)
+        {
+            if (known.Contains(pair.Key))
+                continue;
+            foreach (var message in pair.Value)
+            {
+                if (!string.IsNullOrWhiteSpace(message))
+                    yield return message;
+            }
+        }
+    }
+}

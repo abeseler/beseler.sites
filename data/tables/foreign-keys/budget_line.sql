@@ -4,3 +4,11 @@ ALTER TABLE budget_line
         FOREIGN KEY (budget_period_id) REFERENCES budget_period (budget_period_id) ON DELETE CASCADE,
     ADD CONSTRAINT fk_budget_line_template
         FOREIGN KEY (budget_recurring_template_id) REFERENCES budget_recurring_template (budget_recurring_template_id) ON DELETE CASCADE;
+
+/* Migration { "title": "01:templateOnDeleteSetNull" } */
+ALTER TABLE budget_line
+    DROP CONSTRAINT fk_budget_line_template,
+    ADD CONSTRAINT fk_budget_line_template
+        FOREIGN KEY (budget_recurring_template_id)
+        REFERENCES budget_recurring_template (budget_recurring_template_id)
+        ON DELETE SET NULL;

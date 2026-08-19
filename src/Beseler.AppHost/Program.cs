@@ -3,9 +3,11 @@ using Projects;
 var builder = DistributedApplication.CreateBuilder(args);
 
 var cache = builder.AddRedis("Cache")
+    .WithLifetime(ContainerLifetime.Persistent)
     .WithRedisInsight();
 
 var postgres = builder.AddPostgres("postgres")
+    .WithLifetime(ContainerLifetime.Persistent)
     .WithPgWeb();
 
 var database = postgres.AddDatabase("Database", "app")
@@ -68,44 +70,8 @@ var beselerNetWeb = builder.AddProject<BeselerNet_Web>("beseler-net-web")
         });
         ctx.Urls.Add(new ResourceUrlAnnotation
         {
-            Url = "/account/login",
-            DisplayText = "Login",
-            Endpoint = ctx.GetEndpoint("https")
-        });
-        ctx.Urls.Add(new ResourceUrlAnnotation
-        {
-            Url = "/budget",
-            DisplayText = "Budget",
-            Endpoint = ctx.GetEndpoint("https")
-        });
-        ctx.Urls.Add(new ResourceUrlAnnotation
-        {
-            Url = "/roles",
-            DisplayText = "Roles",
-            Endpoint = ctx.GetEndpoint("https")
-        });
-        ctx.Urls.Add(new ResourceUrlAnnotation
-        {
-            Url = "/account",
-            DisplayText = "Account",
-            Endpoint = ctx.GetEndpoint("https")
-        });
-        ctx.Urls.Add(new ResourceUrlAnnotation
-        {
-            Url = "/accounts",
-            DisplayText = "Users",
-            Endpoint = ctx.GetEndpoint("https")
-        });
-        ctx.Urls.Add(new ResourceUrlAnnotation
-        {
-            Url = "/settings",
-            DisplayText = "Settings",
-            Endpoint = ctx.GetEndpoint("https")
-        });
-        ctx.Urls.Add(new ResourceUrlAnnotation
-        {
-            Url = "/account/confirm-email",
-            DisplayText = "Confirm email",
+            Url = "/account/signup",
+            DisplayText = "Sign up",
             Endpoint = ctx.GetEndpoint("https")
         });
     });

@@ -1,0 +1,267 @@
+@page "/budget/{Year:int}"
+@inject BudgetService Budget
+@inject ClientClock Clock
+@inject AccountSession Session
+@inject NavigationManager Nav
+@inject IJSRuntime Js
+
+<PageTitle>@SiteConstants.SiteName: @Year Budget</PageTitle>
+
+<RequirePermission Resource="@Resources.Budget" Action="@Actions.Read">
+@if (loading)
+{
+    <div class="app-main">
+        <p class="kicker">Budget</p>
+        <p class="page-lede">Loading…</p>
+    </div>
+}
+else if (year is null)
+{
+    <BudgetStart Year="Year" OnStarted="_ => Reload()" />
+}
+else
+{
+    <div class="app-main app-main-wide">
+        <p class="kicker">Budget</p>
+        <div class="budget-bar">
+            <div class="budget-bar-nav">
+                <span class="budget-bar-title">@Year</span>
+                @if (CanUpdate && Year >= Clock.Year)
+                {
+                    <button type="button" class="budget-edit-icon budget-danger-icon" title="Start over" aria-label="Start over" aria-expanded="@startingOver" @onclick="ToggleStartOver">
+                        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                            <path fill="currentColor" d="M6 1.5h4l.4 1H14v1.3H2V2.5h3.6L6 1.5zm-.2 4h1.3l.5 7H6.3l-.5-7zm3.1 0h1.3l-.5 7H8.4l.5-7zM3.7 5.5H5l.6 7.5H4.2L3.7 5.5zm7.3 0h1.3l-.5 7.5H10.4l.6-7.5z"/>
+                        </svg>
+                    </button>
+                }
+            </div>
+            <div class="budget-bar-links">
+                <a href="@Routes.BudgetMonth(Year, Clock.Year == Year ? Clock.Month : 1)">This month</a>
+                <a href="@Routes.BudgetTemplates">Templates</a>
+            </div>
+        </div>
+
+        @if (error is not null)
+        {
+            <p class="auth-alert" role="alert">@error</p>
+        }
+        @if (notice is not null)
+        {
+            <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
+        }
+
+        @if (startingOver)
+        {
+            <section class="role-card budget-start-over">
+                <span class="tile-kicker">Start over</span>
+                <p class="page-lede">Deletes @Year and every line in it. No undo.</p>
+                @if (Year == Clock.Year)
+                {
+                    <div class="auth-field">
+                        <label for="confirm-year">Type @Year to confirm</label>
+                        <input id="confirm-year" @bind="confirmYear" disabled="@busy" />
+                    </div>
+                }
+                <div class="role-actions">
+                    <button type="button" class="btn btn-danger" disabled="@busy" @onclick="DeleteYear">Delete @Year</button>
+                    <button type="button" class="btn btn-ghost" disabled="@busy" @onclick="ToggleStartOver">Keep @Year</button>
+                </div>
+            </section>
+        }
+
+        <section class="role-card">
+            <span class="tile-kicker">January starting balance</span>
+            @if (CanUpdate && editingBalance)
+            {
+                <div class="budget-start-edit">
+                    <input inputmode="decimal" @bind="balanceText" disabled="@busy" />
+                    <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="SaveBalance">Save</button>
+                </div>
+            }
+            else
+            {
+                <div class="budget-start-lock">
+                    <BudgetMoney Value="year.StartingBalance" Extra="account-static" />
+                    @if (CanUpdate)
+                    {
+                        <button type="button" class="budget-edit-icon" title="Edit starting balance" aria-label="Edit starting balance" @onclick="BeginEditBalance">
+                            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                                <path fill="currentColor" d="M11.6 1.4a1.4 1.4 0 0 1 2 2L5.2 11.8 2 12.8l1-3.2 8.6-8.2zM3.4 10.7l-.4 1.3 1.3-.4 6.9-6.9-1-1-6.8 7z"/>
+                            </svg>
+                        </button>
+                    }
+                </div>
+            }
+        </section>
+
+        <div class="budget-totals">
+            <div>
+                <span class="tile-kicker">@(IsCurrentYear ? "Checking now" : "Year end")</span>
+                <BudgetMoney Value="CheckingNow" />
+            </div>
+            <div>
+                <span class="tile-kicker">Cash flow</span>
+                <BudgetMoney Value="YearCashFlow" />
+            </div>
+            <div>
+                <span class="tile-kicker">Saved</span>
+                <BudgetMoney Value="YearSaved" />
+            </div>
+        </div>
+
+        <section class="role-card">
+            <span class="tile-kicker">Months</span>
+            <div class="budget-month-head">
+                <span></span>
+                <span>Cash flow</span>
+                <span>Checking</span>
+            </div>
+            <div class="budget-month-list">
+                @foreach (var item in year.Months)
+                {
+                    <a class="budget-month-row @(IsNow(item.Month) ? "is-now" : null)" href="@Routes.BudgetMonth(Year, item.Month)">
+                        <span class="budget-month-name">@Abbrev(item.Month)</span>
+                        <BudgetMoney Value="item.CashFlow" Extra="budget-month-flow" />
+                        <BudgetMoney Value="item.EndingBalance" Extra="budget-month-check" />
+                    </a>
+                }
+            </div>
+        </section>
+    </div>
+}
+</RequirePermission>
+
+@code {
+    [Parameter] public int Year { get; set; }
+
+    private BudgetYearResponse? year;
+    private bool loading = true;
+    private bool busy;
+    private string? error;
+    private string? notice;
+    private string balanceText = "";
+    private string confirmYear = "";
+    private bool editingBalance;
+    private bool startingOver;
+
+    private bool CanUpdate => Session.HasPermission(Resources.Budget, Actions.Update);
+    private bool IsCurrentYear => Clock.Year == Year;
+
+    private decimal CheckingNow
+    {
+        get
+        {
+            if (year is null || year.Months.Count == 0)
+                return 0;
+            var month = IsCurrentYear && Clock.Month is >= 1 and <= 12 ? Clock.Month : 12;
+            return year.Months.FirstOrDefault(item => item.Month == month)?.EndingBalance
+                ?? year.Months[^1].EndingBalance;
+        }
+    }
+
+    private decimal YearCashFlow => year?.Months.Sum(item => item.CashFlow) ?? 0;
+    private decimal YearSaved => year?.Months.Sum(item => item.Savings) ?? 0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await Clock.EnsureAsync(Js);
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        loading = true;
+        error = null;
+        var result = await Budget.GetYearAsync(Year);
+        loading = false;
+        if (result.StatusCode is System.Net.HttpStatusCode.NotFound)
+        {
+            year = null;
+            return;
+        }
+
+        if (!result.Succeeded || result.Value is null)
+        {
+            year = null;
+            error = result.Error ?? "Could not load that year.";
+            return;
+        }
+
+        year = result.Value;
+        balanceText = year.StartingBalance.ToString("0.##");
+        editingBalance = false;
+    }
+
+    private void BeginEditBalance()
+    {
+        if (year is null)
+            return;
+        balanceText = year.StartingBalance.ToString("0.##");
+        editingBalance = true;
+    }
+
+    private async Task SaveBalance()
+    {
+        if (year is null)
+            return;
+
+        if (!decimal.TryParse(balanceText, out var balance))
+        {
+            error = "Starting balance must be a number.";
+            return;
+        }
+
+        if (balance == year.StartingBalance)
+        {
+            editingBalance = false;
+            return;
+        }
+
+        busy = true;
+        error = null;
+        var result = await Budget.SetStartingBalanceAsync(Year, balance);
+        busy = false;
+        if (!result.Succeeded || result.Value is null)
+        {
+            error = result.Error ?? "Could not save.";
+            return;
+        }
+
+        year = result.Value;
+        balanceText = year.StartingBalance.ToString("0.##");
+        editingBalance = false;
+        notice = "Starting balance saved.";
+    }
+
+    private void ToggleStartOver()
+    {
+        startingOver = !startingOver;
+        confirmYear = "";
+        error = null;
+    }
+
+    private async Task DeleteYear()
+    {
+        if (Year == Clock.Year && confirmYear != Year.ToString())
+        {
+            error = $"Type {Year} to delete this year.";
+            return;
+        }
+
+        busy = true;
+        error = null;
+        var result = await Budget.DeleteYearAsync(Year);
+        busy = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not delete that year.";
+            return;
+        }
+
+        Nav.NavigateTo(Routes.Budget);
+    }
+
+    private bool IsNow(int month) => IsCurrentYear && Clock.Month == month;
+
+    private static string Abbrev(int month) => new DateOnly(2000, month, 1).ToString("MMM");
+}

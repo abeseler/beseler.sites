@@ -32,3 +32,24 @@ CREATE INDEX idx_budget_line_period ON budget_line (budget_period_id);
 CREATE UNIQUE INDEX uq_budget_line_period_template
     ON budget_line (budget_period_id, budget_recurring_template_id)
     WHERE budget_recurring_template_id IS NOT NULL;
+
+/* Migration { "title": "03:dropUniquePeriodTemplate" } */
+DROP INDEX uq_budget_line_period_template;
+
+/* Migration { "title": "04:indexPeriodTemplate" } */
+CREATE INDEX idx_budget_line_period_template
+    ON budget_line (budget_period_id, budget_recurring_template_id)
+    WHERE budget_recurring_template_id IS NOT NULL;
+
+/* Migration { "title": "05:reshapeColumns" } */
+ALTER TABLE budget_line
+    DROP COLUMN include_in_cashflow,
+    DROP COLUMN estimated_date,
+    DROP COLUMN actual_date,
+    DROP COLUMN estimated_amount,
+    DROP COLUMN actual_amount,
+    DROP COLUMN origin,
+    DROP COLUMN status,
+    ADD COLUMN amount NUMERIC(12,2) NULL,
+    ADD COLUMN on_date DATE NULL,
+    ADD COLUMN committed BOOLEAN NOT NULL DEFAULT false;
