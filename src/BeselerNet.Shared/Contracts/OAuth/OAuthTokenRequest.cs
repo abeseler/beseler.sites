@@ -28,6 +28,7 @@ public sealed record OAuthTokenRequest
             if (string.IsNullOrWhiteSpace(Username)) errors.Add("username", "Username is required.");
             if (string.IsNullOrWhiteSpace(Password)) errors.Add("password", "Password is required.");
             if (string.IsNullOrWhiteSpace(ClientId)) errors.Add("client_id", "Client ID is required.");
+            if (string.IsNullOrWhiteSpace(ClientSecret)) errors.Add("client_secret", "Client secret is required.");
         }
         else if (GrantType == OAuthGrantType.client_credentials)
         {

@@ -1,5 +1,7 @@
 using Beseler.ServiceDefaults;
+using BeselerNet.Shared;
 using BeselerNet.Web.Components;
+using Microsoft.Extensions.Options;
 using BeselerNet.Web.Features.Account;
 using BeselerNet.Web.Features.Accounts;
 using BeselerNet.Web.Features.Roles;
@@ -20,6 +22,7 @@ builder.Services.AddSingleton<SessionActivity>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddOptions<OAuthOptions>().BindConfiguration(OAuthOptions.SectionName);
 builder.Services.AddScoped<AuthCookie>();
 builder.Services.AddScoped<TokenRefresher>();
 builder.Services.AddScoped<ApiClient>();
@@ -38,6 +41,10 @@ var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
 {
+    var oauth = app.Services.GetRequiredService<IOptions<OAuthOptions>>().Value;
+    if (string.IsNullOrWhiteSpace(oauth.WebClientSecret))
+        throw new InvalidOperationException("OAuth:WebClientSecret is required.");
+
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
 }

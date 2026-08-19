@@ -451,6 +451,24 @@ a.tile-app:hover {
     color: var(--muted);
 }
 
+.access-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin-top: 0.65rem;
+}
+
+.access-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.access-from {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
 .perm-chips {
     display: flex;
     flex-wrap: wrap;

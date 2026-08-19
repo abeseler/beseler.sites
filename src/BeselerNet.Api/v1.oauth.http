@@ -1,6 +1,8 @@
 @host={{$projectUrl}}
 @email=testing@beseler.net
 @password=password
+@clientId=beseler-net-web
+@clientSecret=local-dev-web-client-secret
 
 ### Get token
 
@@ -11,7 +13,9 @@ Content-Type: application/json
 {
   "grant_type": "password",
   "username": "{{email}}",
-  "password": "{{password}}"
+  "password": "{{password}}",
+  "client_id": "{{clientId}}",
+  "client_secret": "{{clientSecret}}"
 }
 
 ### Get token with refresh token

@@ -19,44 +19,41 @@
         <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
     }
 
-    @if (CanManage)
+    @if (CanManage && !creating)
     {
-        @if (creating)
-        {
-            <section class="role-card">
-                <span class="tile-kicker">New role</span>
-                <div class="auth-field">
-                    <label for="new-role-name">Name</label>
-                    <input id="new-role-name" @bind="editName" maxlength="64" disabled="@busy" />
-                </div>
-                <PermissionPicker Catalog="catalog" Selected="selected" Disabled="busy" />
-                <div class="role-actions">
-                    <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="Create">
-                        @(busy ? "Saving…" : "Create role")
-                    </button>
-                    <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="CancelEdit">Cancel</button>
-                </div>
-            </section>
-        }
-        else
-        {
-            <p class="role-toolbar">
-                <button type="button" class="btn btn-primary btn-small" @onclick="StartCreate">New role</button>
-            </p>
-        }
+        <p class="role-toolbar">
+            <button type="button" class="btn btn-primary btn-small" @onclick="StartCreate">New role</button>
+        </p>
     }
 
     @if (loading)
     {
         <p class="page-lede">Loading roles…</p>
     }
-    else if (roles.Count == 0)
+    else if (roles.Count == 0 && !creating)
     {
         <p class="muted-empty">No roles yet.</p>
     }
     else
     {
         <div class="role-list">
+            @if (creating)
+            {
+                <section class="role-card">
+                    <span class="tile-kicker">New role</span>
+                    <div class="auth-field">
+                        <label for="new-role-name">Name</label>
+                        <input id="new-role-name" @bind="editName" maxlength="64" disabled="@busy" />
+                    </div>
+                    <PermissionPicker Catalog="catalog" Selected="selected" Disabled="busy" />
+                    <div class="role-actions">
+                        <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="Create">
+                            @(busy ? "Saving…" : "Create role")
+                        </button>
+                        <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="CancelEdit">Cancel</button>
+                    </div>
+                </section>
+            }
             @foreach (var role in roles)
             {
                 var editingThis = editingId == role.RoleId;

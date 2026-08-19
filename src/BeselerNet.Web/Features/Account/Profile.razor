@@ -1,5 +1,6 @@
 @attribute [Route(Routes.Account)]
 @inject AccountsService AccountsApi
+@inject AccountService AccountApi
 @inject AccountSession Session
 
 <PageTitle>@SiteConstants.SiteName: Account</PageTitle>
@@ -14,54 +15,84 @@
     {
         <p class="auth-alert" role="alert">@error</p>
     }
-    @if (saved)
+    @if (notice is not null)
     {
-        <NoticeOk OnDismiss="() => saved = false">Name saved.</NoticeOk>
+        <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
     }
 
-    <section class="role-card">
-        <div class="auth-field">
-            <label>Email</label>
-            <p class="account-static">@(Session.Profile?.Email ?? "—")</p>
-        </div>
-        <div class="auth-field">
-            <label>Roles</label>
-            <p class="account-static">@rolesLabel</p>
-        </div>
-
-        @if (CanUpdate)
-        {
+    <div class="role-list">
+        <section class="role-card">
             <div class="auth-field">
-                <label for="given">Given name</label>
-                <input id="given" @bind="givenName" maxlength="64" disabled="@busy" />
+                <label>Email</label>
+                <p class="account-static">@(Session.Profile?.Email ?? "—")</p>
             </div>
             <div class="auth-field">
-                <label for="family">Family name</label>
-                <input id="family" @bind="familyName" maxlength="64" disabled="@busy" />
+                <label>Roles</label>
+                <p class="account-static">@rolesLabel</p>
+            </div>
+
+            @if (CanUpdate)
+            {
+                <div class="auth-field">
+                    <label for="given">Given name</label>
+                    <input id="given" @bind="givenName" maxlength="64" disabled="@busy" />
+                </div>
+                <div class="auth-field">
+                    <label for="family">Family name</label>
+                    <input id="family" @bind="familyName" maxlength="64" disabled="@busy" />
+                </div>
+                <div class="role-actions">
+                    <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="Save">
+                        @(busy ? "Saving…" : "Save")
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="auth-field">
+                    <label>Name</label>
+                    <p class="account-static">@(Session.Name ?? "—")</p>
+                </div>
+            }
+        </section>
+
+        <section class="role-card">
+            <span class="tile-kicker">Password</span>
+            <input type="text" value="@Session.Profile?.Email" autocomplete="username" class="visually-hidden" tabindex="-1" readonly />
+            <div class="auth-field">
+                <label for="current-password">Current password</label>
+                <input id="current-password" type="password" @bind="currentPassword" autocomplete="current-password" disabled="@busy" />
+                <FieldError Keys="passwordErrors" Name="current_password" />
+            </div>
+            <div class="auth-field">
+                <label for="new-password">New password</label>
+                <input id="new-password" type="password" @bind="newPassword" autocomplete="new-password" disabled="@busy" />
+                <FieldError Keys="passwordErrors" Name="password" />
+            </div>
+            <div class="auth-field">
+                <label for="confirm-password">Confirm new password</label>
+                <input id="confirm-password" type="password" @bind="confirmPassword" autocomplete="new-password" disabled="@busy" />
             </div>
             <div class="role-actions">
-                <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="Save">
-                    @(busy ? "Saving…" : "Save")
+                <button type="button" class="btn btn-primary btn-small" disabled="@busy" @onclick="ChangePassword">
+                    @(busy ? "Saving…" : "Update password")
                 </button>
             </div>
-        }
-        else
-        {
-            <div class="auth-field">
-                <label>Name</label>
-                <p class="account-static">@(Session.Name ?? "—")</p>
-            </div>
-        }
-    </section>
+        </section>
+    </div>
 </div>
 </RequirePermission>
 
 @code {
     private string givenName = "";
     private string familyName = "";
+    private string currentPassword = "";
+    private string newPassword = "";
+    private string confirmPassword = "";
+    private IDictionary<string, string[]>? passwordErrors;
     private bool busy;
-    private bool saved;
     private string? error;
+    private string? notice;
 
     private bool CanUpdate => Session.HasPermission(Resources.Account, Actions.Update);
     private string rolesLabel =>
@@ -81,7 +112,7 @@
             return;
 
         busy = true;
-        saved = false;
+        notice = null;
         error = null;
         var result = await AccountsApi.UpdateAsync(Session.Profile.AccountId, givenName, familyName);
         busy = false;
@@ -95,6 +126,35 @@
         await Session.RefreshProfileAsync();
         givenName = Session.Profile?.GivenName ?? givenName;
         familyName = Session.Profile?.FamilyName ?? familyName;
-        saved = true;
+        notice = "Name saved.";
+    }
+
+    private async Task ChangePassword()
+    {
+        passwordErrors = null;
+        error = null;
+        notice = null;
+
+        if (newPassword != confirmPassword)
+        {
+            error = "The two new passwords do not match.";
+            return;
+        }
+
+        busy = true;
+        var result = await AccountApi.ChangePasswordAsync(currentPassword, newPassword);
+        busy = false;
+
+        if (!result.Succeeded)
+        {
+            passwordErrors = result.FieldErrors;
+            error = result.FieldErrors is { Count: > 0 } ? null : result.Error ?? "Could not update the password.";
+            return;
+        }
+
+        currentPassword = "";
+        newPassword = "";
+        confirmPassword = "";
+        notice = "Password updated.";
     }
 }

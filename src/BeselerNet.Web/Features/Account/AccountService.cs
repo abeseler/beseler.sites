@@ -1,16 +1,17 @@
 using System.Net;
+using BeselerNet.Shared;
 using BeselerNet.Shared.Contracts.OAuth;
 using BeselerNet.Shared.Contracts.Users;
 using BeselerNet.Web.Shared;
+using Microsoft.Extensions.Options;
 
 namespace BeselerNet.Web.Features.Account;
 
-internal sealed class AccountService(ApiClient api, AccountSession session)
+internal sealed class AccountService(ApiClient api, AccountSession session, IOptions<OAuthOptions> oauth)
 {
-    private const string ClientId = "beseler-net-web";
-
     private readonly ApiClient _api = api;
     private readonly AccountSession _session = session;
+    private readonly OAuthOptions _oauth = oauth.Value;
 
     public async Task<ApiResult<string>> LoginAsync(string email, string password, bool persist = false, string? returnUrl = null, CancellationToken cancellationToken = default)
     {
@@ -19,7 +20,8 @@ internal sealed class AccountService(ApiClient api, AccountSession session)
             GrantType = OAuthGrantType.password,
             Username = email,
             Password = password,
-            ClientId = ClientId
+            ClientId = _oauth.WebClientId,
+            ClientSecret = _oauth.WebClientSecret
         }, cancellationToken: cancellationToken);
 
         if (result.IsLocked)
@@ -78,6 +80,13 @@ internal sealed class AccountService(ApiClient api, AccountSession session)
         var handoff = await _session.EstablishAsync(result.Value, persist, returnUrl, cancellationToken);
         return ApiResult<string>.Ok(handoff);
     }
+
+    public Task<ApiResult> ChangePasswordAsync(string currentPassword, string password, CancellationToken cancellationToken = default) =>
+        _api.PostAsync("/v1/accounts/change-password", new ChangePasswordRequest
+        {
+            CurrentPassword = currentPassword,
+            Password = password
+        }, session: true, cancellationToken: cancellationToken);
 
     public async Task<ApiResult> ResendVerificationAsync(CancellationToken cancellationToken = default)
     {

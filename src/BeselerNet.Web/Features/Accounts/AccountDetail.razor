@@ -26,6 +26,7 @@
     }
     else if (account is not null)
     {
+        <div class="role-list">
         <section class="role-card">
             <div class="role-card-head">
                 <span class="role-name">@account.Name</span>
@@ -154,6 +155,30 @@
                 }
             </section>
         }
+
+        @if (catalog.Count > 0)
+        {
+            <section class="role-card">
+                <span class="tile-kicker">Access</span>
+                @if (access.Count == 0)
+                {
+                    <p class="muted-empty">No permissions from their roles.</p>
+                }
+                else
+                {
+                    <div class="access-list">
+                        @foreach (var row in access)
+                        {
+                            <div class="access-row">
+                                <span>@row.Permission</span>
+                                <span class="access-from">@row.GrantedBy</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        }
+        </div>
     }
 </div>
 </RequirePermission>
@@ -164,6 +189,7 @@
     private int loadedId;
     private AccountResponse? account;
     private IReadOnlyList<RoleResponse> catalog = [];
+    private IReadOnlyList<AccessRow> access = [];
     private List<RoleEdit> edits = [];
     private string givenName = "";
     private string familyName = "";
@@ -209,7 +235,7 @@
 
         Apply(result.Value);
 
-        if (CanAdminister && Session.HasPermission(Resources.Role, Actions.Read))
+        if (Session.HasPermission(Resources.Role, Actions.Read))
         {
             var listed = await RolesApi.ListAsync();
             if (listed.Succeeded)
@@ -219,6 +245,7 @@
         }
 
         BindEdits();
+        BindAccess();
         loading = false;
     }
 
@@ -228,6 +255,43 @@
         givenName = value.GivenName ?? "";
         familyName = value.FamilyName ?? "";
         BindEdits();
+        BindAccess();
+    }
+
+    private void BindAccess()
+    {
+        if (account is null || catalog.Count == 0)
+        {
+            access = [];
+            return;
+        }
+
+        var byId = catalog.ToDictionary(role => role.RoleId);
+        var granted = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var assigned in account.Roles)
+        {
+            if (!byId.TryGetValue(assigned.RoleId, out var role))
+                continue;
+
+            var from = $"{assigned.Name} ({assigned.Scope})";
+            foreach (var permission in role.Permissions)
+            {
+                var key = $"{permission.Resource}:{permission.Action}";
+                if (!granted.TryGetValue(key, out var roles))
+                {
+                    roles = [];
+                    granted[key] = roles;
+                }
+
+                if (!roles.Contains(from, StringComparer.Ordinal))
+                    roles.Add(from);
+            }
+        }
+
+        access = granted
+            .OrderBy(row => row.Key, StringComparer.Ordinal)
+            .Select(row => new AccessRow(row.Key, string.Join(", ", row.Value)))
+            .ToArray();
     }
 
     private void BindEdits()
@@ -353,6 +417,8 @@
 
     private static string When(DateTimeOffset? value) =>
         value is { } time ? time.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "never";
+
+    private sealed record AccessRow(string Permission, string GrantedBy);
 
     private sealed class RoleEdit
     {

@@ -172,5 +172,15 @@ internal static class AccountEndpoints
             .Produces(Status401Unauthorized)
             .ProducesProblem(Status403Forbidden, Application.Json)
             .RequireAuthorization();
+
+        v1.MapPost("/change-password", ChangePasswordHandler.Handle)
+            .WithName("ChangePassword")
+            .WithDescription("Change the signed-in account's password. Requires the current password.")
+            .Accepts<ChangePasswordRequest>(Application.Json)
+            .Produces(Status204NoContent)
+            .ProducesValidationProblem(Status400BadRequest, Application.Json)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .RequireAuthorization();
     }
 }

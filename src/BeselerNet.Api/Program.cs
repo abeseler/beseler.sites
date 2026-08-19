@@ -1,5 +1,7 @@
 using Beseler.ServiceDefaults;
+using BeselerNet.Shared;
 using BeselerNet.Api.Accounts;
+using Microsoft.Extensions.Options;
 using BeselerNet.Api.Accounts.EventHandlers;
 using BeselerNet.Api.Accounts.OAuth;
 using BeselerNet.Api.Communications;
@@ -35,6 +37,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton(TimeProvider.System);
 
 builder.Services.AddOptions<JwtOptions>().BindConfiguration(JwtOptions.SectionName);
+builder.Services.AddOptions<OAuthOptions>().BindConfiguration(OAuthOptions.SectionName);
 builder.Services.AddSingleton<JwtGenerator>();
 builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
 builder.Services.AddScoped<Cookies>();
@@ -52,6 +55,13 @@ builder.AddEmailProvider(options =>
 });
 
 var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    var oauth = app.Services.GetRequiredService<IOptions<OAuthOptions>>().Value;
+    if (string.IsNullOrWhiteSpace(oauth.WebClientSecret))
+        throw new InvalidOperationException("OAuth:WebClientSecret is required.");
+}
 
 app.UseExceptionHandler();
 app.UseRequestLogging();

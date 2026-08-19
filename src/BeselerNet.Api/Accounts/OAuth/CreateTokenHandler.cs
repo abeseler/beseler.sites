@@ -1,6 +1,8 @@
 ﻿using BeselerNet.Api.Core;
+using BeselerNet.Shared;
 using BeselerNet.Shared.Contracts.OAuth;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using System.Diagnostics;
 using System.Security.Claims;
@@ -20,6 +22,7 @@ internal sealed class CreateTokenHandler
         public JwtGenerator TokenGenerator { get; init; }
         public TokenLogDataSource TokenLogs { get; init; }
         public Cookies Cookies { get; init; }
+        public IOptions<OAuthOptions> OAuth { get; init; }
         public CancellationToken CancellationToken { get; init; }
     }
 
@@ -28,6 +31,12 @@ internal sealed class CreateTokenHandler
         if (parameters.Request.IsInvalid(out var errors))
         {
             return TypedResults.ValidationProblem(errors);
+        }
+
+        if (parameters.Request.GrantType is OAuthGrantType.password
+            && !parameters.OAuth.Value.IsWebClient(parameters.Request.ClientId, parameters.Request.ClientSecret))
+        {
+            return TypedResults.Unauthorized();
         }
 
         return parameters.Request.GrantType switch
