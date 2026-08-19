@@ -592,6 +592,30 @@ a.tile-app:hover {
     top: 0.5rem;
 }
 
+#components-reconnect-modal {
+    width: calc(100% - 2.5rem);
+    max-width: 26rem;
+    margin: auto;
+    padding: 2rem 1.75rem 1.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+    font-family: "IBM Plex Mono", ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+    font-size: 16px;
+    line-height: 1.65;
+    color-scheme: dark;
+}
+
+#components-reconnect-modal:focus {
+    outline: none;
+}
+
+#components-reconnect-modal::backdrop {
+    background: rgba(14, 17, 18, 0.78);
+}
+
 .budget-bar {
     display: flex;
     flex-wrap: wrap;

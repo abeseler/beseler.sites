@@ -1,0 +1,45 @@
+.components-reconnect-first-attempt-visible,
+.components-reconnect-repeated-attempt-visible,
+.components-reconnect-failed-visible,
+.components-pause-visible,
+.components-resume-failed-visible,
+.components-rejoining-animation {
+    display: none;
+}
+
+#components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible,
+#components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-paused .components-pause-visible,
+#components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible {
+    display: block;
+}
+
+#components-reconnect-modal.components-reconnect-show .components-rejoining-animation,
+#components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation {
+    display: block;
+}
+
+#components-reconnect-modal.components-reconnect-failed .btn-row.components-reconnect-failed-visible,
+#components-reconnect-modal.components-reconnect-paused .btn-row.components-pause-visible,
+#components-reconnect-modal.components-reconnect-resume-failed .btn-row.components-resume-failed-visible {
+    display: flex;
+}
+
+#components-reconnect-modal.components-reconnect-resume-failed .btn.components-resume-failed-visible {
+    display: inline-flex;
+}
+
+.components-rejoining-animation {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: -0.5rem 0 1rem;
+    border: 2px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: reconnect-spin 0.7s linear infinite;
+}
+
+@keyframes reconnect-spin {
+    to { transform: rotate(360deg); }
+}

@@ -1,0 +1,35 @@
+<script type="module" src="@Assets["Layouts/ReconnectModal.razor.js"]"></script>
+
+<dialog id="components-reconnect-modal" data-nosnippet aria-live="polite" aria-label="Connection status">
+    <div class="auth-brand">
+        <span class="auth-brand-mark">beseler</span>
+        <span class="auth-brand-name">Beseler <span>.NET</span></span>
+    </div>
+
+    <div class="components-rejoining-animation" aria-hidden="true"></div>
+
+    <p class="auth-lede components-reconnect-first-attempt-visible">
+        Connection dropped. Rejoining…
+    </p>
+    <p class="auth-lede components-reconnect-repeated-attempt-visible">
+        Still trying. Next attempt in <span id="components-seconds-to-next-attempt"></span> seconds.
+    </p>
+    <p class="auth-lede components-reconnect-failed-visible">
+        Couldn't rejoin. Retry, or reload the page.
+    </p>
+    <p class="auth-lede components-pause-visible">
+        The server paused this session.
+    </p>
+    <p class="auth-lede components-resume-failed-visible">
+        Couldn't resume. Retry, or reload the page.
+    </p>
+
+    <div class="btn-row components-reconnect-failed-visible">
+        <button type="button" id="components-reconnect-button" class="btn btn-primary">Retry</button>
+        <button type="button" class="btn btn-ghost" data-reconnect-reload>Reload</button>
+    </div>
+    <div class="btn-row components-pause-visible components-resume-failed-visible">
+        <button type="button" id="components-resume-button" class="btn btn-primary">Resume</button>
+        <button type="button" class="btn btn-ghost components-resume-failed-visible" data-reconnect-reload>Reload</button>
+    </div>
+</dialog>
