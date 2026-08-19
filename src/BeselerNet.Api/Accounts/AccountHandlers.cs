@@ -122,6 +122,29 @@ internal static class AccountHandlers
         return TypedResults.Ok(Map(account));
     }
 
+    public static async Task<IResult> Delete(int accountId, ClaimsPrincipal user, AccountDataSource accounts, RoleDataSource roles, CancellationToken cancellationToken)
+    {
+        var account = await accounts.WithId_IncludeRoles(accountId, cancellationToken);
+        if (account is null)
+            return TypedResults.Problem(AccountProblems.NotFound);
+
+        if (AccountProblems.Forbid(user, account, Actions.Delete, Scopes.Global) is { } denied)
+            return denied;
+
+        if (IsSelf(user, accountId))
+            return TypedResults.Problem(AccountProblems.CannotChangeSelf);
+
+        if (account.Type != AccountType.User)
+            return TypedResults.Problem(AccountProblems.CannotDeleteService);
+
+        var isAdmin = account.Roles.Any(role => string.Equals(role.Name, Roles.Admin, StringComparison.OrdinalIgnoreCase));
+        if (isAdmin && !await roles.IsAssignedToAnyoneElse(Roles.Admin, accountId, cancellationToken))
+            return TypedResults.Problem(AccountProblems.LastAdmin);
+
+        await accounts.DeleteUser(accountId, cancellationToken);
+        return TypedResults.NoContent();
+    }
+
     private static bool IsSelf(ClaimsPrincipal user, int accountId) =>
         int.TryParse(user.FindFirstValue(JwtRegisteredClaimNames.Sub), out var callerId) && callerId == accountId;
 

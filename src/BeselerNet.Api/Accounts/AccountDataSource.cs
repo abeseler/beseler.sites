@@ -270,6 +270,16 @@ internal sealed class AccountDataSource(NpgsqlDataSource dataSource, OutboxDataS
         }
     }
 
+    public async Task DeleteUser(int accountId, CancellationToken cancellationToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await connection.ExecuteAsync("DELETE FROM token_log WHERE account_id = @accountId", new { accountId }, transaction);
+        await connection.ExecuteAsync("DELETE FROM communication WHERE account_id = @accountId", new { accountId }, transaction);
+        await connection.ExecuteAsync("DELETE FROM account WHERE account_id = @accountId AND type = 'User'", new { accountId }, transaction);
+        await transaction.CommitAsync(cancellationToken);
+    }
+
     private static async Task SyncPermissions(Account account, NpgsqlConnection connection, NpgsqlTransaction transaction)
     {
         await connection.ExecuteAsync(

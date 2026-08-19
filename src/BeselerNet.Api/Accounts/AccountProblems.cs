@@ -36,7 +36,7 @@ internal static class AccountProblems
     public static ProblemDetails CannotChangeSelf { get; } = new()
     {
         Title = "Cannot Change Own Account",
-        Detail = "You cannot disable, enable, unlock, or change roles on your own account.",
+        Detail = "You cannot disable, enable, unlock, change roles, or delete your own account.",
         Status = StatusCodes.Status400BadRequest
     };
 
@@ -44,6 +44,13 @@ internal static class AccountProblems
     {
         Title = "Last Admin",
         Detail = "At least one account must keep the admin role.",
+        Status = StatusCodes.Status400BadRequest
+    };
+
+    public static ProblemDetails CannotDeleteService { get; } = new()
+    {
+        Title = "Cannot Delete Service",
+        Detail = "Service accounts cannot be deleted here.",
         Status = StatusCodes.Status400BadRequest
     };
 

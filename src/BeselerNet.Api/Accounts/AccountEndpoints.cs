@@ -78,6 +78,16 @@ internal static class AccountEndpoints
             .ProducesProblem(Status404NotFound, Application.Json)
             .RequireAuthorization();
 
+        v1.MapDelete("/{accountId:int}", AccountHandlers.Delete)
+            .WithName("DeleteAccount")
+            .WithDescription("Delete a user account. Requires account:delete at global. Cannot target yourself or the last admin. Removes their budget and sessions.")
+            .Produces(Status204NoContent)
+            .Produces(Status401Unauthorized)
+            .ProducesProblem(Status400BadRequest, Application.Json)
+            .ProducesProblem(Status403Forbidden, Application.Json)
+            .ProducesProblem(Status404NotFound, Application.Json)
+            .RequireAuthorization();
+
         v1.MapPost("/invite", InviteUserHandler.Handle)
             .WithName("InviteUser")
             .WithDescription("Create an invited account and email a set-password link. Requires account:update at global.")

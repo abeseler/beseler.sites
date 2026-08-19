@@ -54,6 +54,11 @@ Authorization: Bearer {{login.response.body.$.access_token}}
 POST {{host}}/v1/accounts/2/unlock
 Authorization: Bearer {{login.response.body.$.access_token}}
 
+### Delete user
+
+DELETE {{host}}/v1/accounts/2
+Authorization: Bearer {{login.response.body.$.access_token}}
+
 ### Set roles
 
 PUT {{host}}/v1/accounts/2/roles

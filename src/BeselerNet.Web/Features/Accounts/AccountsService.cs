@@ -37,4 +37,7 @@ internal sealed class AccountsService(ApiClient api)
 
     public Task<ApiResult> ResendInviteAsync(int accountId, CancellationToken cancellationToken = default) =>
         _api.PostAsync($"/v1/accounts/{accountId}/resend-invite", session: true, cancellationToken: cancellationToken);
+
+    public Task<ApiResult> DeleteAsync(int accountId, CancellationToken cancellationToken = default) =>
+        _api.DeleteAsync($"/v1/accounts/{accountId}", session: true, cancellationToken);
 }

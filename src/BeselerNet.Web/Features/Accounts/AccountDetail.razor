@@ -2,6 +2,7 @@
 @inject AccountsService AccountsApi
 @inject RoleService RolesApi
 @inject AccountSession Session
+@inject NavigationManager Nav
 
 <PageTitle>@SiteConstants.SiteName: User</PageTitle>
 
@@ -104,9 +105,9 @@
                     }
                 </div>
             }
-            else if (CanAdminister && isSelf)
+            else if ((CanAdminister || CanDelete) && isSelf)
             {
-                <p class="muted-empty">You cannot disable, unlock, or change roles on your own account.</p>
+                <p class="muted-empty">You cannot disable, unlock, change roles, or delete your own account.</p>
             }
         </section>
 
@@ -156,6 +157,31 @@
             </section>
         }
 
+        @if (CanDelete && !isSelf)
+        {
+            <section class="role-card">
+                <span class="tile-kicker">Delete</span>
+                <p class="page-lede">Removes this account, their budget, and their sessions. No undo.</p>
+                @if (confirmDelete)
+                {
+                    <div class="auth-field">
+                        <label for="confirm-delete">Type @deleteConfirmTarget to confirm</label>
+                        <input id="confirm-delete" @bind="confirmDeleteText" disabled="@busy" />
+                    </div>
+                    <div class="role-actions">
+                        <button type="button" class="btn btn-danger btn-small" disabled="@busy" @onclick="Delete">Delete account</button>
+                        <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="CancelDelete">Keep</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="role-actions">
+                        <button type="button" class="btn btn-danger btn-small" disabled="@busy" @onclick="() => confirmDelete = true">Delete</button>
+                    </div>
+                }
+            </section>
+        }
+
         @if (catalog.Count > 0)
         {
             <section class="role-card">
@@ -196,12 +222,16 @@
     private bool loading = true;
     private bool busy;
     private bool confirmDisable;
+    private bool confirmDelete;
+    private string confirmDeleteText = "";
     private string? error;
     private string? notice;
 
     private bool isSelf => account is not null && account.AccountId == Session.Profile?.AccountId;
     private bool CanUpdate => Session.HasPermission(Resources.Account, Actions.Update);
     private bool CanAdminister => Session.HasPermission(Resources.Account, Actions.Update, Scopes.Global);
+    private bool CanDelete => Session.HasPermission(Resources.Account, Actions.Delete, Scopes.Global);
+    private string deleteConfirmTarget => account?.Email ?? account?.Username ?? "";
     private string lede => account is null ? "User details." : "Profile, status, and roles.";
     private string rolesLabel =>
         account?.Roles is { Count: > 0 } roles
@@ -223,6 +253,8 @@
         error = null;
         notice = null;
         confirmDisable = false;
+        confirmDelete = false;
+        confirmDeleteText = "";
         var result = await AccountsApi.GetAsync(Id);
         if (!result.Succeeded || result.Value is null)
         {
@@ -393,6 +425,37 @@
     private Task Disable() => RunAdmin(AccountsApi.DisableAsync, "Account disabled.");
     private Task Enable() => RunAdmin(AccountsApi.EnableAsync, "Account enabled.");
     private Task Unlock() => RunAdmin(AccountsApi.UnlockAsync, "Lockout cleared.");
+
+    private void CancelDelete()
+    {
+        confirmDelete = false;
+        confirmDeleteText = "";
+    }
+
+    private async Task Delete()
+    {
+        if (account is null)
+            return;
+
+        if (!string.Equals(confirmDeleteText.Trim(), deleteConfirmTarget, StringComparison.OrdinalIgnoreCase))
+        {
+            error = $"Type {deleteConfirmTarget} to delete this account.";
+            return;
+        }
+
+        busy = true;
+        error = null;
+        notice = null;
+        var result = await AccountsApi.DeleteAsync(account.AccountId);
+        busy = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not delete that account.";
+            return;
+        }
+
+        Nav.NavigateTo(Routes.Accounts);
+    }
 
     private async Task RunAdmin(Func<int, CancellationToken, Task<ApiResult<AccountResponse>>> action, string done)
     {
