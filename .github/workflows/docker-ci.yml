@@ -1,22 +1,22 @@
-# Runs when tag-version.yml creates a component tag — not on every push to main.
-# Dispatching will build the selected tag from the current ref and push
-# to Docker Hub (x.y.z + latest).
+# Build one component image and push to Docker Hub (x.y.z + latest).
+# Called by tag-version.yml after versions are planned and before git tags exist.
+# Manual dispatch still rebuilds a selected component from the current ref.
 
 name: Docker CI
 
 on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Component tag, e.g. beseler-net-api-v1.0.0'
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       tag:
         description: 'Component tag, e.g. beseler-net-api-v1.0.0'
         required: true
         type: string
-  push:
-    tags:
-      - 'beseler-net-api-v*'
-      - 'beseler-net-web-v*'
-      - 'beseler-dev-web-v*'
-      - 'beseler-net-dbdeploy-v*'
 
 permissions:
   contents: read
@@ -33,12 +33,7 @@ jobs:
         id: parse
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]
-          then
-              TAG="${{ inputs.tag }}"
-          else
-              TAG="${GITHUB_REF_NAME}"
-          fi
+          TAG="${{ inputs.tag }}"
 
           if [[ ! "$TAG" =~ ^([a-z0-9-]+)-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]
           then
@@ -99,6 +94,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      # Deploys are not dispatched here. tag-version.yml sequences
-      # db → api → web → dev-web after these images land on Hub.

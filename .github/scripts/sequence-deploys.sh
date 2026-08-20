@@ -1,8 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-# Wait for Hub images from tagged-releases.txt, then deploy db → api → web → dev-web.
+# Deploy db → api → web → dev-web from tagged-releases.txt.
 # Each line is: <component> <x.y.z>
+#
+# Images are built and pushed before this script runs. A short Hub inspect
+# covers tag visibility lag; a missing image fails fast instead of waiting
+# for a tag-triggered rebuild that will never come.
 #
 # Requires: docker (logged in), gh (GH_TOKEN that can dispatch beseler-private).
 # Does not use `gh run watch` — fine-grained PATs cannot read Checks annotations.
@@ -38,20 +42,18 @@ wait_for_image() {
     local image="$1"
     echo "Waiting for $image"
     local i
-    for i in $(seq 1 60)
+    for i in $(seq 1 12)
     do
         if docker buildx imagetools inspect "$image" >/dev/null 2>&1
         then
             echo "  ready"
             return 0
         fi
-        if (( i == 1 || i % 6 == 0 ))
-        then
-            echo "  not on Hub yet (${i}/60)"
-        fi
-        sleep 10
+        echo "  not on Hub yet (${i}/12)"
+        sleep 5
     done
     echo "Timed out waiting for $image"
+    echo "Images are built before tagging; a missing tag means that build did not push."
     return 1
 }
 

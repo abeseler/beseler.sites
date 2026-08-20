@@ -62,37 +62,38 @@ Each shipping unit has its own version. A commit is not a release unless that nu
 
 Bump the shipping project, not Shared or ServiceDefaults. If Shared changes and you want it in prod, bump API (and anything else that should ship).
 
-`version.sh` tags a component only when its version is newer than that component’s latest tag. It does not bump the project for you.
+`version.sh plan` lists components whose version is newer than that component’s latest tag. `version.sh tag` creates those tags and pushes them together. It does not bump the project for you.
 
 ## Pipeline
 
-Work is on `main`. Push → tag if a version changed → build that image → deploy in a fixed order.
+Work is on `main`. Push → plan version bumps → build those images → tag only if every build succeeded → deploy in a fixed order.
 
 ```mermaid
 flowchart TD
-  push["Push to main"] --> tagver["Tag version"]
-  tagver --> versionsh["version.sh"]
-  versionsh -->|"no bump"| stop["Stop"]
-  versionsh -->|"new tags"| doci["Docker CI<br/>one run per tag"]
-  versionsh --> seq["sequence-deploys"]
-  doci --> hub["Hub :x.y.z and :latest"]
+  push["Push to main"] --> prepare["Build + validate + plan"]
+  prepare -->|"no bump"| stop["Stop"]
+  prepare -->|"version bumps"| images["Docker CI<br/>one job per component"]
+  images -->|"any build fails"| fail["Stop: no tags, no deploys"]
+  images -->|"all succeed"| tag["Tag and push"]
+  tag --> seq["sequence-deploys"]
   seq --> order["db → api → web → dev-web"]
-  order --> wait["Wait for that image on Hub"]
-  wait --> deploy["Deploy on beseler-private<br/>self-hosted runner"]
+  order --> deploy["Deploy on beseler-private<br/>self-hosted runner"]
 ```
 
-1. **Tag version** (`.github/workflows/tag-version.yml`) — build, `ratchet validate`, `version.sh`. README / LICENSE / editorconfig / gitattributes pushes are ignored.
-2. Each new tag starts **Docker CI** (`.github/workflows/docker-ci.yml`) — one image, tags `x.y.z` and `latest`. Builds may run in parallel. This job does not deploy.
-3. The same Tag version run then **sequences deploys** into [beseler-private](https://github.com/abeseler/beseler-private): **db → api → web → dev-web**. Each step waits for the image on Hub, then runs that repo’s **Deploy** workflow (`kubectl set image`, or a Job for dbdeploy).
+1. **Release** (`.github/workflows/tag-version.yml`) — `dotnet build`, `ratchet validate`, `version.sh plan`. README / LICENSE / editorconfig / gitattributes pushes are ignored.
+2. Each planned component runs **Docker CI** (`.github/workflows/docker-ci.yml`) as a reusable workflow — one image, tags `x.y.z` and `latest`. Builds run in parallel. If any image build fails, the run stops: no git tags, no deploys.
+3. After every image is on Hub, the same run **tags and pushes** (`version.sh tag`), then **sequences deploys** into [beseler-private](https://github.com/abeseler/beseler-private): **db → api → web → dev-web**. Each step runs that repo’s **Deploy** workflow (`kubectl set image`, or a Job for dbdeploy).
 
 If only web was bumped, db and api are skipped. If db and api were bumped, api does not deploy until the db Job succeeds.
 
-Both workflows can still be started by hand (Tag version with `apply=false` only prints versions).
+A failed image build stops the run before git tags or deploys. Successful siblings may already be on Hub; a retry overwrites those tags. Pushing a git tag by hand no longer starts Docker CI — use **Actions → Docker CI** to rebuild one component from the current ref.
+
+Both workflows can still be started by hand (Release with `apply=false` only prints versions).
 
 Secrets on this repo:
 
 - `DOCKER_USERNAME` / `DOCKER_PASSWORD` — push to Hub and inspect tags
-- `VERSION_TAGGING_TOKEN` — PAT with Contents write on **this** repo so a tag push can start Docker CI (`GITHUB_TOKEN` cannot)
+- `VERSION_TAGGING_TOKEN` — PAT with Contents write on **this** repo to push release tags
 - `DEPLOY_DISPATCH_TOKEN` — PAT with Actions write + Contents read on **beseler-private** to dispatch and watch Deploy
 
 Manual deploy (any tag already on Hub): **beseler-private → Actions → Deploy**.

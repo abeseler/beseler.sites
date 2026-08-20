@@ -1,18 +1,17 @@
-# Push to main → build + validate → tag if a version bumped.
-# Images are built on those tags (docker-ci.yml). Deploys are sequenced here:
-# db → api → web → dev-web, after each image appears on Hub.
-# Requires secrets.VERSION_TAGGING_TOKEN (a PAT) so the tag push can
-# trigger Docker CI. GITHUB_TOKEN will not start another workflow.
+# Push to main → build + validate → plan version bumps → build those images.
+# Git tags are created only after every image build succeeds, then deploys
+# run in order: db → api → web → dev-web.
+# Requires secrets.VERSION_TAGGING_TOKEN (a PAT) to push tags.
 # Requires secrets.DEPLOY_DISPATCH_TOKEN to call beseler-private's Deploy workflow.
 # Dispatching with apply=false only prints versions.
 
-name: Tag version
+name: Release
 
 on:
   workflow_dispatch:
     inputs:
       apply:
-        description: 'Create and push tags (otherwise only print versions)'
+        description: 'Plan, build, tag, and deploy (otherwise only print versions)'
         type: boolean
         default: false
   push:
@@ -23,20 +22,24 @@ on:
       - ".editorconfig"
       - ".gitattributes"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
 jobs:
-  tag:
-    name: Build, validate, and tag
+  prepare:
+    name: Build, validate, and plan
     runs-on: ubuntu-latest
     outputs:
-      tagged: ${{ steps.release.outputs.tagged }}
+      has_releases: ${{ steps.plan.outputs.has_releases }}
+      tags: ${{ steps.plan.outputs.tags }}
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.VERSION_TAGGING_TOKEN }}
           fetch-depth: 0
           fetch-tags: true
 
@@ -64,47 +67,100 @@ jobs:
           echo "Existing component tags:"
           git tag -l 'beseler-*-v*' || true
 
-      - name: git
-        if: github.event_name != 'workflow_dispatch' || inputs.apply
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "<>"
-
-      - name: Get version, update and tag
-        id: release
+      - name: Plan releases
+        id: plan
         if: github.event_name != 'workflow_dispatch' || inputs.apply
         env:
           TAGGED_RELEASES_FILE: ${{ github.workspace }}/tagged-releases.txt
+        shell: bash
         run: |
           : > "$TAGGED_RELEASES_FILE"
-          bash "$GITHUB_WORKSPACE/version.sh"
+          bash "$GITHUB_WORKSPACE/version.sh" plan
           if [[ -s "$TAGGED_RELEASES_FILE" ]]
           then
-              echo "tagged=true" >> "$GITHUB_OUTPUT"
-              echo "Tagged releases:"
+              tags_json="["
+              sep=""
+              while read -r name version
+              do
+                  [[ -z "${name:-}" || -z "${version:-}" ]] && continue
+                  tags_json+="${sep}\"${name}-v${version}\""
+                  sep=","
+              done < "$TAGGED_RELEASES_FILE"
+              tags_json+="]"
+              echo "has_releases=true" >> "$GITHUB_OUTPUT"
+              echo "tags=${tags_json}" >> "$GITHUB_OUTPUT"
+              echo "Planned releases:"
               cat "$TAGGED_RELEASES_FILE"
+              echo "Matrix tags: ${tags_json}"
           else
-              echo "tagged=false" >> "$GITHUB_OUTPUT"
+              echo "has_releases=false" >> "$GITHUB_OUTPUT"
+              echo "tags=[]" >> "$GITHUB_OUTPUT"
+              echo "No version bumps to release."
           fi
-        shell: bash
 
-      - name: Upload tagged releases
-        if: steps.release.outputs.tagged == 'true'
+      - name: Upload planned releases
+        if: steps.plan.outputs.has_releases == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: tagged-releases
           path: tagged-releases.txt
 
+  build-images:
+    name: ${{ matrix.tag }}
+    needs: prepare
+    if: needs.prepare.outputs.has_releases == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.prepare.outputs.tags || '[]') }}
+    uses: ./.github/workflows/docker-ci.yml
+    with:
+      tag: ${{ matrix.tag }}
+    secrets: inherit
+
+  tag:
+    name: Tag and push
+    needs: [prepare, build-images]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_releases == 'true' && needs.build-images.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.VERSION_TAGGING_TOKEN }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+      - name: Create and push tags
+        env:
+          TAGGED_RELEASES_FILE: ${{ github.workspace }}/tagged-releases.txt
+        shell: bash
+        run: |
+          : > "$TAGGED_RELEASES_FILE"
+          bash "$GITHUB_WORKSPACE/version.sh" tag
+          if [[ ! -s "$TAGGED_RELEASES_FILE" ]]
+          then
+              echo "Plan had releases but nothing was tagged"
+              exit 1
+          fi
+          echo "Pushed tags:"
+          cat "$TAGGED_RELEASES_FILE"
+
   sequence-deploys:
     name: Deploy in order
-    needs: tag
-    if: needs.tag.outputs.tagged == 'true'
+    needs: [prepare, tag]
+    if: ${{ always() && needs.prepare.result == 'success' && needs.prepare.outputs.has_releases == 'true' && needs.tag.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      - name: Download tagged releases
+      - name: Download planned releases
         uses: actions/download-artifact@v4
         with:
           name: tagged-releases
@@ -115,7 +171,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Wait for images and deploy
+      - name: Deploy in order
         env:
           GH_TOKEN: ${{ secrets.DEPLOY_DISPATCH_TOKEN }}
         run: bash .github/scripts/sequence-deploys.sh tagged-releases.txt
