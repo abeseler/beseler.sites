@@ -126,7 +126,7 @@
         await Clock.EnsureAsync(Js);
         var years = await Budget.ListYearsAsync();
         if (years.Succeeded)
-            yearStarted = (years.Value?.Years ?? []).Contains(Clock.Year);
+            yearStarted = years.Value?.YearNumbers.Contains(Clock.Year) is true;
 
         if (yearStarted)
         {

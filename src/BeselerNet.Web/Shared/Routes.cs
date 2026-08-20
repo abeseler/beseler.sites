@@ -13,6 +13,7 @@ internal static class Routes
     public const string SignOut = "/account/sign-out";
     public const string Dashboard = "/dashboard";
     public const string Budget = "/budget";
+    public const string BudgetYears = "/budget/years";
     public const string BudgetTemplates = "/budget/templates";
 
     public static string BudgetYear(int year) => $"/budget/{year}";

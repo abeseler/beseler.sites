@@ -9,15 +9,19 @@ namespace BeselerNet.Api.Budget;
 
 internal static class BudgetHandlers
 {
-    public static async Task<IResult> ListYears(ClaimsPrincipal user, BudgetDataSource budget, CancellationToken cancellationToken)
+    public static async Task<IResult> ListYears(ClaimsPrincipal user, BudgetDataSource budget, TimeProvider time, HttpContext http, CancellationToken cancellationToken)
     {
         if (AccountId(user) is not { } accountId)
             return TypedResults.Unauthorized();
         if (BudgetProblems.Forbid(user, accountId, Actions.Read) is { } denied)
             return denied;
 
-        var years = await budget.ListYears(accountId, cancellationToken);
-        return TypedResults.Ok(new BudgetYearsResponse { Years = years });
+        var periods = await budget.Periods(accountId, cancellationToken);
+        var lines = await budget.Lines(accountId, cancellationToken);
+        return TypedResults.Ok(new BudgetYearsResponse
+        {
+            Years = BudgetCalculator.Rollup(periods, lines, Today(time, http))
+        });
     }
 
     public static async Task<IResult> StartYear(
@@ -91,16 +95,12 @@ internal static class BudgetHandlers
         return TypedResults.Ok(await LoadYear(budget, accountId, year, Today(time, http), cancellationToken));
     }
 
-    public static async Task<IResult> DeleteYear(int year, ClaimsPrincipal user, BudgetDataSource budget, TimeProvider time, HttpContext http, CancellationToken cancellationToken)
+    public static async Task<IResult> DeleteYear(int year, ClaimsPrincipal user, BudgetDataSource budget, CancellationToken cancellationToken)
     {
         if (AccountId(user) is not { } accountId)
             return TypedResults.Unauthorized();
         if (BudgetProblems.Forbid(user, accountId, Actions.Update) is { } denied)
             return denied;
-        if (Today(time, http) is not { } today)
-            return TypedResults.Problem(BudgetProblems.UnknownTimeZone);
-        if (year < today.Year)
-            return TypedResults.Problem(BudgetProblems.PastYear);
         if (!await budget.YearExists(accountId, year, cancellationToken))
             return TypedResults.Problem(BudgetProblems.YearNotFound);
 
@@ -180,14 +180,41 @@ internal static class BudgetHandlers
             return TypedResults.Unauthorized();
         if (BudgetProblems.Forbid(user, accountId, Actions.Update) is { } denied)
             return denied;
-        if (pack.IsInvalid(year, out var errors))
-            return TypedResults.ValidationProblem(errors);
         if (Today(time, http) is not { } today)
             return TypedResults.Problem(BudgetProblems.UnknownTimeZone);
 
-        var exists = await budget.YearExists(accountId, year, cancellationToken);
-        if (!exists && year < today.Year)
-            return TypedResults.Problem(BudgetProblems.PastYear);
+        var history = year < today.Year;
+        if (pack.IsInvalid(year, history, out var errors))
+            return TypedResults.ValidationProblem(errors);
+
+        if (history)
+        {
+            var historyLines = (pack.Year!.Lines ?? []).Select(line => new BudgetImportLine(
+                line.Name.Trim(),
+                BudgetSections.Normalize(line.Section),
+                line.Amount,
+                line.OnDate!.Value,
+                true,
+                null)).ToArray();
+
+            try
+            {
+                await budget.ImportYear(
+                    accountId,
+                    year,
+                    pack.Year.StartingBalance!.Value,
+                    [],
+                    new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+                    historyLines,
+                    cancellationToken);
+            }
+            catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+            {
+                return TypedResults.Problem(BudgetProblems.YearExists);
+            }
+
+            return TypedResults.Ok(await LoadYear(budget, accountId, year, today, cancellationToken));
+        }
 
         var existing = await budget.ListTemplates(accountId, cancellationToken);
         var bySignature = existing.ToLookup(template => BudgetTemplateIdentity.MatchKey(
@@ -535,17 +562,22 @@ internal static class BudgetHandlers
         var lines = await budget.LinesForYear(accountId, year, cancellationToken);
         var months = BudgetCalculator.Summarize(periods, lines);
         decimal? checkingNow = null;
+        DateOnly? asOf = null;
         if (today is { } date && date.Year == year)
         {
+            asOf = date;
             var month = months.FirstOrDefault(item => item.Month == date.Month);
             if (month is not null)
                 checkingNow = BudgetCalculator.BalanceOn(date, month.StartingBalance, lines);
         }
 
+        var (income, expenses) = BudgetCalculator.SectionTotals(lines, asOf);
         return new BudgetYearResponse
         {
             Year = year,
             StartingBalance = months[0].StartingBalance,
+            Income = income,
+            Expenses = expenses,
             Months = months,
             CheckingNow = checkingNow
         };

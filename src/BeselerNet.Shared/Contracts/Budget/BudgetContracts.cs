@@ -5,7 +5,26 @@ namespace BeselerNet.Shared.Contracts.Budget;
 
 public sealed record BudgetYearsResponse
 {
-    public required IReadOnlyList<int> Years { get; init; }
+    public required IReadOnlyList<BudgetYearRollup> Years { get; init; }
+
+    [JsonIgnore]
+    public IReadOnlyList<int> YearNumbers => Years.Select(item => item.Year).ToArray();
+}
+
+public sealed record BudgetYearRollup
+{
+    public required int Year { get; init; }
+    [JsonPropertyName("starting_balance")]
+    public required decimal StartingBalance { get; init; }
+    public required decimal Income { get; init; }
+    public required decimal Expenses { get; init; }
+    public required decimal Savings { get; init; }
+    [JsonPropertyName("cash_flow")]
+    public required decimal CashFlow { get; init; }
+    [JsonPropertyName("ending_balance")]
+    public required decimal EndingBalance { get; init; }
+    [JsonPropertyName("line_count")]
+    public required int LineCount { get; init; }
 }
 
 public sealed record StartBudgetYearRequest
@@ -43,6 +62,8 @@ public sealed record BudgetYearResponse
     public required int Year { get; init; }
     [JsonPropertyName("starting_balance")]
     public required decimal StartingBalance { get; init; }
+    public required decimal Income { get; init; }
+    public required decimal Expenses { get; init; }
     public required IReadOnlyList<BudgetMonthSummary> Months { get; init; }
     [JsonPropertyName("checking_now")]
     public decimal? CheckingNow { get; init; }

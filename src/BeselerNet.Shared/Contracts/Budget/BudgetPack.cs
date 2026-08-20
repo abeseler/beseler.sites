@@ -19,7 +19,10 @@ public sealed record BudgetPack
     public IReadOnlyList<BudgetPackTemplate> Templates { get; init; } = [];
     public BudgetPackYear? Year { get; init; }
 
-    public bool IsInvalid(int year, [NotNullWhen(true)] out Dictionary<string, string[]>? validationErrors)
+    public bool IsInvalid(int year, [NotNullWhen(true)] out Dictionary<string, string[]>? validationErrors) =>
+        IsInvalid(year, history: false, out validationErrors);
+
+    public bool IsInvalid(int year, bool history, [NotNullWhen(true)] out Dictionary<string, string[]>? validationErrors)
     {
         var errors = new ErrorCollector();
         if (!string.Equals(Format.Trim(), BudgetPackFormat.Name, StringComparison.OrdinalIgnoreCase))
@@ -36,32 +39,35 @@ public sealed record BudgetPack
                 errors.Add("year.starting_balance", "Starting balance is required.");
 
             var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var signatures = new Dictionary<string, int>(StringComparer.Ordinal);
-            for (var i = 0; i < Templates.Count; i++)
+            if (!history)
             {
-                var template = Templates[i];
-                if (string.IsNullOrWhiteSpace(template.Key))
-                    errors.Add("templates", i, "key", "Template key is required.");
-                else if (!keys.Add(template.Key.Trim()))
-                    errors.Add("templates", i, "key", "Template keys must be unique.");
-
-                var request = template.ToUpsert();
-                if (request.IsInvalid(out var templateErrors) && templateErrors is not null)
+                var signatures = new Dictionary<string, int>(StringComparer.Ordinal);
+                for (var i = 0; i < Templates.Count; i++)
                 {
-                    foreach (var pair in templateErrors)
+                    var template = Templates[i];
+                    if (string.IsNullOrWhiteSpace(template.Key))
+                        errors.Add("templates", i, "key", "Template key is required.");
+                    else if (!keys.Add(template.Key.Trim()))
+                        errors.Add("templates", i, "key", "Template keys must be unique.");
+
+                    var request = template.ToUpsert();
+                    if (request.IsInvalid(out var templateErrors) && templateErrors is not null)
                     {
-                        foreach (var message in pair.Value)
-                            errors.Add("templates", i, pair.Key, message);
+                        foreach (var pair in templateErrors)
+                        {
+                            foreach (var message in pair.Value)
+                                errors.Add("templates", i, pair.Key, message);
+                        }
                     }
-                }
 
-                if (!string.IsNullOrWhiteSpace(template.Name) && BudgetSections.IsKnown(template.Section) && BudgetSchedules.IsKnown(template.ScheduleType))
-                {
-                    var signature = BudgetTemplateIdentity.MatchKey(
-                        template.Name, template.Section, template.ScheduleType,
-                        template.DayOfMonth, template.IntervalDays, template.AnchorDate);
-                    if (!signatures.TryAdd(signature, i))
-                        errors.Add("templates", i, "key", $"Same schedule as templates[{signatures[signature]}]. Rename or change one.");
+                    if (!string.IsNullOrWhiteSpace(template.Name) && BudgetSections.IsKnown(template.Section) && BudgetSchedules.IsKnown(template.ScheduleType))
+                    {
+                        var signature = BudgetTemplateIdentity.MatchKey(
+                            template.Name, template.Section, template.ScheduleType,
+                            template.DayOfMonth, template.IntervalDays, template.AnchorDate);
+                        if (!signatures.TryAdd(signature, i))
+                            errors.Add("templates", i, "key", $"Same schedule as templates[{signatures[signature]}]. Rename or change one.");
+                    }
                 }
             }
 
@@ -92,7 +98,7 @@ public sealed record BudgetPack
                     }
                 }
 
-                if (!string.IsNullOrWhiteSpace(line.TemplateKey) && !keys.Contains(line.TemplateKey.Trim()))
+                if (!history && !string.IsNullOrWhiteSpace(line.TemplateKey) && !keys.Contains(line.TemplateKey.Trim()))
                     errors.Add("year.lines", i, "template_key", "Template key is not in this file.");
             }
         }

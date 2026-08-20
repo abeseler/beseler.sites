@@ -26,16 +26,7 @@ else if (month is null)
         <p class="kicker">Budget</p>
         <h1 class="page-title">@monthName @Year</h1>
         <p class="page-lede">That year has not been started.</p>
-        @if (years.Count > 0)
-        {
-            <div class="budget-year-jump">
-                @foreach (var item in years.OrderBy(value => value))
-                {
-                    <a href="@Routes.BudgetYear(item)">@item</a>
-                }
-            </div>
-        }
-        <p><a href="@Routes.Budget">This month</a></p>
+        <p><a href="@Routes.Budget">This month</a> · <a href="@Routes.BudgetYears">Years</a></p>
     </div>
 }
 else
@@ -167,7 +158,7 @@ else
         error = null;
         var listed = await Budget.ListYearsAsync();
         if (listed.Succeeded)
-            years = listed.Value?.Years ?? [];
+            years = listed.Value?.YearNumbers ?? [];
         var result = await Budget.GetMonthAsync(Year, Month);
         loading = false;
         if (result.StatusCode is System.Net.HttpStatusCode.NotFound)

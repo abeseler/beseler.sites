@@ -1,0 +1,162 @@
+@page "/budget/years"
+@using System.Globalization
+@inject BudgetService Budget
+@inject ClientClock Clock
+@inject AccountSession Session
+@inject IJSRuntime Js
+
+<PageTitle>@SiteConstants.SiteName: Years</PageTitle>
+
+<RequirePermission Resource="@Resources.Budget" Action="@Actions.Read">
+<div class="app-main app-main-wide">
+    <p class="kicker">Budget</p>
+    <div class="budget-bar">
+        <div class="budget-bar-nav">
+            <h1 class="budget-bar-title">Years</h1>
+        </div>
+        <div class="budget-bar-links">
+            <a href="@Routes.Budget">This month</a>
+            @if (Clock.Year > 0)
+            {
+                <a href="@Routes.BudgetYear(Clock.Year)">Summary</a>
+            }
+            <a href="@Routes.BudgetTemplates">Templates</a>
+            @if (CanUpdate)
+            {
+                <button type="button" class="budget-bar-action" @onclick="ToggleRestore">Restore</button>
+            }
+        </div>
+    </div>
+
+    @if (error is not null)
+    {
+        <p class="auth-alert" role="alert">@error</p>
+    }
+    @if (notice is not null)
+    {
+        <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
+    }
+
+    @if (restoring)
+    {
+        <section class="role-card budget-start-over">
+            <span class="tile-kicker">Restore</span>
+            <BudgetHistoryRestore ExistingYears="YearNumbers" CurrentYear="Clock.Year" Lede="JSON from Export. Past years load as lines only. Live templates are not created." OnImported="Restored" OnCancel="ToggleRestore" />
+        </section>
+    }
+
+    @if (loading)
+    {
+        <p class="page-lede">Loading…</p>
+    }
+    else if (years.Count == 0)
+    {
+        <p class="muted-empty">No years yet.</p>
+        <p><a href="@Routes.Budget">Start @Clock.Year</a></p>
+    }
+    else
+    {
+        <div class="budget-totals budget-history-totals">
+            <div>
+                <span class="tile-kicker">Income</span>
+                <BudgetMoney Value="TotalIncome" />
+            </div>
+            <div>
+                <span class="tile-kicker">Expenses</span>
+                <BudgetMoney Value="TotalExpenses" />
+            </div>
+            <div>
+                <span class="tile-kicker">Cash flow</span>
+                <BudgetMoney Value="TotalFlow" />
+            </div>
+            <div>
+                <span class="tile-kicker">Saved</span>
+                <BudgetMoney Value="TotalSaved" />
+            </div>
+        </div>
+
+        <section class="role-card">
+            <span class="tile-kicker">Years</span>
+            <div class="budget-years-head">
+                <span></span>
+                <span>Flow</span>
+                <span>Saved</span>
+                <span>End</span>
+            </div>
+            <div class="budget-month-list">
+                @foreach (var item in years)
+                {
+                    <a class="budget-years-row @(item.Year == Clock.Year ? "is-now" : null)" href="@Routes.BudgetYear(item.Year)">
+                        <span class="budget-month-name">@item.Year</span>
+                        <BudgetMoney Value="item.CashFlow" Compact="true" Extra="budget-month-flow" />
+                        <BudgetMoney Value="item.Savings" Compact="true" Extra="budget-month-check" />
+                        <BudgetMoney Value="item.EndingBalance" Compact="true" Extra="budget-month-check" />
+                    </a>
+                    @if (Mismatch(item) is { } mismatch)
+                    {
+                        <p class="muted-empty budget-year-mismatch">@mismatch</p>
+                    }
+                }
+            </div>
+        </section>
+    }
+</div>
+</RequirePermission>
+
+@code {
+    private IReadOnlyList<BudgetYearRollup> years = [];
+    private bool loading = true;
+    private bool restoring;
+    private string? error;
+    private string? notice;
+    private static readonly CultureInfo Usd = CultureInfo.GetCultureInfo("en-US");
+
+    private bool CanUpdate => Session.HasPermission(Resources.Budget, Actions.Update);
+    private IReadOnlyList<int> YearNumbers => years.Select(item => item.Year).ToArray();
+    private decimal TotalIncome => years.Sum(item => item.Income);
+    private decimal TotalExpenses => years.Sum(item => item.Expenses);
+    private decimal TotalFlow => years.Sum(item => item.CashFlow);
+    private decimal TotalSaved => years.Sum(item => item.Savings);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Clock.EnsureAsync(Js);
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        loading = true;
+        error = null;
+        var result = await Budget.ListYearsAsync();
+        loading = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not load years.";
+            return;
+        }
+
+        years = result.Value?.Years ?? [];
+    }
+
+    private void ToggleRestore()
+    {
+        restoring = !restoring;
+        error = null;
+    }
+
+    private async Task Restored()
+    {
+        restoring = false;
+        notice = "History restored.";
+        await Reload();
+    }
+
+    private string? Mismatch(BudgetYearRollup item)
+    {
+        var previous = years.FirstOrDefault(year => year.Year == item.Year - 1);
+        if (previous is null || previous.EndingBalance == item.StartingBalance)
+            return null;
+        return $"{previous.Year} ended at {previous.EndingBalance.ToString("C2", Usd)}. {item.Year} started at {item.StartingBalance.ToString("C2", Usd)}.";
+    }
+}

@@ -107,6 +107,63 @@ internal static class BudgetCalculator
         return summaries;
     }
 
+    public static (decimal Income, decimal Expenses) SectionTotals(
+        IEnumerable<BudgetLineRow> lines,
+        DateOnly? asOf)
+    {
+        decimal income = 0, expenses = 0;
+        foreach (var line in lines)
+        {
+            if (asOf is { } date && !line.Committed && (line.OnDate is not { } on || on < date))
+                continue;
+
+            var amount = line.Amount ?? 0;
+            if (string.Equals(line.Section, BudgetSections.Income, StringComparison.OrdinalIgnoreCase))
+                income += Math.Abs(amount);
+            else if (string.Equals(line.Section, BudgetSections.Expense, StringComparison.OrdinalIgnoreCase))
+                expenses += Math.Abs(amount);
+        }
+
+        return (income, expenses);
+    }
+
+    public static IReadOnlyList<BudgetYearRollup> Rollup(
+        IReadOnlyList<BudgetPeriodRow> periods,
+        IReadOnlyList<BudgetLineRow> lines,
+        DateOnly? today)
+    {
+        var lineByPeriod = lines.ToLookup(line => line.BudgetPeriodId);
+        var rollups = new List<BudgetYearRollup>();
+        foreach (var group in periods.GroupBy(period => (int)period.Year).OrderByDescending(group => group.Key))
+        {
+            var yearPeriods = group.OrderBy(period => period.Month).ToArray();
+            var yearLines = yearPeriods.SelectMany(period => lineByPeriod[period.BudgetPeriodId]).ToArray();
+            var months = Summarize(yearPeriods, yearLines);
+            if (months.Count == 0)
+                continue;
+
+            var counted = (today is { } date && group.Key == date.Year
+                ? months.Where(item => item.Month <= date.Month)
+                : months).ToArray();
+            if (counted.Length == 0)
+                counted = months.ToArray();
+
+            rollups.Add(new BudgetYearRollup
+            {
+                Year = group.Key,
+                StartingBalance = months[0].StartingBalance,
+                Income = counted.Sum(item => item.Income),
+                Expenses = counted.Sum(item => item.Expenses),
+                Savings = counted.Sum(item => item.Savings),
+                CashFlow = counted.Sum(item => item.CashFlow),
+                EndingBalance = counted[^1].EndingBalance,
+                LineCount = yearLines.Length
+            });
+        }
+
+        return rollups;
+    }
+
     public static IReadOnlyList<BudgetDayBalance> Days(
         int year,
         int month,

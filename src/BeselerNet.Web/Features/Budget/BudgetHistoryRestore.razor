@@ -1,0 +1,182 @@
+@using System.Text.Json
+@inject BudgetService Budget
+
+<p class="page-lede">@Lede</p>
+
+<InputFile OnChange="OnFiles" accept=".json,application/json" multiple disabled="@busy" />
+
+@if (pending.Count > 0)
+{
+    <ul class="budget-restore-list">
+        @foreach (var item in pending)
+        {
+            <li>
+                <span>@item.Year</span>
+                <span class="muted-empty">@item.FileName · @(item.Exists ? "replace" : "new") · @item.LineCount lines</span>
+            </li>
+        }
+    </ul>
+}
+
+@if (NeedsConfirm)
+{
+    <div class="auth-field">
+        <label for="confirm-restore">Type replace to overwrite existing years</label>
+        <input id="confirm-restore" @bind="confirm" disabled="@busy" />
+    </div>
+}
+
+@foreach (var message in ExtraErrors())
+{
+    <p class="field-error">@message</p>
+}
+@if (error is not null)
+{
+    <p class="field-error">@error</p>
+}
+
+<div class="role-actions">
+    <button type="button" class="btn btn-primary btn-small" disabled="@(busy || pending.Count == 0)" @onclick="Import">
+        @(busy ? "Restoring…" : pending.Count <= 1 ? "Restore" : $"Restore {pending.Count} years")
+    </button>
+    @if (OnCancel.HasDelegate)
+    {
+        <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="OnCancel">Keep</button>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<int> ExistingYears { get; set; } = [];
+    [Parameter] public int CurrentYear { get; set; }
+    [Parameter] public string Lede { get; set; } = "JSON from Export. Past years load as lines only.";
+    [Parameter] public EventCallback OnImported { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private readonly List<Pending> pending = [];
+    private bool busy;
+    private string confirm = "";
+    private string? error;
+    private IDictionary<string, string[]>? fieldErrors;
+
+    private bool NeedsConfirm => pending.Any(item => item.Exists);
+
+    private async Task OnFiles(InputFileChangeEventArgs args)
+    {
+        error = null;
+        fieldErrors = null;
+        confirm = "";
+        pending.Clear();
+
+        IReadOnlyList<IBrowserFile> files;
+        try
+        {
+            files = args.GetMultipleFiles(20);
+        }
+        catch (InvalidOperationException)
+        {
+            error = "Choose 20 files or fewer.";
+            return;
+        }
+
+        var years = new HashSet<int>();
+        foreach (var file in files)
+        {
+            BudgetPack? pack;
+            try
+            {
+                await using var stream = file.OpenReadStream(512 * 1024);
+                pack = await JsonSerializer.DeserializeAsync<BudgetPack>(stream, JsonSerializerOptions.Web);
+            }
+            catch (Exception)
+            {
+                error = $"{file.Name} is not valid JSON.";
+                pending.Clear();
+                return;
+            }
+
+            if (pack?.Year?.Year is not { } year)
+            {
+                error = $"{file.Name} has no year.";
+                pending.Clear();
+                return;
+            }
+
+            if (CurrentYear > 0 && year >= CurrentYear)
+            {
+                error = $"{year} is not history. Import it from that year's summary.";
+                pending.Clear();
+                return;
+            }
+
+            if (!years.Add(year))
+            {
+                error = $"Two files are for {year}.";
+                pending.Clear();
+                return;
+            }
+
+            if (pack.IsInvalid(year, history: true, out var errors) && errors is { Count: > 0 })
+            {
+                fieldErrors = errors;
+                error = $"{file.Name} is not a valid pack.";
+                pending.Clear();
+                return;
+            }
+
+            pending.Add(new Pending(file.Name, pack, year, ExistingYears.Contains(year), pack.Year.Lines?.Count ?? 0));
+        }
+    }
+
+    private async Task Import()
+    {
+        if (pending.Count == 0)
+        {
+            error = "Choose JSON files first.";
+            return;
+        }
+
+        if (NeedsConfirm && !string.Equals(confirm.Trim(), "replace", StringComparison.OrdinalIgnoreCase))
+        {
+            error = "Type replace to overwrite existing years.";
+            return;
+        }
+
+        error = null;
+        fieldErrors = null;
+        busy = true;
+        foreach (var item in pending)
+        {
+            var result = await Budget.ImportYearAsync(item.Year, item.Pack);
+            if (!result.Succeeded)
+            {
+                busy = false;
+                fieldErrors = result.FieldErrors;
+                error = result.FieldErrors is { Count: > 0 }
+                    ? $"{item.Year} could not be restored."
+                    : result.Error ?? $"{item.Year} could not be restored.";
+                return;
+            }
+        }
+
+        busy = false;
+        pending.Clear();
+        confirm = "";
+        await OnImported.InvokeAsync();
+    }
+
+    private IEnumerable<string> ExtraErrors()
+    {
+        if (fieldErrors is null)
+            yield break;
+        foreach (var pair in fieldErrors)
+        {
+            foreach (var message in pair.Value)
+            {
+                if (!string.IsNullOrWhiteSpace(message))
+                    yield return message;
+            }
+        }
+    }
+
+    private sealed record Pending(string FileName, BudgetPack Pack, int Year, bool Exists, int LineCount);
+}

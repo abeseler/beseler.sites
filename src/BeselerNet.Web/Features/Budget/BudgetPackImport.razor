@@ -39,6 +39,7 @@
 @code {
     [Parameter] public int Year { get; set; }
     [Parameter] public bool RequireConfirm { get; set; }
+    [Parameter] public bool History { get; set; }
     [Parameter] public string Lede { get; set; } = "";
     [Parameter] public EventCallback OnImported { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
@@ -82,7 +83,7 @@
             return;
         }
 
-        if (pack.IsInvalid(Year, out var errors) && errors is { Count: > 0 })
+        if (pack.IsInvalid(Year, History, out var errors) && errors is { Count: > 0 })
         {
             fieldErrors = errors;
             pack = null;

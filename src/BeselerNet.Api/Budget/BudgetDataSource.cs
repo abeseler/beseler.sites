@@ -66,6 +66,36 @@ internal sealed class BudgetDataSource(NpgsqlDataSource dataSource)
         return years.AsList();
     }
 
+    public async Task<IReadOnlyList<BudgetPeriodRow>> Periods(int accountId, CancellationToken cancellationToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<BudgetPeriodRow>(
+            """
+            SELECT budget_period_id, account_id, year, month, starting_balance
+            FROM budget_period
+            WHERE account_id = @accountId
+            ORDER BY year, month
+            """,
+            new { accountId });
+        return rows.AsList();
+    }
+
+    public async Task<IReadOnlyList<BudgetLineRow>> Lines(int accountId, CancellationToken cancellationToken)
+    {
+        using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<BudgetLineRow>(
+            """
+            SELECT l.budget_line_id, l.budget_period_id, l.name, l.section, l.amount, l.on_date,
+                   l.committed, l.budget_recurring_template_id
+            FROM budget_line l
+            INNER JOIN budget_period p ON p.budget_period_id = l.budget_period_id
+            WHERE p.account_id = @accountId
+            ORDER BY p.year, l.on_date NULLS LAST, l.name
+            """,
+            new { accountId });
+        return rows.AsList();
+    }
+
     public async Task<bool> YearExists(int accountId, int year, CancellationToken cancellationToken)
     {
         using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);

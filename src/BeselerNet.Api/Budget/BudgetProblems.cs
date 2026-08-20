@@ -23,7 +23,7 @@ internal static class BudgetProblems
     public static ProblemDetails PastYear { get; } = new()
     {
         Title = "Past Year",
-        Detail = "A past budget year cannot be started or deleted.",
+        Detail = "A past budget year cannot be started.",
         Status = StatusCodes.Status400BadRequest
     };
 

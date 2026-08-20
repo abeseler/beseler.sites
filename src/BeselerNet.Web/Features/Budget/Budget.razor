@@ -45,7 +45,7 @@ else if (showStart)
             return;
         }
 
-        var list = years.Value?.Years ?? [];
+        var list = years.Value?.YearNumbers ?? [];
         if (list.Contains(Clock.Year))
         {
             Nav.NavigateTo(Routes.BudgetMonth(Clock.Year, Clock.Month), replace: true);

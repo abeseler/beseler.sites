@@ -12,26 +12,10 @@
     </div>
     <div class="budget-bar-links">
         <a href="@Routes.BudgetYear(Year)">Summary</a>
+        <a href="@Routes.BudgetYears">Years</a>
         <a href="@Routes.BudgetTemplates">Templates</a>
     </div>
 </div>
-
-@if (Years.Count > 1)
-{
-    <div class="budget-year-jump">
-        @foreach (var item in Years.OrderBy(value => value))
-        {
-            if (item == Year)
-            {
-                <span class="is-now">@item</span>
-            }
-            else
-            {
-                <a href="@Routes.BudgetYear(item)">@item</a>
-            }
-        }
-    </div>
-}
 
 @code {
     [Parameter] public int Year { get; set; }

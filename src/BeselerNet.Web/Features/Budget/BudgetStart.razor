@@ -4,7 +4,7 @@
 <div class="app-main">
     <p class="kicker">Budget</p>
     <h1 class="page-title">Start @Year</h1>
-    <p class="page-lede">Creates all 12 months and stamps templates from today forward. Or import a @Year pack.</p>
+    <p class="page-lede">Creates all 12 months and stamps templates from today forward. Or import a @Year pack. <a href="@Routes.BudgetYears">Restore earlier years</a> as history.</p>
 
     @if (years.Count > 0)
     {
@@ -58,7 +58,7 @@
     {
         var listed = await Budget.ListYearsAsync();
         if (listed.Succeeded)
-            years = listed.Value?.Years ?? [];
+            years = listed.Value?.YearNumbers ?? [];
 
         if (years.Contains(Year - 1))
         {

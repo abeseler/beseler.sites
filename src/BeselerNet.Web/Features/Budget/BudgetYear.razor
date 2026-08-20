@@ -36,7 +36,18 @@ else if (year is null)
                 }
             </div>
         }
-        <p><a href="@Routes.Budget">This month</a></p>
+        @if (error is not null)
+        {
+            <p class="auth-alert" role="alert">@error</p>
+        }
+        @if (CanUpdate && Year < Clock.Year)
+        {
+            <section class="role-card">
+                <span class="tile-kicker">Restore</span>
+                <BudgetPackImport Year="Year" History="true" Lede="@($"Load a {Year} JSON pack as history. Lines only. Templates in the file are ignored.")" OnImported="Imported" />
+            </section>
+        }
+        <p><a href="@Routes.Budget">This month</a> · <a href="@Routes.BudgetYears">Years</a></p>
     </div>
 }
 else
@@ -46,7 +57,7 @@ else
         <div class="budget-bar">
             <div class="budget-bar-nav">
                 <h1 class="budget-bar-title">@Year</h1>
-                @if (CanUpdate && Year >= Clock.Year)
+                @if (CanUpdate)
                 {
                     <button type="button" class="budget-edit-icon budget-danger-icon" title="Start over" aria-label="Start over" aria-expanded="@startingOver" @onclick="ToggleStartOver">
                         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
@@ -57,6 +68,7 @@ else
             </div>
             <div class="budget-bar-links">
                 <a href="@Routes.BudgetMonth(Year, Clock.Year == Year ? Clock.Month : 1)">This month</a>
+                <a href="@Routes.BudgetYears">Years</a>
                 <a href="@Routes.BudgetTemplates">Templates</a>
                 <button type="button" class="budget-bar-action" disabled="@busy" @onclick="Export">Export</button>
                 @if (CanUpdate)
@@ -100,7 +112,7 @@ else
         {
             <section class="role-card budget-start-over">
                 <span class="tile-kicker">Import</span>
-                <BudgetPackImport Year="Year" RequireConfirm="true" Lede="@($"Replaces {Year} lines and the January start. Templates are created only if missing.")" OnImported="Imported" OnCancel="ToggleImport" />
+                <BudgetPackImport Year="Year" RequireConfirm="true" History="@(Year < Clock.Year)" Lede="@importLede" OnImported="Imported" OnCancel="ToggleImport" />
             </section>
         }
 
@@ -109,13 +121,10 @@ else
             <section class="role-card budget-start-over">
                 <span class="tile-kicker">Start over</span>
                 <p class="page-lede">Deletes @Year and every line in it. No undo.</p>
-                @if (Year == Clock.Year)
-                {
-                    <div class="auth-field">
-                        <label for="confirm-year">Type @Year to confirm</label>
-                        <input id="confirm-year" @bind="confirmYear" disabled="@busy" />
-                    </div>
-                }
+                <div class="auth-field">
+                    <label for="confirm-year">Type @Year to confirm</label>
+                    <input id="confirm-year" @bind="confirmYear" disabled="@busy" />
+                </div>
                 <div class="role-actions">
                     <button type="button" class="btn btn-danger" disabled="@busy" @onclick="DeleteYear">Delete @Year</button>
                     <button type="button" class="btn btn-ghost" disabled="@busy" @onclick="ToggleStartOver">Keep @Year</button>
@@ -149,6 +158,14 @@ else
         </section>
 
         <div class="budget-totals">
+            <div>
+                <span class="tile-kicker">Income</span>
+                <BudgetMoney Value="year.Income" />
+            </div>
+            <div>
+                <span class="tile-kicker">Expenses</span>
+                <BudgetMoney Value="year.Expenses" />
+            </div>
             <div>
                 <span class="tile-kicker">@(IsCurrentYear ? "Checking now" : "Year end")</span>
                 <BudgetMoney Value="CheckingNow" />
@@ -206,6 +223,9 @@ else
         CanUpdate && (Year == Clock.Year || (Clock.Month == 12 && Year == Clock.Year + 1));
     private bool CanStartNextYear =>
         CanUpdate && IsCurrentYear && Clock.Month == 12 && !years.Contains(Year + 1);
+    private string importLede => Year < Clock.Year
+        ? $"Replaces {Year} lines and the January start. Templates in the file are ignored."
+        : $"Replaces {Year} lines and the January start. Templates are created only if missing.";
 
     private decimal CheckingNow
     {
@@ -243,7 +263,7 @@ else
         error = null;
         var listed = await Budget.ListYearsAsync();
         if (listed.Succeeded)
-            years = listed.Value?.Years ?? [];
+            years = listed.Value?.YearNumbers ?? [];
         var result = await Budget.GetYearAsync(Year);
         loading = false;
         if (result.StatusCode is System.Net.HttpStatusCode.NotFound)
@@ -345,7 +365,7 @@ else
 
     private async Task DeleteYear()
     {
-        if (Year == Clock.Year && confirmYear != Year.ToString())
+        if (confirmYear != Year.ToString())
         {
             error = $"Type {Year} to delete this year.";
             return;
@@ -361,7 +381,7 @@ else
             return;
         }
 
-        Nav.NavigateTo(Routes.Budget);
+        Nav.NavigateTo(Routes.BudgetYears);
     }
 
     private bool IsNow(int month) => IsCurrentYear && Clock.Month == month;
