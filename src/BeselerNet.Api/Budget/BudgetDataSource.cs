@@ -50,6 +50,7 @@ internal sealed class BudgetNameHintRow
     public required string Section { get; init; }
     public required string Name { get; init; }
     public DateOnly? OnDate { get; init; }
+    public decimal? Amount { get; init; }
 }
 
 internal sealed class BudgetDataSource(NpgsqlDataSource dataSource)
@@ -87,7 +88,7 @@ internal sealed class BudgetDataSource(NpgsqlDataSource dataSource)
         return rows.AsList();
     }
 
-    public async Task<IReadOnlyDictionary<string, IReadOnlyList<string>>> SuggestedNames(
+    public async Task<IReadOnlyDictionary<string, IReadOnlyList<BudgetNameHint>>> SuggestedNames(
         int accountId,
         int year,
         int month,
@@ -96,7 +97,7 @@ internal sealed class BudgetDataSource(NpgsqlDataSource dataSource)
         using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
         var rows = await connection.QueryAsync<BudgetNameHintRow>(
             """
-            SELECT l.section, l.name, l.on_date
+            SELECT l.section, l.name, l.on_date, l.amount
             FROM budget_line l
             INNER JOIN budget_period p ON p.budget_period_id = l.budget_period_id
             WHERE p.account_id = @accountId
@@ -112,10 +113,10 @@ internal sealed class BudgetDataSource(NpgsqlDataSource dataSource)
             inMonth.Add($"{BudgetSections.Normalize(row.Section)}\n{row.Name.Trim()}");
         }
 
-        var hints = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+        var hints = new Dictionary<string, IReadOnlyList<BudgetNameHint>>(StringComparer.OrdinalIgnoreCase);
         foreach (var section in new[] { BudgetSections.Income, BudgetSections.Expense, BudgetSections.Savings })
         {
-            var names = new List<string>();
+            var names = new List<BudgetNameHint>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in rows)
             {
@@ -126,7 +127,12 @@ internal sealed class BudgetDataSource(NpgsqlDataSource dataSource)
                     continue;
                 if (inMonth.Contains($"{section}\n{name}"))
                     continue;
-                names.Add(name);
+                names.Add(new BudgetNameHint
+                {
+                    Name = name,
+                    Amount = row.Amount,
+                    Day = row.OnDate?.Day
+                });
                 if (names.Count == 3)
                     break;
             }

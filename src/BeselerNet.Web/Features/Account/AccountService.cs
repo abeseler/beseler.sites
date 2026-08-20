@@ -81,12 +81,44 @@ internal sealed class AccountService(ApiClient api, AccountSession session, IOpt
         return ApiResult<string>.Ok(handoff);
     }
 
-    public Task<ApiResult> ChangePasswordAsync(string currentPassword, string password, CancellationToken cancellationToken = default) =>
-        _api.PostAsync("/v1/accounts/change-password", new ChangePasswordRequest
+    public async Task<ApiResult> ChangePasswordAsync(string currentPassword, string password, CancellationToken cancellationToken = default)
+    {
+        var result = await _api.PostAsync<OAuthTokenResponse>("/v1/accounts/change-password", new ChangePasswordRequest
         {
             CurrentPassword = currentPassword,
             Password = password
         }, session: true, cancellationToken: cancellationToken);
+
+        if (result.Succeeded && result.Value is not null)
+            _session.ReplaceTokens(result.Value);
+
+        return result.WithoutValue();
+    }
+
+    public async Task<ApiResult> RevokeSessionsAsync(bool everywhere, CancellationToken cancellationToken = default)
+    {
+        if (everywhere)
+        {
+            var result = await _api.PostAsync<OAuthTokenResponse>("/v1/accounts/sessions/revoke", new RevokeSessionsRequest
+            {
+                Everywhere = true
+            }, session: true, cancellationToken: cancellationToken);
+
+            if (result.Succeeded && result.Value is not null)
+                _session.ReplaceTokens(result.Value);
+
+            return result.WithoutValue();
+        }
+
+        return await _api.PostAsync("/v1/accounts/sessions/revoke", new RevokeSessionsRequest
+        {
+            Everywhere = false,
+            RefreshToken = _session.RefreshToken
+        }, session: true, cancellationToken: cancellationToken);
+    }
+
+    public Task<ApiResult> RequestEmailConfirmationAsync(string email, CancellationToken cancellationToken = default) =>
+        _api.PostAsync("/v1/accounts/request-email-confirmation", new ForgotPasswordRequest { Email = email }, cancellationToken: cancellationToken);
 
     public async Task<ApiResult> ResendVerificationAsync(CancellationToken cancellationToken = default)
     {

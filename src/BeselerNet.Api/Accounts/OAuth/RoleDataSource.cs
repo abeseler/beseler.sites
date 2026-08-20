@@ -78,7 +78,10 @@ internal sealed class RoleDataSource(NpgsqlDataSource dataSource, HybridCache ca
             LEFT JOIN permission p ON p.permission_id = rp.permission_id
             ORDER BY r.protected DESC, r.name, p.resource, p.action
             """);
-        return MapRoles(rows);
+        var counts = (await connection.QueryAsync<RoleUserCountRow>(
+            "SELECT role_id, COUNT(*)::int AS user_count FROM account_role GROUP BY role_id"))
+            .ToDictionary(row => row.RoleId, row => row.UserCount);
+        return MapRoles(rows, counts);
     }
 
     public async Task<RoleResponse?> WithId(int roleId, CancellationToken cancellationToken)
@@ -94,7 +97,11 @@ internal sealed class RoleDataSource(NpgsqlDataSource dataSource, HybridCache ca
             WHERE r.role_id = @roleId
             ORDER BY p.resource, p.action
             """, new { roleId });
-        return MapRoles(rows).FirstOrDefault();
+        var counts = (await connection.QueryAsync<RoleUserCountRow>(
+            "SELECT role_id, COUNT(*)::int AS user_count FROM account_role WHERE role_id = @roleId GROUP BY role_id",
+            new { roleId }))
+            .ToDictionary(row => row.RoleId, row => row.UserCount);
+        return MapRoles(rows, counts).FirstOrDefault();
     }
 
     public async Task<RoleDetails?> Details(int roleId, CancellationToken cancellationToken)
@@ -171,7 +178,7 @@ internal sealed class RoleDataSource(NpgsqlDataSource dataSource, HybridCache ca
     private async Task Invalidate(CancellationToken cancellationToken) =>
         await _cache.RemoveAsync("Roles", cancellationToken);
 
-    private static List<RoleResponse> MapRoles(IEnumerable<RolePermissionRow> rows)
+    private static List<RoleResponse> MapRoles(IEnumerable<RolePermissionRow> rows, IReadOnlyDictionary<int, int>? userCounts = null)
     {
         return rows
             .GroupBy(row => row.RoleId)
@@ -184,6 +191,7 @@ internal sealed class RoleDataSource(NpgsqlDataSource dataSource, HybridCache ca
                     Name = first.Name,
                     Protected = first.Protected,
                     LockedGrants = first.LockedGrants,
+                    UserCount = userCounts is not null && userCounts.TryGetValue(first.RoleId, out var count) ? count : 0,
                     Permissions = group
                         .Where(row => row.PermissionId is not null)
                         .Select(row => new PermissionResponse
@@ -196,6 +204,12 @@ internal sealed class RoleDataSource(NpgsqlDataSource dataSource, HybridCache ca
                 };
             })
             .ToList();
+    }
+
+    private sealed class RoleUserCountRow
+    {
+        public int RoleId { get; init; }
+        public int UserCount { get; init; }
     }
 
     private sealed class RolePermissionRow

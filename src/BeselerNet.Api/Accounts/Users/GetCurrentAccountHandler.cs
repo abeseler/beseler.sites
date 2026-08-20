@@ -55,6 +55,7 @@ internal static class GetCurrentAccountHandler
             GivenName = account.GivenName,
             FamilyName = account.FamilyName,
             Name = account.Name,
+            LastLogon = account.LastLogon,
             Roles = roles
         };
     }

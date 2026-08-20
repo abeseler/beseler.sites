@@ -29,17 +29,17 @@
             }
             else
             {
-                <button type="button" class="budget-line" disabled="@(!CanEdit || Busy)" @onclick="() => BeginEdit(line)">
-                    <span class="budget-line-day">@DayLabel(line)</span>
-                    <span class="budget-line-name">
-                        @line.Name
-                        @if (line.TemplateId is not null && !line.Committed)
-                        {
-                            <span class="budget-est">est</span>
-                        }
-                    </span>
-                    <BudgetMoney Value="@(line.Amount ?? 0)" Extra="budget-line-amt" />
-                </button>
+                <div class="budget-line-row">
+                    <button type="button" class="budget-line" disabled="@(!CanEdit || Busy)" @onclick="() => BeginEdit(line)">
+                        <span class="budget-line-day">@DayLabel(line)</span>
+                        <span class="budget-line-name">@line.Name</span>
+                        <BudgetMoney Value="line.Amount" Extra="budget-line-amt" />
+                    </button>
+                    @if (line.TemplateId is not null && !line.Committed)
+                    {
+                        <button type="button" class="budget-est" disabled="@(!CanEdit || Busy || saving)" title="Mark as committed" @onclick="() => Commit(line)">est</button>
+                    }
+                </div>
             }
         }
     </div>
@@ -59,7 +59,7 @@
     [Parameter] public string Section { get; set; } = "";
     [Parameter] public decimal Total { get; set; }
     [Parameter] public IReadOnlyList<BudgetLineResponse> Lines { get; set; } = [];
-    [Parameter] public IReadOnlyList<string> NameHints { get; set; } = [];
+    [Parameter] public IReadOnlyList<BudgetNameHint> NameHints { get; set; } = [];
     [Parameter] public int Year { get; set; }
     [Parameter] public int Month { get; set; }
     [Parameter] public bool CanEdit { get; set; }
@@ -114,6 +114,22 @@
         CloseForm();
         saving = false;
         await OnChanged.InvokeAsync();
+    }
+
+    private async Task Commit(BudgetLineResponse line)
+    {
+        saving = true;
+        var result = await Budget.UpdateLineAsync(line.LineId, new UpsertBudgetLineRequest
+        {
+            Name = line.Name,
+            Section = line.Section,
+            Amount = line.Amount,
+            OnDate = line.OnDate,
+            Committed = true
+        });
+        saving = false;
+        if (result.Succeeded)
+            await OnChanged.InvokeAsync();
     }
 
 }

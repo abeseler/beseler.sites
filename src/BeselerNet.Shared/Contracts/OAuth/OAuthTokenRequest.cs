@@ -1,4 +1,4 @@
-﻿using BeselerNet.Shared.Core;
+using BeselerNet.Shared.Core;
 using System.Diagnostics.CodeAnalysis;
 
 namespace BeselerNet.Shared.Contracts.OAuth;

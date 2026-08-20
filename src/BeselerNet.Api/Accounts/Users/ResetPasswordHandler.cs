@@ -10,6 +10,7 @@ namespace BeselerNet.Api.Accounts.Users;
 
 internal sealed class ResetPasswordHandler
 {
+    public const string ResetClaim = "reset";
     private const string RefreshCookiePath = "/v1/accounts/oauth/tokens";
 
     public static async Task<IResult> Handle(
@@ -22,7 +23,8 @@ internal sealed class ResetPasswordHandler
         Cookies cookies,
         CancellationToken cancellationToken)
     {
-        if (!int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId))
+        if (!int.TryParse(principal.FindFirstValue(JwtRegisteredClaimNames.Sub), out var accountId)
+            || principal.FindFirstValue(ResetClaim) is null)
         {
             return TypedResults.Unauthorized();
         }
@@ -53,6 +55,7 @@ internal sealed class ResetPasswordHandler
         var hashedPassword = passwordHasher.HashPassword(account!, request.Password!);
         account!.ChangePassword(hashedPassword);
         await accounts.SaveChanges(account, cancellationToken);
+        await tokenLogs.RevokeAll(account.AccountId, cancellationToken);
 
         var tokenResult = tokens.Generate(account.ToClaimsPrincipal());
         if (tokenResult.RefreshToken is not null)

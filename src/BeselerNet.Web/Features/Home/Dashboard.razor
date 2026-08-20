@@ -1,5 +1,8 @@
 @page "/dashboard"
 @inject AccountSession Session
+@inject BudgetService Budget
+@inject ClientClock Clock
+@inject IJSRuntime Js
 
 <PageTitle>@SiteConstants.SiteName: Dashboard</PageTitle>
 
@@ -8,23 +11,38 @@
     <h1 class="page-title">Hello@(greeting)</h1>
     <p class="page-lede">@meta</p>
 
-    <section class="dash-section">
-        <h2 class="dash-section-title">Apps</h2>
-        <div class="tile-grid">
-            <a class="tile tile-app" href="@Routes.Budget">
-                <span class="tile-kicker">App</span>
-                <span class="tile-title">Budget</span>
-                <span class="tile-copy">This month’s income, expenses, and savings. Templates stamp the repeating rows.</span>
-            </a>
-        </div>
-    </section>
+    <Can Resource="@Resources.Budget" Action="@Actions.Read">
+        <section class="dash-section">
+            <h2 class="dash-section-title">Apps</h2>
+            <div class="tile-grid">
+                <a class="tile tile-app" href="@budgetHref">
+                    <span class="tile-kicker">App</span>
+                    <span class="tile-title">Budget</span>
+                    <span class="tile-copy">@budgetCopy</span>
+                    @if (month is not null)
+                    {
+                        <div class="dash-metrics">
+                            <div>
+                                <span class="tile-kicker">Cash flow</span>
+                                <BudgetMoney Value="month.CashFlow" />
+                            </div>
+                            <div>
+                                <span class="tile-kicker">Now</span>
+                                <BudgetMoney Value="CheckingNow" />
+                            </div>
+                        </div>
+                    }
+                </a>
+            </div>
+        </section>
+    </Can>
 
     <section class="dash-section">
         <h2 class="dash-section-title">You</h2>
         <div class="tile-grid">
             <a class="tile" href="@Routes.Account">
                 <span class="tile-title">Account</span>
-                <span class="tile-copy">Your name and the email you sign in with.</span>
+                <span class="tile-copy">Name and the email you sign in with.</span>
             </a>
         </div>
     </section>
@@ -62,6 +80,31 @@
 @code {
     private string greeting = "";
     private string meta = "";
+    private BudgetMonthResponse? month;
+    private bool yearStarted;
+    private bool budgetReady;
+
+    private string budgetHref =>
+        yearStarted && Clock.Month is >= 1 and <= 12
+            ? Routes.BudgetMonth(Clock.Year, Clock.Month)
+            : Routes.Budget;
+
+    private string budgetCopy
+    {
+        get
+        {
+            if (!budgetReady)
+                return "This month’s income, expenses, and savings. Templates stamp the repeating rows.";
+            if (!yearStarted)
+                return $"Start {Clock.Year}. January balance, then templates stamp from today.";
+            return "This month’s income, expenses, and savings.";
+        }
+    }
+
+    private decimal CheckingNow =>
+        month?.Days.FirstOrDefault(day => day.Day == Clock.Day)?.Balance
+        ?? month?.EndingBalance
+        ?? 0;
 
     protected override void OnInitialized()
     {
@@ -73,5 +116,26 @@
             bits.Add(email);
         bits.AddRange(Session.Profile?.Roles.Select(role => role.Name) ?? []);
         meta = bits.Count > 0 ? string.Join(" · ", bits) : "Signed in.";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !Session.HasPermission(Resources.Budget, Actions.Read))
+            return;
+
+        await Clock.EnsureAsync(Js);
+        var years = await Budget.ListYearsAsync();
+        if (years.Succeeded)
+            yearStarted = (years.Value?.Years ?? []).Contains(Clock.Year);
+
+        if (yearStarted)
+        {
+            var result = await Budget.GetMonthAsync(Clock.Year, Clock.Month);
+            if (result.Succeeded)
+                month = result.Value;
+        }
+
+        budgetReady = true;
+        StateHasChanged();
     }
 }

@@ -8,6 +8,7 @@
 <section class="auth-shell">
     <div class="auth-card">
         <Brand />
+        <h1 class="visually-hidden">Confirm email</h1>
 
         @if (state == PageState.Working)
         {
@@ -19,9 +20,20 @@
             {
                 <p class="auth-alert" role="alert">@error</p>
             }
+            <p class="auth-lede">If the link expired, enter your email. We will send a new one if that address still needs confirming.</p>
+            <div class="auth-field">
+                <label for="confirm-email">Email</label>
+                <input id="confirm-email" type="email" @bind="email" disabled="@busy" />
+            </div>
+            <button type="button" class="auth-submit" disabled="@busy" @onclick="RequestLink">
+                @(busy ? "Sending…" : "Send a new link")
+            </button>
+            @if (sent)
+            {
+                <NoticeOk OnDismiss="() => sent = false">If that address still needs confirming, a new link is on the way.</NoticeOk>
+            }
             <p class="auth-footer">
-                Need a new link? <a href="@Routes.VerifyEmail">Resend confirmation</a>
-                · <a href="@Routes.Login">Sign in</a>
+                <a href="@Routes.Login">Sign in</a>
             </p>
         }
     </div>
@@ -37,6 +49,9 @@
     private PageState state = PageState.Working;
     private string? error;
     private bool started;
+    private bool busy;
+    private bool sent;
+    private string email = "";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -61,8 +76,24 @@
         }
 
         state = PageState.Failed;
-        error = result.Error;
+        error = result.Error ?? "This link is invalid or has expired.";
         StateHasChanged();
+    }
+
+    private async Task RequestLink()
+    {
+        busy = true;
+        sent = false;
+        error = null;
+        var result = await Accounts.RequestEmailConfirmationAsync(email);
+        busy = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not send a new link.";
+            return;
+        }
+
+        sent = true;
     }
 
     private enum PageState { Working, Failed }

@@ -156,6 +156,14 @@ internal static class AccountEndpoints
             .ProducesProblem(Status422UnprocessableEntity, Application.Json)
             .RequireAuthorization();
 
+        v1.MapPost("/request-email-confirmation", RequestEmailConfirmationHandler.Handle)
+            .WithName("RequestEmailConfirmation")
+            .WithDescription("Request a confirmation link by email. Always returns the same message.")
+            .Accepts<ForgotPasswordRequest>(Application.Json)
+            .Produces<GenericMessageResponse>(Status202Accepted)
+            .ProducesValidationProblem(Status400BadRequest, Application.Json)
+            .AllowAnonymous();
+
         v1.MapPost("/confirm-email", ConfirmEmailHandler.Handle)
             .WithName("ConfirmEmail")
             .WithDescription("Confirm the email address and return a fresh session.")
@@ -175,7 +183,7 @@ internal static class AccountEndpoints
 
         v1.MapPost("/reset-password", ResetPasswordHandler.Handle)
             .WithName("ResetUserPassword")
-            .WithDescription("Reset the password and return a fresh session.")
+            .WithDescription("Reset the password from a reset-purpose token and return a fresh session.")
             .Accepts<ResetPasswordRequest>(Application.Json)
             .Produces<OAuthTokenResponse>(Status200OK, Application.Json)
             .ProducesValidationProblem(Status400BadRequest, Application.Json)
@@ -185,12 +193,21 @@ internal static class AccountEndpoints
 
         v1.MapPost("/change-password", ChangePasswordHandler.Handle)
             .WithName("ChangePassword")
-            .WithDescription("Change the signed-in account's password. Requires the current password.")
+            .WithDescription("Change the signed-in account's password. Requires the current password. Revokes other sessions and returns a fresh session.")
             .Accepts<ChangePasswordRequest>(Application.Json)
-            .Produces(Status204NoContent)
+            .Produces<OAuthTokenResponse>(Status200OK, Application.Json)
             .ProducesValidationProblem(Status400BadRequest, Application.Json)
             .Produces(Status401Unauthorized)
             .ProducesProblem(Status403Forbidden, Application.Json)
+            .RequireAuthorization();
+
+        v1.MapPost("/sessions/revoke", RevokeSessionsHandler.Handle)
+            .WithName("RevokeSessions")
+            .WithDescription("Revoke the current refresh token, or every session and return a fresh one.")
+            .Accepts<RevokeSessionsRequest>(Application.Json)
+            .Produces<OAuthTokenResponse>(Status200OK, Application.Json)
+            .Produces(Status204NoContent)
+            .Produces(Status401Unauthorized)
             .RequireAuthorization();
     }
 }

@@ -11,6 +11,8 @@ public sealed record RoleResponse
     public required bool Protected { get; init; }
     [JsonPropertyName("locked_grants")]
     public required bool LockedGrants { get; init; }
+    [JsonPropertyName("user_count")]
+    public int UserCount { get; init; }
     public IReadOnlyList<PermissionResponse> Permissions { get; init; } = [];
 }
 

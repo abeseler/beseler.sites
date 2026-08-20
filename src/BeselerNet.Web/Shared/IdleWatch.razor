@@ -1,5 +1,6 @@
 @inject AccountSession Session
 @inject SessionActivity Activity
+@inject AccountService Accounts
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @implements IAsyncDisposable
@@ -38,6 +39,14 @@
             {
                 if (DateTimeOffset.UtcNow - lastActivity >= Activity.IdleAfter)
                 {
+                    try
+                    {
+                        await Accounts.RevokeSessionsAsync(everywhere: false, cancellationToken);
+                    }
+                    catch (Exception)
+                    {
+                    }
+
                     Nav.NavigateTo(Routes.SignOut, forceLoad: true);
                     return;
                 }

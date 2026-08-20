@@ -1,0 +1,41 @@
+@inject ClientClock Clock
+@inject NavigationManager Nav
+@inject IJSRuntime Js
+@implements IAsyncDisposable
+
+@code {
+    private CancellationTokenSource? loop;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await Clock.EnsureAsync(Js);
+        loop = new CancellationTokenSource();
+        _ = WatchAsync(loop.Token);
+    }
+
+    private async Task WatchAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                if (await Clock.EnsureAsync(Js))
+                    Nav.Refresh();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        loop?.Cancel();
+        loop?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

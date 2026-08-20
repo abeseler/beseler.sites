@@ -1,4 +1,4 @@
-<button type="button" class="notice-ok" @onclick="Dismiss">@ChildContent</button>
+<button type="button" class="notice-ok" role="status" @onclick="Dismiss">@ChildContent</button>
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }

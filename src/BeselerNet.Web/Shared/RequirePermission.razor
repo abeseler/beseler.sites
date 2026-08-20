@@ -21,6 +21,13 @@
         </div>
     }
 }
+else
+{
+    <div class="app-main">
+        <h1 class="visually-hidden">Loading</h1>
+        <p class="page-lede">Loading…</p>
+    </div>
+}
 
 @code {
     [Parameter] public string Resource { get; set; } = "";

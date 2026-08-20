@@ -23,7 +23,7 @@
     font-weight: 400;
 }
 
-.navbar-toggler {
+.nav-toggle {
     appearance: none;
     cursor: pointer;
     width: 2.75rem;
@@ -36,7 +36,7 @@
     background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28216, 214, 208, 0.7%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") no-repeat center/1.5rem var(--surface-2);
 }
 
-.navbar-toggler:checked {
+.nav-toggle[aria-expanded="true"] {
     border-color: var(--accent);
 }
 
@@ -63,23 +63,29 @@
     text-transform: uppercase;
 }
 
-.nav-link {
+::deep .nav-link {
     display: block;
     padding: 0.55rem 0.75rem;
     border-radius: 8px;
-    color: var(--text);
+    color: var(--accent);
     text-decoration: none;
     font-size: 0.9rem;
 }
 
-.nav-link:hover {
+::deep .nav-link:hover {
     color: var(--warn);
-    background: var(--surface-2);
+    background: var(--warn-dim);
+    text-decoration: none;
 }
 
-.nav-link.active {
+::deep .nav-link.active {
     background: var(--warn-dim);
     color: var(--warn);
+    text-decoration: none;
+}
+
+::deep .nav-link.active:hover {
+    filter: brightness(1.08);
 }
 
 .nav-user {
@@ -121,13 +127,13 @@
     display: none;
 }
 
-.navbar-toggler:checked ~ .nav-scrollable {
+.nav-scrollable.is-open {
     display: flex;
     flex-direction: column;
 }
 
 @media (min-width: 641px) {
-    .navbar-toggler {
+    .nav-toggle {
         display: none;
     }
 

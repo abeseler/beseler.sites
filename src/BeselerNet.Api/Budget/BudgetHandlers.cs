@@ -278,10 +278,10 @@ internal static class BudgetHandlers
         var summary = yearResponse.Months.Single(item => item.Month == month);
         var periods = await budget.PeriodsForYear(accountId, year, cancellationToken);
         var period = periods.Single(item => item.Month == month);
-        var monthLines = (await budget.LinesForYear(accountId, year, cancellationToken))
-            .Where(line => line.BudgetPeriodId == period.BudgetPeriodId)
-            .ToArray();
+        var yearLines = await budget.LinesForYear(accountId, year, cancellationToken);
+        var monthLines = yearLines.Where(line => line.BudgetPeriodId == period.BudgetPeriodId).ToArray();
         var suggested = await budget.SuggestedNames(accountId, year, month, cancellationToken);
+        var nextTrough = await NextTrough(budget, accountId, year, month, summary.EndingBalance, periods, yearLines, cancellationToken);
 
         return TypedResults.Ok(new BudgetMonthResponse
         {
@@ -295,6 +295,7 @@ internal static class BudgetHandlers
             EndingBalance = summary.EndingBalance,
             Lines = monthLines.Select(MapLine).ToArray(),
             Days = BudgetCalculator.Days(year, month, summary.StartingBalance, monthLines),
+            NextTrough = nextTrough,
             SuggestedNames = suggested
         });
     }
@@ -548,6 +549,46 @@ internal static class BudgetHandlers
             Months = months,
             CheckingNow = checkingNow
         };
+    }
+
+    private static async Task<BudgetTrough?> NextTrough(
+        BudgetDataSource budget,
+        int accountId,
+        int year,
+        int month,
+        decimal endingBalance,
+        IReadOnlyList<BudgetPeriodRow> periods,
+        IReadOnlyList<BudgetLineRow> yearLines,
+        CancellationToken cancellationToken)
+    {
+        int nextYear;
+        int nextMonth;
+        IReadOnlyList<BudgetPeriodRow> nextPeriods;
+        IReadOnlyList<BudgetLineRow> nextLines;
+
+        if (month < 12)
+        {
+            nextYear = year;
+            nextMonth = month + 1;
+            nextPeriods = periods;
+            nextLines = yearLines;
+        }
+        else
+        {
+            nextYear = year + 1;
+            nextMonth = 1;
+            nextPeriods = await budget.PeriodsForYear(accountId, nextYear, cancellationToken);
+            if (nextPeriods.Count == 0)
+                return null;
+            nextLines = await budget.LinesForYear(accountId, nextYear, cancellationToken);
+        }
+
+        var nextPeriod = nextPeriods.FirstOrDefault(item => item.Month == nextMonth);
+        if (nextPeriod is null)
+            return null;
+
+        var lines = nextLines.Where(line => line.BudgetPeriodId == nextPeriod.BudgetPeriodId);
+        return BudgetCalculator.Trough(nextYear, nextMonth, endingBalance, lines);
     }
 
     private static BudgetLineResponse MapLine(BudgetLineRow line) => new()

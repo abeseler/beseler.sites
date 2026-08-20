@@ -78,7 +78,8 @@ internal static class BudgetCalculator
         {
             var start = period.Month == 1 ? period.StartingBalance ?? 0 : previousEnding;
             decimal income = 0, expenses = 0, savings = 0;
-            foreach (var line in byPeriod[period.BudgetPeriodId])
+            var periodLines = byPeriod[period.BudgetPeriodId].ToArray();
+            foreach (var line in periodLines)
             {
                 var amount = line.Amount ?? 0;
                 if (string.Equals(line.Section, BudgetSections.Income, StringComparison.OrdinalIgnoreCase))
@@ -89,7 +90,6 @@ internal static class BudgetCalculator
                     savings += amount;
             }
 
-            var cashFlow = income - expenses;
             var ending = start + income - expenses - savings;
             previousEnding = ending;
             summaries.Add(new BudgetMonthSummary
@@ -99,7 +99,7 @@ internal static class BudgetCalculator
                 Income = income,
                 Expenses = expenses,
                 Savings = savings,
-                CashFlow = cashFlow,
+                CashFlow = income - expenses,
                 EndingBalance = ending
             });
         }
@@ -131,6 +131,31 @@ internal static class BudgetCalculator
         }
 
         return days;
+    }
+
+    public static BudgetTrough? Trough(int year, int month, decimal startingBalance, IEnumerable<BudgetLineRow> lines)
+    {
+        var days = Days(year, month, startingBalance, lines);
+        if (days.Count == 0)
+            return null;
+
+        var low = days[0];
+        foreach (var day in days)
+        {
+            if (day.Balance < low.Balance)
+                low = day;
+        }
+
+        if (low.Balance >= 0)
+            return null;
+
+        return new BudgetTrough
+        {
+            Year = year,
+            Month = month,
+            Day = low.Day,
+            Balance = low.Balance
+        };
     }
 
     public static decimal BalanceOn(DateOnly date, decimal startingBalance, IEnumerable<BudgetLineRow> lines)

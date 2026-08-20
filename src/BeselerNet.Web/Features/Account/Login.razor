@@ -10,6 +10,7 @@
 <section class="auth-shell">
     <div class="auth-card">
         <Brand />
+        <h1 class="visually-hidden">Sign in</h1>
         <p class="auth-lede">Sign in with the email you registered.</p>
 
         @if (error is not null)
@@ -34,9 +35,13 @@
             </div>
             <div class="auth-field">
                 <label for="password">Password</label>
-                <InputText id="password" type="password" @bind-Value="model.Password" autocomplete="current-password" />
+                <InputText id="password" type="@passwordType" @bind-Value="model.Password" autocomplete="current-password" />
                 <ValidationMessage For="() => model.Password" />
             </div>
+            <label class="auth-check">
+                <InputCheckbox id="show-password" @bind-Value="showPassword" />
+                <span>Show password</span>
+            </label>
             <label class="auth-check">
                 <InputCheckbox id="persist" @bind-Value="model.ThisDevice" />
                 <span>
@@ -69,7 +74,9 @@
     private bool busy;
     private bool locked;
     private bool signupOpen;
+    private bool showPassword;
     private string? error;
+    private string passwordType => showPassword ? "text" : "password";
 
     protected override async Task OnInitializedAsync()
     {

@@ -86,11 +86,10 @@ internal sealed class ForgotPasswordService(IServiceProvider services, JwtGenera
             activity?.SetTag_AccountId(account.AccountId);
             var communicationService = scope.ServiceProvider.GetRequiredService<CommunicationService>();
             var subjectClaim = new Claim(JwtRegisteredClaimNames.Sub, account.AccountId.ToString(), ClaimValueTypes.Integer);
-            var token = _tokens.Generate(subjectClaim, AuthLimits.ResetPassword).AccessToken;
+            var resetClaim = new Claim(ResetPasswordHandler.ResetClaim, "true", ClaimValueTypes.Boolean);
+            var token = _tokens.Generate(subjectClaim, AuthLimits.ResetPassword, [resetClaim]).AccessToken;
 
-            var sendResult = account.IsLocked
-                ? await communicationService.SendAccountLocked(account.AccountId, request.Email, account.Name, cancellationToken)
-                : await communicationService.SendPasswordReset(account.AccountId, request.Email, account.Name, token, cancellationToken);
+            var sendResult = await communicationService.SendPasswordReset(account.AccountId, request.Email, account.Name, token, cancellationToken);
 
             if (sendResult.Failed(out var exception))
             {

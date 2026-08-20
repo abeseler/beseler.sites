@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Beseler .NET",
   "short_name": "Beseler",
-  "description": "Budget, accounts, and the rest of the tools on this site.",
+  "description": "Budget, accounts, and whatever else this site grows into.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
@@ -29,6 +29,16 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Budget",
+      "url": "/budget"
+    },
+    {
+      "name": "Account",
+      "url": "/account"
     }
   ]
 }

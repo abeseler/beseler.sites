@@ -43,3 +43,11 @@
 @keyframes reconnect-spin {
     to { transform: rotate(360deg); }
 }
+
+@media (prefers-reduced-motion: reduce) {
+    .components-rejoining-animation {
+        animation: none;
+        border-top-color: var(--accent);
+        opacity: 0.7;
+    }
+}

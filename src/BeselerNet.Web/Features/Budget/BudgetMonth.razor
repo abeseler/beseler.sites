@@ -12,6 +12,7 @@
 {
     <div class="app-main">
         <p class="kicker">Budget</p>
+        <h1 class="page-title">Budget</h1>
         <p class="page-lede">Loading…</p>
     </div>
 }
@@ -46,10 +47,6 @@ else
         @if (error is not null)
         {
             <p class="auth-alert" role="alert">@error</p>
-        }
-        @if (notice is not null)
-        {
-            <NoticeOk OnDismiss="() => notice = null">@notice</NoticeOk>
         }
 
         <div class="budget-totals">
@@ -92,10 +89,19 @@ else
                     {
                         <span>Now <BudgetMoney Value="CheckingNow" /></span>
                     }
-                    <span>Lowest <BudgetMoney Value="LowestDay" /></span>
+                    @if (LowestDay < 0)
+                    {
+                        <span>Neg <BudgetMoney Value="LowestDay" /></span>
+                    }
                     <span class="budget-days-chevron" aria-hidden="true">@(daysOpen ? "▴" : "▾")</span>
                 </span>
             </button>
+            @if (month.NextTrough is { } trough)
+            {
+                <a class="budget-next-trough" href="@Routes.BudgetMonth(trough.Year, trough.Month)">
+                    @Abbrev(trough.Month) <BudgetMoney Value="trough.Balance" /> on the @Ordinal(trough.Day)
+                </a>
+            }
             @if (daysOpen)
             {
                 <div class="budget-day-list">
@@ -120,7 +126,6 @@ else
     private BudgetMonthResponse? month;
     private bool loading = true;
     private string? error;
-    private string? notice;
     private int slide;
     private bool daysOpen;
     private double pointerX;
@@ -133,11 +138,11 @@ else
         CanUpdate && (Year == Clock.Year || (Clock.Month == 12 && Year == Clock.Year + 1));
     private string monthName => new DateOnly(Year, Month, 1).ToString("MMMM");
     private bool IsCurrentMonth => Clock.Year == Year && Clock.Month == Month;
-    private decimal LowestDay => month?.Days.Count > 0 ? month.Days.Min(day => day.Balance) : 0;
     private decimal CheckingNow =>
         month?.Days.FirstOrDefault(day => day.Day == Clock.Day)?.Balance ?? 0;
+    private decimal LowestDay => month?.Days.Count > 0 ? month.Days.Min(day => day.Balance) : 0;
     private bool IsToday(int day) => IsCurrentMonth && Clock.Day == day;
-    private IReadOnlyList<string> Hints(string section) =>
+    private IReadOnlyList<BudgetNameHint> Hints(string section) =>
         month?.SuggestedNames is { } map && map.TryGetValue(section, out var names) ? names : [];
 
     private IReadOnlyList<BudgetLineResponse> Income => Lines(BudgetSections.Income);
@@ -216,6 +221,22 @@ else
             slide++;
         else if (dx > 0 && slide > 0)
             slide--;
+    }
+
+    private static string Abbrev(int month) => new DateOnly(2000, month, 1).ToString("MMM");
+
+    private static string Ordinal(int day)
+    {
+        var rem = day % 100;
+        if (rem is >= 11 and <= 13)
+            return $"{day}th";
+        return (day % 10) switch
+        {
+            1 => $"{day}st",
+            2 => $"{day}nd",
+            3 => $"{day}rd",
+            _ => $"{day}th"
+        };
     }
 
 }

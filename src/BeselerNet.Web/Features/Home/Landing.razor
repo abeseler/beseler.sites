@@ -1,6 +1,7 @@
 @page "/"
 @layout BasicLayout
 @inject AccountSession Session
+@inject AccountService Accounts
 @inject NavigationManager Nav
 @inject AppService App
 
@@ -45,5 +46,16 @@
         signupOpen = status.Value?.SignupOpen is true;
     }
 
-    private void SignOut() => Nav.NavigateTo(Routes.SignOut, forceLoad: true);
+    private async Task SignOut()
+    {
+        try
+        {
+            await Accounts.RevokeSessionsAsync(everywhere: false);
+        }
+        catch (Exception)
+        {
+        }
+
+        Nav.NavigateTo(Routes.SignOut, forceLoad: true);
+    }
 }

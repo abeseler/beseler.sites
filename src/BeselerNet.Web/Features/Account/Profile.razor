@@ -9,7 +9,7 @@
 <div class="app-main">
     <p class="kicker">Account</p>
     <h1 class="page-title">Your account</h1>
-    <p class="page-lede">Name and the email you sign in with.</p>
+    <p class="page-lede">Name, the email you sign in with, and this session.</p>
 
     @if (error is not null)
     {
@@ -29,6 +29,10 @@
             <div class="auth-field">
                 <label>Roles</label>
                 <p class="account-static">@rolesLabel</p>
+            </div>
+            <div class="auth-field">
+                <label>Last sign-in</label>
+                <p class="account-static">@lastLogon</p>
             </div>
 
             @if (CanUpdate)
@@ -79,6 +83,16 @@
                 </button>
             </div>
         </section>
+
+        <section class="role-card">
+            <span class="tile-kicker">Session</span>
+            <p class="muted-empty">@sessionLabel</p>
+            <div class="role-actions">
+                <button type="button" class="btn btn-ghost btn-small" disabled="@busy" @onclick="RevokeOthers">
+                    @(busy ? "Signing out…" : "Sign out other sessions")
+                </button>
+            </div>
+        </section>
     </div>
 </div>
 </RequirePermission>
@@ -99,6 +113,14 @@
         Session.Profile?.Roles is { Count: > 0 } roles
             ? string.Join(" · ", roles.Select(role => role.Name))
             : "None";
+    private string lastLogon =>
+        Session.Profile?.LastLogon is { } time
+            ? time.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+            : "never";
+    private string sessionLabel =>
+        Session.Persist
+            ? "This device stays signed in for 14 days."
+            : "This session signs out after 20 minutes idle.";
 
     protected override void OnInitialized()
     {
@@ -155,6 +177,22 @@
         currentPassword = "";
         newPassword = "";
         confirmPassword = "";
-        notice = "Password updated.";
+        notice = "Password updated. Other sessions were signed out.";
+    }
+
+    private async Task RevokeOthers()
+    {
+        busy = true;
+        error = null;
+        notice = null;
+        var result = await AccountApi.RevokeSessionsAsync(everywhere: true);
+        busy = false;
+        if (!result.Succeeded)
+        {
+            error = result.Error ?? "Could not sign out other sessions.";
+            return;
+        }
+
+        notice = "Other sessions were signed out.";
     }
 }

@@ -24,14 +24,17 @@
         <div class="auth-field">
             <label for="email">Email</label>
             <input id="email" type="email" @bind="email" disabled="@busy" />
+            <FieldError Keys="fieldErrors" Name="email" />
         </div>
         <div class="auth-field">
             <label for="given">Given name</label>
             <input id="given" @bind="givenName" maxlength="64" disabled="@busy" />
+            <FieldError Keys="fieldErrors" Name="given_name" />
         </div>
         <div class="auth-field">
             <label for="family">Family name</label>
             <input id="family" @bind="familyName" maxlength="64" disabled="@busy" />
+            <FieldError Keys="fieldErrors" Name="family_name" />
         </div>
 
         @if (edits.Count > 0)
@@ -49,10 +52,8 @@
                         @if (edit.Selected)
                         {
                             <select class="auth-select" @bind="edit.Scope" disabled="@busy">
-                                <option value="@Scopes.Owned">owned</option>
-                                <option value="@Scopes.Global">global</option>
-                                <option value="@Scopes.Shared">shared</option>
-                                <option value="@Scopes.Self">self</option>
+                                <option value="@Scopes.Owned">Their own</option>
+                                <option value="@Scopes.Global">Everything</option>
                             </select>
                         }
                     </div>
@@ -77,6 +78,7 @@
     private bool busy;
     private string? error;
     private string? notice;
+    private IDictionary<string, string[]>? fieldErrors;
 
     protected override async Task OnInitializedAsync()
     {
@@ -101,6 +103,7 @@
         busy = true;
         error = null;
         notice = null;
+        fieldErrors = null;
         var result = await AccountsApi.InviteAsync(new InviteUserRequest
         {
             Email = email,
@@ -113,7 +116,8 @@
         busy = false;
         if (!result.Succeeded)
         {
-            error = result.Error ?? "Could not send the invite.";
+            fieldErrors = result.FieldErrors;
+            error = result.FieldErrors is { Count: > 0 } ? null : result.Error ?? "Could not send the invite.";
             return;
         }
 

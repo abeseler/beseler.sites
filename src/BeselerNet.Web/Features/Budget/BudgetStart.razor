@@ -22,9 +22,9 @@
     }
 
     <section class="role-card">
-        <span class="tile-kicker">January starting balance</span>
+        <span class="tile-kicker">January start</span>
         <div class="auth-field">
-            <label for="start-balance">January starting balance</label>
+            <label for="start-balance">Starting balance</label>
             <input id="start-balance" inputmode="decimal" @bind="balanceText" disabled="@busy" />
         </div>
         <div class="role-actions">
@@ -59,6 +59,14 @@
         var listed = await Budget.ListYearsAsync();
         if (listed.Succeeded)
             years = listed.Value?.Years ?? [];
+
+        if (years.Contains(Year - 1))
+        {
+            var previous = await Budget.GetYearAsync(Year - 1);
+            var december = previous.Value?.Months.FirstOrDefault(item => item.Month == 12);
+            if (december is not null)
+                balanceText = december.EndingBalance.ToString("0.##");
+        }
     }
 
     private async Task Start()

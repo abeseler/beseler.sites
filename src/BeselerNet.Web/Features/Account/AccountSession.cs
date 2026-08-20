@@ -21,6 +21,7 @@ internal sealed class AccountSession(ApiClient api, AuthCookie cookie, TokenRefr
     public bool HasSession { get; private set; }
     public bool Persist => _cookie.Current?.Persist is true;
     public string? Sid => _cookie.Current?.Sid;
+    public string? RefreshToken => _cookie.Current?.RefreshToken;
     public bool EmailVerified => Profile?.EmailVerified is true;
     public string? Name => string.IsNullOrWhiteSpace(Profile?.Name) ? null : Profile.Name;
 
@@ -82,6 +83,15 @@ internal sealed class AccountSession(ApiClient api, AuthCookie cookie, TokenRefr
 
         var dest = ReturnUrl.Destination(returnUrl, EmailVerified);
         return $"{Routes.EstablishSession}?ticket={handoff}&return={Uri.EscapeDataString(dest)}";
+    }
+
+    public void ReplaceTokens(OAuthTokenResponse tokens)
+    {
+        var current = _cookie.Current;
+        if (current is null)
+            return;
+
+        _cookie.Set(AuthTicket.From(tokens, _time, current.Sid, current.Persist));
     }
 
     public async Task RefreshProfileAsync(CancellationToken cancellationToken = default)

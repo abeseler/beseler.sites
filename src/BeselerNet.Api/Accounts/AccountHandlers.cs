@@ -46,14 +46,14 @@ internal static class AccountHandlers
         return TypedResults.Ok(Map(account));
     }
 
-    public static Task<IResult> Disable(int accountId, ClaimsPrincipal user, AccountDataSource accounts, CancellationToken cancellationToken) =>
-        SetStatus(accountId, user, accounts, disable: true, unlock: false, cancellationToken);
+    public static Task<IResult> Disable(int accountId, ClaimsPrincipal user, AccountDataSource accounts, TokenLogDataSource tokenLogs, CancellationToken cancellationToken) =>
+        SetStatus(accountId, user, accounts, tokenLogs, disable: true, unlock: false, cancellationToken);
 
     public static Task<IResult> Enable(int accountId, ClaimsPrincipal user, AccountDataSource accounts, CancellationToken cancellationToken) =>
-        SetStatus(accountId, user, accounts, disable: false, unlock: false, cancellationToken);
+        SetStatus(accountId, user, accounts, tokenLogs: null, disable: false, unlock: false, cancellationToken);
 
     public static Task<IResult> Unlock(int accountId, ClaimsPrincipal user, AccountDataSource accounts, CancellationToken cancellationToken) =>
-        SetStatus(accountId, user, accounts, disable: null, unlock: true, cancellationToken);
+        SetStatus(accountId, user, accounts, tokenLogs: null, disable: null, unlock: true, cancellationToken);
 
     public static async Task<IResult> SetRoles(int accountId, SetAccountRolesRequest request, ClaimsPrincipal user, AccountDataSource accounts, RoleDataSource roles, CancellationToken cancellationToken)
     {
@@ -98,7 +98,7 @@ internal static class AccountHandlers
         return TypedResults.Ok(Map(account));
     }
 
-    private static async Task<IResult> SetStatus(int accountId, ClaimsPrincipal user, AccountDataSource accounts, bool? disable, bool unlock, CancellationToken cancellationToken)
+    private static async Task<IResult> SetStatus(int accountId, ClaimsPrincipal user, AccountDataSource accounts, TokenLogDataSource? tokenLogs, bool? disable, bool unlock, CancellationToken cancellationToken)
     {
         var account = await accounts.WithId_IncludeRoles(accountId, cancellationToken);
         if (account is null)
@@ -119,6 +119,9 @@ internal static class AccountHandlers
             account.Unlock();
 
         await accounts.SaveChanges(account, cancellationToken);
+        if (disable is true && tokenLogs is not null)
+            await tokenLogs.RevokeAll(account.AccountId, cancellationToken);
+
         return TypedResults.Ok(Map(account));
     }
 

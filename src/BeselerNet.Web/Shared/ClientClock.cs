@@ -10,16 +10,38 @@ internal sealed class ClientClock
     public int Month { get; private set; }
     public int Day { get; private set; }
 
-    public async Task EnsureAsync(IJSRuntime js)
-    {
-        if (!string.IsNullOrWhiteSpace(TimeZone))
-            return;
+    private DateTimeOffset _validUntil;
 
+    /// <returns>True when the local calendar day changed since the last snapshot.</returns>
+    public async Task<bool> EnsureAsync(IJSRuntime js)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var had = !string.IsNullOrWhiteSpace(TimeZone);
+        if (had && now < _validUntil)
+            return false;
+
+        var previous = (Year, Month, Day);
         var snap = await js.InvokeAsync<Snapshot>("beselerClock.snapshot");
         TimeZone = string.IsNullOrWhiteSpace(snap.TimeZone) ? "UTC" : snap.TimeZone;
         Year = snap.Year;
         Month = snap.Month;
         Day = snap.Day;
+        SetValidUntil();
+        return had && previous != (Year, Month, Day);
+    }
+
+    private void SetValidUntil()
+    {
+        try
+        {
+            var zone = TimeZoneInfo.FindSystemTimeZoneById(TimeZone ?? "UTC");
+            var nextLocal = new DateTime(Year, Month, Day, 0, 0, 0, DateTimeKind.Unspecified).AddDays(1);
+            _validUntil = new DateTimeOffset(TimeZoneInfo.ConvertTimeToUtc(nextLocal, zone), TimeSpan.Zero);
+        }
+        catch (Exception)
+        {
+            _validUntil = DateTimeOffset.UtcNow.AddMinutes(30);
+        }
     }
 
     private sealed class Snapshot

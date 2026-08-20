@@ -139,10 +139,16 @@
                                 @if (edit.Selected)
                                 {
                                     <select class="auth-select" @bind="edit.Scope" disabled="@busy">
-                                        <option value="@Scopes.Owned">owned</option>
-                                        <option value="@Scopes.Global">global</option>
-                                        <option value="@Scopes.Shared">shared</option>
-                                        <option value="@Scopes.Self">self</option>
+                                        <option value="@Scopes.Owned">Their own</option>
+                                        <option value="@Scopes.Global">Everything</option>
+                                        @if (edit.Scope == Scopes.Shared)
+                                        {
+                                            <option value="@Scopes.Shared">Shared</option>
+                                        }
+                                        else if (edit.Scope == Scopes.Self)
+                                        {
+                                            <option value="@Scopes.Self">Self</option>
+                                        }
                                     </select>
                                 }
                             </div>

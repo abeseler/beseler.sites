@@ -8,10 +8,12 @@
 <section class="auth-shell">
     <div class="auth-card">
         <Brand />
+        <h1 class="visually-hidden">Accept invite</h1>
 
         @if (string.IsNullOrWhiteSpace(Token))
         {
             <p class="auth-alert" role="alert">This page needs the link from your invite email.</p>
+            <p class="auth-lede">If the invite expired, ask an admin to send it again. You do not need to be signed in.</p>
             <p class="auth-footer">
                 <a href="@Routes.Login">Sign in</a>
             </p>
@@ -29,14 +31,18 @@
                 <DataAnnotationsValidator />
                 <div class="auth-field">
                     <label for="password">Password</label>
-                    <InputText id="password" type="password" @bind-Value="model.Password" autocomplete="new-password" />
+                    <InputText id="password" type="@passwordType" @bind-Value="model.Password" autocomplete="new-password" />
                     <ValidationMessage For="() => model.Password" />
                 </div>
                 <div class="auth-field">
                     <label for="confirm">Confirm password</label>
-                    <InputText id="confirm" type="password" @bind-Value="model.Confirm" autocomplete="new-password" />
+                    <InputText id="confirm" type="@passwordType" @bind-Value="model.Confirm" autocomplete="new-password" />
                     <ValidationMessage For="() => model.Confirm" />
                 </div>
+                <label class="auth-check">
+                    <InputCheckbox id="show-password" @bind-Value="showPassword" />
+                    <span>Show password</span>
+                </label>
                 <label class="auth-check">
                     <InputCheckbox id="persist" @bind-Value="model.ThisDevice" />
                     <span>
@@ -61,7 +67,9 @@
 
     private readonly AcceptModel model = new();
     private bool busy;
+    private bool showPassword;
     private string? error;
+    private string passwordType => showPassword ? "text" : "password";
 
     private async Task Submit()
     {
@@ -82,7 +90,7 @@
             return;
         }
 
-        error = result.Error;
+        error = result.Error ?? "This invite is invalid or has expired. Ask an admin to send a new one.";
     }
 
     private sealed class AcceptModel

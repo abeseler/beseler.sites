@@ -28,7 +28,7 @@
 
     @if (loading)
     {
-        <p class="page-lede">Loading roles…</p>
+        <p class="page-lede">Loading…</p>
     }
     else if (roles.Count == 0 && !creating)
     {
@@ -111,6 +111,10 @@
                                 {
                                     @if (pendingDeleteId == role.RoleId)
                                     {
+                                        @if (role.UserCount > 0)
+                                        {
+                                            <p class="muted-empty">This is on @role.UserCount @(role.UserCount == 1 ? "user" : "users"). They lose it.</p>
+                                        }
                                         <button type="button" class="btn btn-danger btn-small" disabled="@busy" @onclick="() => Delete(role)">
                                             @(busy ? "Deleting…" : "Confirm delete")
                                         </button>

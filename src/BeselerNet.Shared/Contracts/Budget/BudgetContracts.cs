@@ -77,9 +77,26 @@ public sealed record BudgetMonthResponse
     public required decimal EndingBalance { get; init; }
     public required IReadOnlyList<BudgetLineResponse> Lines { get; init; }
     public required IReadOnlyList<BudgetDayBalance> Days { get; init; }
+    [JsonPropertyName("next_trough")]
+    public BudgetTrough? NextTrough { get; init; }
     [JsonPropertyName("suggested_names")]
-    public IReadOnlyDictionary<string, IReadOnlyList<string>> SuggestedNames { get; init; } =
-        new Dictionary<string, IReadOnlyList<string>>();
+    public IReadOnlyDictionary<string, IReadOnlyList<BudgetNameHint>> SuggestedNames { get; init; } =
+        new Dictionary<string, IReadOnlyList<BudgetNameHint>>();
+}
+
+public sealed record BudgetTrough
+{
+    public required int Year { get; init; }
+    public required int Month { get; init; }
+    public required int Day { get; init; }
+    public required decimal Balance { get; init; }
+}
+
+public sealed record BudgetNameHint
+{
+    public required string Name { get; init; }
+    public decimal? Amount { get; init; }
+    public int? Day { get; init; }
 }
 
 public sealed record BudgetDayBalance

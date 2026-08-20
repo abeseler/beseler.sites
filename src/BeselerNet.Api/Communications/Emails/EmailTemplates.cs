@@ -46,15 +46,15 @@ internal static class EmailTemplates
 
     public static EmailTemplate AccountLocked(CommunicationOptions options, string recipientName)
     {
-        var resetUrl = options.ResetPasswordUrl;
-        var resetPlain = string.IsNullOrWhiteSpace(resetUrl)
-            ? "If this was you, wait a few minutes and try again, or reset your password from the sign-in page."
-            : $"If this was you, reset your password: {resetUrl}";
-        var resetHtml = string.IsNullOrWhiteSpace(resetUrl)
-            ? $"<p style=\"{P}\">If this was you, wait a few minutes and try again, or reset your password from the sign-in page.</p>"
+        var forgotUrl = ForgotPasswordUrl(options.ResetPasswordUrl);
+        var resetPlain = string.IsNullOrWhiteSpace(forgotUrl)
+            ? "If this was you, use Forgot password on the sign-in page. The reset link unlocks the account."
+            : $"If this was you, request a reset (it unlocks the account): {forgotUrl}";
+        var resetHtml = string.IsNullOrWhiteSpace(forgotUrl)
+            ? $"<p style=\"{P}\">If this was you, use Forgot password on the sign-in page. The reset link unlocks the account.</p>"
             : $"""
-                <p style="{P}">If this was you, reset your password:</p>
-                {Button(resetUrl, "Reset password")}
+                <p style="{P}">If this was you, request a reset. The link unlocks the account.</p>
+                {Button(forgotUrl, "Forgot password")}
                 """;
 
         return Message(
@@ -199,6 +199,14 @@ internal static class EmailTemplates
 
         var joiner = baseUrl.Contains('?', StringComparison.Ordinal) ? '&' : '?';
         return $"{baseUrl}{joiner}token={Uri.EscapeDataString(token)}";
+    }
+
+    private static string? ForgotPasswordUrl(string? resetUrl)
+    {
+        if (string.IsNullOrWhiteSpace(resetUrl))
+            return null;
+
+        return resetUrl.Replace("/account/reset-password", "/account/forgot-password", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string Encode(string value) => WebUtility.HtmlEncode(value);

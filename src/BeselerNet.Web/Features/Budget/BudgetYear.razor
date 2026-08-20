@@ -13,6 +13,7 @@
 {
     <div class="app-main">
         <p class="kicker">Budget</p>
+        <h1 class="page-title">Budget</h1>
         <p class="page-lede">Loading…</p>
     </div>
 }
@@ -44,7 +45,7 @@ else
         <p class="kicker">Budget</p>
         <div class="budget-bar">
             <div class="budget-bar-nav">
-                <span class="budget-bar-title">@Year</span>
+                <h1 class="budget-bar-title">@Year</h1>
                 @if (CanUpdate && Year >= Clock.Year)
                 {
                     <button type="button" class="budget-edit-icon budget-danger-icon" title="Start over" aria-label="Start over" aria-expanded="@startingOver" @onclick="ToggleStartOver">

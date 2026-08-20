@@ -10,7 +10,7 @@ internal static class AccountProblems
     public static ProblemDetails Locked { get; } = new()
     {
         Title = AuthLimits.AccountLockedTitle,
-        Detail = "Your account is locked. Please contact support.",
+        Detail = "Your account is locked. Reset your password to unlock it.",
         Status = StatusCodes.Status403Forbidden
     };
     public static ProblemDetails Disabled { get; } = new()

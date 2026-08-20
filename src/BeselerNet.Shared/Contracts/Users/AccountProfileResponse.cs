@@ -13,6 +13,8 @@ public sealed record AccountProfileResponse
     [JsonPropertyName("family_name")]
     public string? FamilyName { get; init; }
     public required string Name { get; init; }
+    [JsonPropertyName("last_logon")]
+    public DateTimeOffset? LastLogon { get; init; }
     public IReadOnlyList<AccountRoleResponse> Roles { get; init; } = [];
 
     public bool HasRole(string name) =>

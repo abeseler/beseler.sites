@@ -11,31 +11,37 @@
 {
     <div class="app-main">
         <p class="kicker">Budget</p>
+        <h1 class="page-title">Budget</h1>
         <p class="page-lede">Loading…</p>
+    </div>
+}
+else if (error is not null)
+{
+    <div class="app-main">
+        <p class="kicker">Budget</p>
+        <h1 class="page-title">Budget</h1>
+        <p class="auth-alert" role="alert">@error</p>
     </div>
 }
 else if (showStart)
 {
     <BudgetStart Year="Clock.Year" OnStarted="GoToMonth" />
 }
-else
-{
-    <p class="page-lede">Opening this month…</p>
-}
 </RequirePermission>
 
 @code {
     private bool loading = true;
     private bool showStart;
+    private string? error;
 
     protected override async Task OnInitializedAsync()
     {
         await Clock.EnsureAsync(Js);
         var years = await Api.ListYearsAsync();
-        loading = false;
         if (!years.Succeeded)
         {
-            showStart = true;
+            error = years.Error ?? "Could not load budget years.";
+            loading = false;
             return;
         }
 
@@ -47,6 +53,7 @@ else
         }
 
         showStart = true;
+        loading = false;
     }
 
     private void GoToMonth(int year) => Nav.NavigateTo(Routes.BudgetMonth(year, Clock.Year == year ? Clock.Month : 1));
