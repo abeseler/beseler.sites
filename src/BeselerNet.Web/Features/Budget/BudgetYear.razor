@@ -161,21 +161,29 @@ else
             <div>
                 <span class="tile-kicker">Income</span>
                 <BudgetMoney Value="year.Income" />
+                @if (year.IncomeAhead != 0)
+                {
+                    <span class="budget-ahead">ahead <BudgetMoney Value="year.IncomeAhead" Compact="true" /></span>
+                }
             </div>
             <div>
                 <span class="tile-kicker">Expenses</span>
                 <BudgetMoney Value="year.Expenses" />
+                @if (year.ExpensesAhead != 0)
+                {
+                    <span class="budget-ahead">ahead <BudgetMoney Value="year.ExpensesAhead" Compact="true" /></span>
+                }
             </div>
             <div>
                 <span class="tile-kicker">@(IsCurrentYear ? "Checking now" : "Year end")</span>
                 <BudgetMoney Value="CheckingNow" />
             </div>
             <div>
-                <span class="tile-kicker">@(IsCurrentYear ? "Cash flow YTD" : "Cash flow")</span>
+                <span class="tile-kicker">Cash flow</span>
                 <BudgetMoney Value="YearCashFlow" />
             </div>
             <div>
-                <span class="tile-kicker">@(IsCurrentYear ? "Saved YTD" : "Saved")</span>
+                <span class="tile-kicker">Saved</span>
                 <BudgetMoney Value="YearSaved" />
             </div>
         </div>
@@ -243,13 +251,15 @@ else
         year!.Months.FirstOrDefault(item => item.Month == month)?.EndingBalance
         ?? year.Months[^1].EndingBalance;
 
-    private IEnumerable<BudgetMonthSummary> CountedMonths =>
-        year is null ? []
-        : IsCurrentYear ? year.Months.Where(item => item.Month <= Clock.Month)
-        : year.Months;
+    private decimal YearCashFlow =>
+        year is null ? 0
+        : IsCurrentYear ? year.Income - year.Expenses
+        : year.Months.Sum(item => item.CashFlow);
 
-    private decimal YearCashFlow => CountedMonths.Sum(item => item.CashFlow);
-    private decimal YearSaved => CountedMonths.Sum(item => item.Savings);
+    private decimal YearSaved =>
+        year is null ? 0
+        : IsCurrentYear ? year.Savings
+        : year.Months.Sum(item => item.Savings);
 
     protected override async Task OnParametersSetAsync()
     {

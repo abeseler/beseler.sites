@@ -758,6 +758,15 @@ a.tile-app:hover {
     overflow-wrap: anywhere;
 }
 
+.budget-ahead {
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+.budget-ahead .budget-money {
+    font-size: inherit;
+}
+
 .budget-tabs {
     display: flex;
     gap: 0.35rem;
@@ -883,7 +892,7 @@ a.tile-app:hover {
 }
 
 .budget-line-amt { text-align: right; font-variant-numeric: tabular-nums; }
-.budget-est {
+.budget-stamp {
     appearance: none;
     margin: 0;
     padding: 0.1rem 0.35rem;
@@ -897,8 +906,8 @@ a.tile-app:hover {
     cursor: pointer;
 }
 
-.budget-est:hover { border-color: var(--warn); }
-.budget-est:disabled { cursor: default; opacity: 0.6; }
+.budget-stamp:hover { border-color: var(--warn); }
+.budget-stamp:disabled { cursor: default; opacity: 0.6; }
 
 .budget-name-hints {
     display: flex;

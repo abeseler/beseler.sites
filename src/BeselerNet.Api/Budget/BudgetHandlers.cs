@@ -388,7 +388,7 @@ internal static class BudgetHandlers
             BudgetSections.Normalize(request.Section),
             request.Amount,
             request.OnDate,
-            request.Committed ?? existing.Committed,
+            committed: true,
             cancellationToken);
         return TypedResults.Ok(MapLine(line));
     }
@@ -562,22 +562,23 @@ internal static class BudgetHandlers
         var lines = await budget.LinesForYear(accountId, year, cancellationToken);
         var months = BudgetCalculator.Summarize(periods, lines);
         decimal? checkingNow = null;
-        DateOnly? asOf = null;
         if (today is { } date && date.Year == year)
         {
-            asOf = date;
             var month = months.FirstOrDefault(item => item.Month == date.Month);
             if (month is not null)
                 checkingNow = BudgetCalculator.BalanceOn(date, month.StartingBalance, lines);
         }
 
-        var (income, expenses) = BudgetCalculator.SectionTotals(lines, asOf);
+        var (soFar, ahead) = BudgetCalculator.SplitYearTotals(lines, today, year);
         return new BudgetYearResponse
         {
             Year = year,
             StartingBalance = months[0].StartingBalance,
-            Income = income,
-            Expenses = expenses,
+            Income = soFar.Income,
+            Expenses = soFar.Expenses,
+            Savings = soFar.Savings,
+            IncomeAhead = ahead.Income,
+            ExpensesAhead = ahead.Expenses,
             Months = months,
             CheckingNow = checkingNow
         };

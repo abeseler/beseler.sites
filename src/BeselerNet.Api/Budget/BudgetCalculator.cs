@@ -107,24 +107,45 @@ internal static class BudgetCalculator
         return summaries;
     }
 
-    public static (decimal Income, decimal Expenses) SectionTotals(
+    public readonly record struct YearSections(decimal Income, decimal Expenses, decimal Savings);
+
+    public static (YearSections SoFar, YearSections Ahead) SplitYearTotals(
         IEnumerable<BudgetLineRow> lines,
-        DateOnly? asOf)
+        DateOnly? today,
+        int year)
     {
-        decimal income = 0, expenses = 0;
+        decimal incomeSoFar = 0, expensesSoFar = 0, savingsSoFar = 0;
+        decimal incomeAhead = 0, expensesAhead = 0, savingsAhead = 0;
         foreach (var line in lines)
         {
-            if (asOf is { } date && !line.Committed && (line.OnDate is not { } on || on < date))
-                continue;
-
             var amount = line.Amount ?? 0;
+            decimal income = 0, expenses = 0, savings = 0;
             if (string.Equals(line.Section, BudgetSections.Income, StringComparison.OrdinalIgnoreCase))
-                income += Math.Abs(amount);
+                income = Math.Abs(amount);
             else if (string.Equals(line.Section, BudgetSections.Expense, StringComparison.OrdinalIgnoreCase))
-                expenses += Math.Abs(amount);
+                expenses = Math.Abs(amount);
+            else if (string.Equals(line.Section, BudgetSections.Savings, StringComparison.OrdinalIgnoreCase))
+                savings = amount;
+
+            var ahead = today is { } date
+                && (year > date.Year || (year == date.Year && line.OnDate is { } on && on > date));
+            if (ahead)
+            {
+                incomeAhead += income;
+                expensesAhead += expenses;
+                savingsAhead += savings;
+            }
+            else
+            {
+                incomeSoFar += income;
+                expensesSoFar += expenses;
+                savingsSoFar += savings;
+            }
         }
 
-        return (income, expenses);
+        return (
+            new YearSections(incomeSoFar, expensesSoFar, savingsSoFar),
+            new YearSections(incomeAhead, expensesAhead, savingsAhead));
     }
 
     public static IReadOnlyList<BudgetYearRollup> Rollup(

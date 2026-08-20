@@ -32,13 +32,6 @@
     {
         <p class="budget-hint">@BudgetSections.AmountHint(Section)</p>
     }
-    @if (Line is not null)
-    {
-        <label class="auth-check">
-            <input type="checkbox" checked="@committed" disabled="@Busy" @onchange="e => committed = IsChecked(e.Value)" />
-            <span>Committed</span>
-        </label>
-    }
     <FieldError Keys="fieldErrors" Name="section" />
     @foreach (var message in ExtraErrors())
     {
@@ -79,7 +72,6 @@
     private string name = "";
     private string dayText = "";
     private string amountText = "";
-    private bool committed = true;
     private bool confirmDelete;
     private string? error;
     private IDictionary<string, string[]>? fieldErrors;
@@ -127,7 +119,6 @@
         name = Line.Name;
         dayText = Line.OnDate?.Day.ToString() ?? "";
         amountText = Line.Amount?.ToString("0.##") ?? "";
-        committed = Line.Committed;
     }
 
     private async Task Save()
@@ -170,7 +161,7 @@
             Section = Section,
             Amount = amount,
             OnDate = new DateOnly(Year, Month, day),
-            Committed = Line is null || committed
+            Committed = true
         };
 
         var result = Line is null
@@ -211,7 +202,7 @@
         if (fieldErrors is null)
             yield break;
 
-        var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "name", "section", "amount", "on_date", "committed" };
+        var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "name", "section", "amount", "on_date" };
         foreach (var pair in fieldErrors)
         {
             if (known.Contains(pair.Key))
@@ -223,7 +214,4 @@
             }
         }
     }
-
-    private static bool IsChecked(object? value) =>
-        value is true || (value is string text && bool.TryParse(text, out var parsed) && parsed);
 }

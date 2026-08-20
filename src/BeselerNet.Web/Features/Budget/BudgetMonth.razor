@@ -66,9 +66,9 @@ else
              @onpointerdown="OnPointerDown"
              @onpointerup="OnPointerUp">
             <div class="budget-slides">
-                <BudgetSectionList Title="Income" Section="@BudgetSections.Income" Total="month.Income" Lines="Income" NameHints="Hints(BudgetSections.Income)" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
-                <BudgetSectionList Title="Expenses" Section="@BudgetSections.Expense" Total="month.Expenses" Lines="Expenses" NameHints="Hints(BudgetSections.Expense)" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
-                <BudgetSectionList Title="Savings" Section="@BudgetSections.Savings" Total="month.Savings" Lines="Savings" NameHints="Hints(BudgetSections.Savings)" Year="Year" Month="Month" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
+                <BudgetSectionList Title="Income" Section="@BudgetSections.Income" Total="month.Income" Lines="Income" NameHints="Hints(BudgetSections.Income)" Year="Year" Month="Month" Today="Today" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
+                <BudgetSectionList Title="Expenses" Section="@BudgetSections.Expense" Total="month.Expenses" Lines="Expenses" NameHints="Hints(BudgetSections.Expense)" Year="Year" Month="Month" Today="Today" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
+                <BudgetSectionList Title="Savings" Section="@BudgetSections.Savings" Total="month.Savings" Lines="Savings" NameHints="Hints(BudgetSections.Savings)" Year="Year" Month="Month" Today="Today" CanEdit="CanUpdate" OnChanged="ReloadSilent" />
             </div>
         </div>
 
@@ -129,6 +129,9 @@ else
         CanUpdate && (Year == Clock.Year || (Clock.Month == 12 && Year == Clock.Year + 1));
     private string monthName => new DateOnly(Year, Month, 1).ToString("MMMM");
     private bool IsCurrentMonth => Clock.Year == Year && Clock.Month == Month;
+    private DateOnly Today => Clock.Year > 0
+        ? new DateOnly(Clock.Year, Clock.Month, Math.Max(Clock.Day, 1))
+        : DateOnly.MinValue;
     private decimal CheckingNow =>
         month?.Days.FirstOrDefault(day => day.Day == Clock.Day)?.Balance ?? 0;
     private decimal LowestDay => month?.Days.Count > 0 ? month.Days.Min(day => day.Balance) : 0;
