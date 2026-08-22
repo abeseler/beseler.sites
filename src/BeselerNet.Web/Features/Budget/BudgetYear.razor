@@ -175,7 +175,7 @@ else
                 }
             </div>
             <div>
-                <span class="tile-kicker">@(IsCurrentYear ? "Checking now" : "Year end")</span>
+                <span class="tile-kicker @(IsCurrentYear ? "is-now" : null)">@(IsCurrentYear ? "Checking now" : "Year end")</span>
                 <BudgetMoney Value="CheckingNow" />
             </div>
             <div>

@@ -31,28 +31,7 @@
         <section class="role-card">
             <div class="role-card-head">
                 <span class="role-name">@account.Name</span>
-                <span class="role-badges">
-                    @if (isSelf)
-                    {
-                        <span class="badge">You</span>
-                    }
-                    @if (account.Disabled)
-                    {
-                        <span class="badge">Disabled</span>
-                    }
-                    @if (account.Locked)
-                    {
-                        <span class="badge">Locked</span>
-                    }
-                    @if (account.Invited)
-                    {
-                        <span class="badge">Invited</span>
-                    }
-                    else if (!account.EmailVerified)
-                    {
-                        <span class="badge">Unverified</span>
-                    }
-                </span>
+                <AccountStatusBadges Account="account" IsSelf="isSelf" />
             </div>
             <p class="muted-empty">@account.Email</p>
             <p class="muted-empty">@rolesLabel</p>
@@ -199,11 +178,30 @@
                 else
                 {
                     <div class="access-list">
-                        @foreach (var row in access)
+                        @foreach (var group in access)
                         {
-                            <div class="access-row">
-                                <span>@row.Permission</span>
-                                <span class="access-from">@row.GrantedBy</span>
+                            <div class="access-group">
+                                <div class="perm-group-title">@group.Resource</div>
+                                @if (group.SharedGrant)
+                                {
+                                    <div class="access-actions">
+                                        @foreach (var row in group.Rows)
+                                        {
+                                            <span class="perm-chip">@row.Action</span>
+                                        }
+                                    </div>
+                                    <span class="access-from">@group.Rows[0].GrantedBy</span>
+                                }
+                                else
+                                {
+                                    @foreach (var row in group.Rows)
+                                    {
+                                        <div class="access-row">
+                                            <span class="perm-chip">@row.Action</span>
+                                            <span class="access-from">@row.GrantedBy</span>
+                                        </div>
+                                    }
+                                }
                             </div>
                         }
                     </div>
@@ -221,7 +219,7 @@
     private int loadedId;
     private AccountResponse? account;
     private IReadOnlyList<RoleResponse> catalog = [];
-    private IReadOnlyList<AccessRow> access = [];
+    private IReadOnlyList<AccessGroup> access = [];
     private List<RoleEdit> edits = [];
     private string givenName = "";
     private string familyName = "";
@@ -305,7 +303,7 @@
         }
 
         var byId = catalog.ToDictionary(role => role.RoleId);
-        var granted = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var granted = new Dictionary<(string Resource, string Action), List<string>>();
         foreach (var assigned in account.Roles)
         {
             if (!byId.TryGetValue(assigned.RoleId, out var role))
@@ -314,7 +312,7 @@
             var from = $"{assigned.Name} ({assigned.Scope})";
             foreach (var permission in role.Permissions)
             {
-                var key = $"{permission.Resource}:{permission.Action}";
+                var key = (permission.Resource, permission.Action);
                 if (!granted.TryGetValue(key, out var roles))
                 {
                     roles = [];
@@ -327,8 +325,14 @@
         }
 
         access = granted
-            .OrderBy(row => row.Key, StringComparer.Ordinal)
-            .Select(row => new AccessRow(row.Key, string.Join(", ", row.Value)))
+            .GroupBy(row => row.Key.Resource, StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group => new AccessGroup(
+                group.Key,
+                group
+                    .OrderBy(row => row.Key.Action, StringComparer.Ordinal)
+                    .Select(row => new AccessRow(row.Key.Action, string.Join(" · ", row.Value)))
+                    .ToArray()))
             .ToArray();
     }
 
@@ -487,7 +491,13 @@
     private static string When(DateTimeOffset? value) =>
         value is { } time ? time.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "never";
 
-    private sealed record AccessRow(string Permission, string GrantedBy);
+    private sealed record AccessGroup(string Resource, IReadOnlyList<AccessRow> Rows)
+    {
+        public bool SharedGrant =>
+            Rows.Count > 0 && Rows.All(row => string.Equals(row.GrantedBy, Rows[0].GrantedBy, StringComparison.Ordinal));
+    }
+
+    private sealed record AccessRow(string Action, string GrantedBy);
 
     private sealed class RoleEdit
     {

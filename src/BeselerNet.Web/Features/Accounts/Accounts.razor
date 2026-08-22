@@ -35,8 +35,10 @@
             @foreach (var account in accounts)
             {
                 <a class="tile" href="@Routes.AccountDetail(account.AccountId)">
-                    <span class="tile-kicker">@Status(account)</span>
-                    <span class="tile-title">@account.Name</span>
+                    <span class="role-card-head">
+                        <span class="tile-title">@account.Name</span>
+                        <AccountStatusBadges Account="account" IsSelf="account.AccountId == Session.Profile?.AccountId" />
+                    </span>
                     <span class="tile-copy">@Meta(account)</span>
                 </a>
             }
@@ -61,22 +63,6 @@
         }
 
         accounts = result.Value ?? [];
-    }
-
-    private string Status(AccountResponse account)
-    {
-        var bits = new List<string>();
-        if (account.AccountId == Session.Profile?.AccountId)
-            bits.Add("You");
-        if (account.Invited)
-            bits.Add("Invited");
-        if (account.Disabled)
-            bits.Add("Disabled");
-        if (account.Locked)
-            bits.Add("Locked");
-        if (!account.EmailVerified && !account.Invited)
-            bits.Add("Unverified");
-        return bits.Count > 0 ? string.Join(" · ", bits) : "Active";
     }
 
     private static string Meta(AccountResponse account)

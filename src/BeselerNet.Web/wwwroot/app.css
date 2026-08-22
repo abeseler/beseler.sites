@@ -440,6 +440,10 @@ a.tile-app:hover {
     letter-spacing: 0.04em;
 }
 
+.tile-kicker.is-now {
+    color: var(--warn);
+}
+
 .tile-title {
     font-weight: 600;
 }
@@ -495,17 +499,49 @@ a.tile-app:hover {
     color: var(--muted);
 }
 
+.badge-mark {
+    color: var(--warn);
+    border-color: rgba(255, 159, 28, 0.4);
+    background: var(--warn-dim);
+}
+
+.badge-danger {
+    color: var(--danger);
+    border-color: rgba(232, 93, 76, 0.4);
+    background: rgba(232, 93, 76, 0.1);
+}
+
 .access-list {
     display: flex;
     flex-direction: column;
-    gap: 0.7rem;
-    margin-top: 0.65rem;
+    margin-top: 0.75rem;
+}
+
+.access-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.7rem 0;
+    border-top: 1px solid var(--line);
+}
+
+.access-group:first-child {
+    padding-top: 0.2rem;
+    border-top: 0;
+}
+
+.access-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
 }
 
 .access-row {
     display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.2rem 0.85rem;
 }
 
 .access-from {
@@ -520,12 +556,16 @@ a.tile-app:hover {
     margin-top: 0.65rem;
 }
 
+.perm-groups .perm-chips {
+    margin-top: 0.3rem;
+}
+
 .perm-chip {
     font-size: 0.75rem;
     padding: 0.15rem 0.45rem;
     background: var(--surface-2);
     border-radius: 6px;
-    color: var(--muted);
+    color: var(--text);
 }
 
 .perm-groups {
@@ -1030,6 +1070,11 @@ a.tile-app:hover {
     color: var(--muted);
     font-size: 0.8rem;
     min-width: 0;
+}
+
+.budget-days-peek .is-now {
+    color: var(--warn);
+    font-weight: 600;
 }
 
 .budget-days-chevron {

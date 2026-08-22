@@ -4,10 +4,18 @@
 }
 else
 {
-    <div class="perm-chips">
-        @foreach (var permission in Permissions)
+    <div class="perm-groups">
+        @foreach (var group in Permissions.GroupBy(permission => permission.Resource).OrderBy(group => group.Key))
         {
-            <span class="perm-chip">@permission.Resource:@permission.Action</span>
+            <div>
+                <div class="perm-group-title">@group.Key</div>
+                <div class="perm-chips">
+                    @foreach (var permission in group.OrderBy(permission => permission.Action))
+                    {
+                        <span class="perm-chip">@permission.Action</span>
+                    }
+                </div>
+            </div>
         }
     </div>
 }

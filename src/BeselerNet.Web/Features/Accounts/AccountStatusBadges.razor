@@ -1,0 +1,37 @@
+@if (HasAny)
+{
+    <span class="role-badges">
+        @if (IsSelf)
+        {
+            <span class="badge badge-mark">You</span>
+        }
+        @if (Account.Invited)
+        {
+            <span class="badge badge-mark">Invited</span>
+        }
+        @if (!Account.EmailVerified && !Account.Invited)
+        {
+            <span class="badge badge-mark">Unverified</span>
+        }
+        @if (Account.Locked)
+        {
+            <span class="badge badge-danger">Locked</span>
+        }
+        @if (Account.Disabled)
+        {
+            <span class="badge badge-danger">Disabled</span>
+        }
+    </span>
+}
+
+@code {
+    [Parameter, EditorRequired] public AccountResponse Account { get; set; } = default!;
+    [Parameter] public bool IsSelf { get; set; }
+
+    private bool HasAny =>
+        IsSelf
+        || Account.Invited
+        || Account.Locked
+        || Account.Disabled
+        || (!Account.EmailVerified && !Account.Invited);
+}
